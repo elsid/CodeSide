@@ -1,0 +1,11 @@
+[package]
+name = "my-strategy"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+model = { path = "raic/clients/rust/model", package = "aicup2019-model" }
+trans = { path = "raic/clients/rust/model/trans" }
+
+[profile.release]
+debug = true
