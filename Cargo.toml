@@ -9,3 +9,6 @@ trans = { path = "raic/clients/rust/model/trans" }
 
 [profile.release]
 debug = true
+
+[features]
+dump_examples = []

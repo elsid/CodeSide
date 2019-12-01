@@ -4,9 +4,18 @@ pub mod config;
 #[path = "world.rs"]
 pub mod world;
 
+#[cfg(feature = "dump_examples")]
+#[path = "my_strategy_dump_examples.rs"]
+pub mod my_strategy_dump_examples;
+
+#[cfg(not(feature = "dump_examples"))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
 
+#[cfg(feature = "dump_examples")]
+use self::my_strategy_dump_examples::MyStrategyImpl;
+
+#[cfg(not(feature = "dump_examples"))]
 use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
@@ -28,7 +37,14 @@ impl MyStrategy {
 
         if self.strategy_impl.is_none() {
             let config = Config::new();
-            self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
+            #[cfg(not(feature = "dump_examples"))]
+            {
+                self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
+            }
+            #[cfg(feature = "dump_examples")]
+            {
+                self.strategy_impl = Some(MyStrategyImpl::new());
+            }
         }
         self.strategy_impl.as_mut().unwrap().get_action(me, game, debug)
     }
