@@ -1,8 +1,14 @@
+#[path = "random.rs"]
+pub mod random;
+
 #[path = "unit_action.rs"]
 pub mod unit_action;
 
 #[path = "vec2_f64.rs"]
 pub mod vec2_f64;
+
+#[path = "level.rs"]
+pub mod level;
 
 #[path = "common.rs"]
 pub mod common;
@@ -10,11 +16,17 @@ pub mod common;
 #[path = "vec2.rs"]
 pub mod vec2;
 
+#[path = "rect.rs"]
+pub mod rect;
+
 #[path = "config.rs"]
 pub mod config;
 
 #[path = "world.rs"]
 pub mod world;
+
+#[path = "simulator.rs"]
+pub mod simulator;
 
 #[cfg(feature = "dump_examples")]
 #[path = "my_strategy_dump_examples.rs"]

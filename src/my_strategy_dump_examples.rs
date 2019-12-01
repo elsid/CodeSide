@@ -1,6 +1,4 @@
 use crate::Debug;
-use crate::my_strategy::config::Config;
-use crate::my_strategy::world::World;
 
 pub struct MyStrategyImpl {
     has_loot_box: bool,

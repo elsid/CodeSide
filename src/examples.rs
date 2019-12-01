@@ -1,9 +1,9 @@
 use model::{
+    Bullet,
     Game,
     Level,
     LootBox,
     Mine,
-    Bullet,
     Player,
     Properties,
     Unit,
@@ -11,6 +11,16 @@ use model::{
 };
 use crate::my_strategy::world::World;
 use crate::my_strategy::config::Config;
+use crate::my_strategy::random::{XorShiftRng, SeedableRng};
+
+pub fn example_rng(seed: u64) -> XorShiftRng {
+    XorShiftRng::from_seed([
+        seed as u32,
+        (seed as u64 >> 32) as u32,
+        1841971383,
+        1904458926,
+    ])
+}
 
 pub fn example_world() -> World {
     let properties = example_properties();
