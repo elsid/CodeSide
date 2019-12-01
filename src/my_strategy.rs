@@ -1,3 +1,9 @@
+#[path = "unit_action.rs"]
+pub mod unit_action;
+
+#[path = "vec2_f64.rs"]
+pub mod vec2_f64;
+
 #[path = "config.rs"]
 pub mod config;
 

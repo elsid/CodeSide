@@ -1,27 +1,32 @@
+use model::{Game, Unit};
 use crate::my_strategy::config::Config;
 
 #[derive(Debug, Clone)]
 pub struct World {
     config: Config,
-    me: model::Unit,
-    game: model::Game,
+    me: Unit,
+    game: Game,
 }
 
 impl World {
-    pub fn new(config: Config, me: model::Unit, game: model::Game) -> Self {
+    pub fn new(config: Config, me: Unit, game: Game) -> Self {
         World { config, me, game }
     }
 
-    pub fn update(&mut self, me: &model::Unit, game: &model::Game) {
+    pub fn update(&mut self, me: &Unit, game: &Game) {
         self.me = me.clone();
         self.game = game.clone();
     }
 
-    pub fn me(&self) -> &model::Unit {
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    pub fn me(&self) -> &Unit {
         &self.me
     }
 
-    pub fn game(&self) -> &model::Game {
+    pub fn game(&self) -> &Game {
         &self.game
     }
 }
