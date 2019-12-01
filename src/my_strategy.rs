@@ -4,6 +4,12 @@ pub mod unit_action;
 #[path = "vec2_f64.rs"]
 pub mod vec2_f64;
 
+#[path = "common.rs"]
+pub mod common;
+
+#[path = "vec2.rs"]
+pub mod vec2;
+
 #[path = "config.rs"]
 pub mod config;
 
@@ -14,14 +20,21 @@ pub mod world;
 #[path = "my_strategy_dump_examples.rs"]
 pub mod my_strategy_dump_examples;
 
-#[cfg(not(feature = "dump_examples"))]
+#[cfg(feature = "dump_opponent")]
+#[path = "my_strategy_dump_opponent.rs"]
+pub mod my_strategy_dump_opponent;
+
+#[cfg(all(not(feature = "dump_examples"), not(feature = "dump_opponent")))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
 
 #[cfg(feature = "dump_examples")]
 use self::my_strategy_dump_examples::MyStrategyImpl;
 
-#[cfg(not(feature = "dump_examples"))]
+#[cfg(feature = "dump_opponent")]
+use self::my_strategy_dump_opponent::MyStrategyImpl;
+
+#[cfg(all(not(feature = "dump_examples"), not(feature = "dump_opponent")))]
 use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
@@ -43,11 +56,15 @@ impl MyStrategy {
 
         if self.strategy_impl.is_none() {
             let config = Config::new();
-            #[cfg(not(feature = "dump_examples"))]
+            #[cfg(all(not(feature = "dump_examples"), not(feature = "dump_opponent")))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
             }
             #[cfg(feature = "dump_examples")]
+            {
+                self.strategy_impl = Some(MyStrategyImpl::new());
+            }
+            #[cfg(feature = "dump_opponent")]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new());
             }

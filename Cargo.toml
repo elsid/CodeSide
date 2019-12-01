@@ -12,3 +12,4 @@ debug = true
 
 [features]
 dump_examples = []
+dump_opponent = []
