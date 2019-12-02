@@ -207,6 +207,37 @@ fn test_simulator_unit_jump_down_through_platform_for_one_tick() {
     );
 }
 
+#[test]
+fn test_simulator_unit_jump_from_wall_until_land() {
+    let world = example_world();
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().jump = true;
+    for _ in 0..33 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(37.5, 6.498333333333526)
+    );
+    simulator.me_mut().action_mut().jump = false;
+    for _ in 33..66 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(37.5, 0.9999999999999998)
+    );
+}
+
 fn with_my_position(world: World, position: Vec2) -> World {
     let mut game = world.game().clone();
     let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();

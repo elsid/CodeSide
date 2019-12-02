@@ -83,6 +83,10 @@ impl Simulator {
         &mut self.units[self.me_index]
     }
 
+    pub fn current_tick(&self) -> i32 {
+        self.current_tick
+    }
+
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
