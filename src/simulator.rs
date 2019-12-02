@@ -98,11 +98,36 @@ impl Simulator {
         rng.shuffle(&mut self.bullets[..]);
 
         for unit in self.units.iter_mut() {
-            if unit.ignore() {
+            if unit.ignore {
                 continue;
             }
-            if unit.action().velocity != 0.0 {
-                unit.shift_x(unit.action().velocity.min(self.properties.unit_max_horizontal_speed) * time_interval);
+            unit.base.on_ladder = false;
+            unit.shift_x(unit.action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval);
+        }
+
+        for unit in self.units.iter_mut() {
+            if unit.ignore {
+                continue;
+            }
+            let min_y = unit.bottom() as usize;
+            let max_y = unit.top() as usize + 1;
+            let left = unit.left() as usize;
+            let right = unit.right() as usize;
+            for y in min_y .. max_y {
+                for &(x, sign) in &[(left, -1.0), (right, 1.0)] {
+                    match get_tile(&self.level, left, y) {
+                        Tile::Wall => {
+                            collide_by_x(unit, x, y, sign);
+                        },
+                        Tile::Ladder => {
+                            unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, y);
+                        },
+                        Tile::JumpPad => {
+                            start_pad_jump(unit, &self.properties);
+                        },
+                        _ => (),
+                    }
+                }
             }
         }
 
@@ -110,67 +135,65 @@ impl Simulator {
             if unit.ignore {
                 continue;
             }
-            let tile_y = unit.position().y() as usize;
-            let min_y = if tile_y > 0 { tile_y - 1 } else { 0 };
-            let left = unit.left() as usize;
-            let right = unit.right() as usize;
-            for y in min_y .. tile_y + 2 {
-                if get_tile(&self.level, left, y) == Tile::Wall {
-                    let penetration = make_tile_rect(left, y).collide(&unit.rect());
-                    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-                        unit.shift_x(-penetration.x());
-                    }
+            if unit.base.jump_state.can_jump && (unit.action.jump || !unit.base.jump_state.can_cancel) {
+                let jump_time = shift_jump_max_time(unit, time_interval);
+                unit.shift_y(unit.base.jump_state.speed * jump_time);
+                if unit.base.jump_state.max_time == 0.0 {
+                    cancel_jump(unit, &self.properties);
                 }
-                if get_tile(&self.level, right, y) == Tile::Wall {
-                    let penetration = make_tile_rect(right, y).collide(&unit.rect());
-                    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-                         unit.shift_x(penetration.x());
-                    }
-                }
-            }
-        }
-
-        for unit in self.units.iter_mut() {
-            if unit.ignore() {
-                continue;
-            }
-            if unit.action.jump_down {
-                unit.shift_y(-self.properties.unit_jump_speed * time_interval);
-            } else if unit.action.jump {
-                unit.shift_y(self.properties.unit_jump_speed * time_interval);
             } else {
                 unit.shift_y(-self.properties.unit_fall_speed * time_interval);
             }
-            unit.set_on_ladder(false);
-            unit.set_on_ground(false);
+            unit.base.on_ground = false;
         }
 
         for unit in self.units.iter_mut() {
-            if unit.ignore() {
+            if unit.ignore {
                 continue;
             }
-            let tile_x = unit.position().x() as usize;
+            let min_x = unit.left() as usize;
+            let max_x = unit.right() as usize + 1;
             let top = unit.top() as usize;
             let bottom = unit.bottom() as usize;
-            for x in tile_x - 1 .. tile_x + 1 {
-                let top_tile = get_tile(&self.level, x, top);
-                let on_ladder = unit.on_ladder() || can_use_ladder(&unit, x, top);
-                unit.set_on_ladder(on_ladder);
-                if top_tile == Tile::Wall
-                    || (top_tile == Tile::Ladder && on_ladder && !unit.action().jump_down) {
-                    let penetration = make_tile_rect(x, top).collide(&unit.rect());
-                    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-                        unit.shift_y(penetration.y());
-                    }
+            for x in min_x .. max_x {
+                match get_tile(&self.level, x, bottom) {
+                    Tile::Wall => {
+                        collide_by_y(unit, x, bottom, -1.0);
+                        allow_jump(unit, &self.properties);
+                    },
+                    Tile::Ladder => {
+                        unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, bottom);
+                        if !unit.base.on_ladder {
+                            collide_by_y(unit, x, bottom, -1.0);
+                            allow_jump(unit, &self.properties);
+                        }
+                    },
+                    Tile::Platform => {
+                        if !unit.action.jump_down {
+                            collide_by_y(unit, x, bottom, -1.0);
+                            allow_jump(unit, &self.properties);
+                        }
+                    },
+                    Tile::JumpPad => {
+                        start_pad_jump(unit, &self.properties);
+                    },
+                    _ => (),
                 }
-                let bottom_tile = get_tile(&self.level, x, bottom);
-                if bottom_tile == Tile::Wall
-                    || ((bottom_tile == Tile::Ladder || bottom_tile == Tile::Platform) && !unit.action().jump_down) {
-                    let penetration = make_tile_rect(x, bottom).collide(&unit.rect());
-                    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-                        unit.shift_y(-penetration.y());
-                        unit.set_on_ground(true);
-                    }
+                match get_tile(&self.level, x, top) {
+                    Tile::Wall => {
+                        collide_by_y(unit, x, top, 1.0);
+                        unit.base.on_ground = true;
+                        cancel_jump(unit, &self.properties);
+                    },
+                    Tile::Ladder => {
+                        unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, top);
+                        unit.base.on_ground = true;
+                        allow_jump(unit, &self.properties);
+                    },
+                    Tile::JumpPad => {
+                        start_pad_jump(unit, &self.properties);
+                    },
+                    _ => (),
                 }
             }
         }
@@ -307,6 +330,52 @@ fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
     (center.x() - (x as f64 + 0.5)).abs() <= 0.5
         && unit.top() - y as f64 >= 0.0
         && (y + 1) as f64 - center.y() >= 0.0
+}
+
+fn cancel_jump(unit: &mut UnitExt, properties: &Properties) {
+    unit.base.jump_state.can_jump = false;
+    unit.base.jump_state.speed = 0.0;
+    unit.base.jump_state.max_time = 0.0;
+    unit.base.jump_state.can_cancel = false;
+}
+
+fn allow_jump(unit: &mut UnitExt, properties: &Properties) {
+    unit.base.jump_state.can_jump = true;
+    unit.base.jump_state.speed = properties.unit_jump_speed;
+    unit.base.jump_state.max_time = properties.unit_jump_time;
+    unit.base.jump_state.can_cancel = true;
+}
+
+fn start_pad_jump(unit: &mut UnitExt, properties: &Properties) {
+    unit.base.jump_state.can_jump = true;
+    unit.base.jump_state.speed = properties.jump_pad_jump_speed;
+    unit.base.jump_state.max_time = properties.jump_pad_jump_time;
+    unit.base.jump_state.can_cancel = false;
+}
+
+pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
+    let max_time = unit.base.jump_state.max_time;
+    unit.base.jump_state.max_time = unit.base.jump_state.max_time - time_interval;
+    if unit.base.jump_state.max_time < 0.0 {
+        unit.base.jump_state.max_time = 0.0;
+        max_time
+    } else {
+        time_interval
+    }
+}
+
+fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
+    let penetration = make_tile_rect(x, y).collide(&unit.rect());
+    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
+        unit.shift_x(sign * penetration.x());
+    }
+}
+
+fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
+    let penetration = make_tile_rect(x, y).collide(&unit.rect());
+    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
+        unit.shift_y(sign * penetration.y());
+    }
 }
 
 fn make_tile_rect(x: usize, y: usize) -> Rect {
