@@ -1,5 +1,5 @@
 use model::UnitAction;
-use crate::my_strategy::vec2_f64::Vec2F64Wrapper;
+use crate::my_strategy::Vec2F64Wrapper;
 
 #[derive(Debug)]
 pub struct UnitActionWrapper<'a>(pub &'a UnitAction);

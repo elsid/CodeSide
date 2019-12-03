@@ -1,6 +1,6 @@
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use model::Vec2F64;
-use crate::my_strategy::common::Square;
+use crate::my_strategy::Square;
 
 #[derive(Default, Clone, Copy, Debug, PartialOrd)]
 pub struct Vec2 {
@@ -10,11 +10,11 @@ pub struct Vec2 {
 
 impl Vec2 {
     pub const fn new(x: f64, y: f64) -> Self {
-        Vec2 { x, y }
+        Self { x, y }
     }
 
     pub const fn from_model(value: &Vec2F64) -> Self {
-        Vec2 { x: value.x, y: value.y }
+        Self { x: value.x, y: value.y }
     }
 
     pub const fn as_model(&self) -> Vec2F64 {
@@ -33,12 +33,8 @@ impl Vec2 {
         (self.x.square() + self.y.square()).sqrt()
     }
 
-    pub fn normalized(&self) -> Vec2 {
-        *self / self.norm()
-    }
-
-    pub fn det(&self, other: Vec2) -> f64 {
-        self.x * other.y - self.y * other.x
+    pub fn distance(&self, other: Self) -> f64 {
+        (other - *self).norm()
     }
 }
 

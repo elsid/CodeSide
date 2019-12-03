@@ -1,6 +1,8 @@
 use crate::Debug;
-use crate::my_strategy::config::Config;
-use crate::my_strategy::world::World;
+use crate::my_strategy::{
+    Config,
+    World,
+};
 
 pub struct MyStrategyImpl {
     config: Config,

@@ -7,9 +7,11 @@ use model::{
     Tile,
     Unit,
 };
-use crate::my_strategy::config::Config;
-use crate::my_strategy::level::get_tile_by_vec2;
-use crate::my_strategy::vec2::Vec2;
+use crate::my_strategy::{
+    Config,
+    Vec2,
+    get_tile_by_vec2,
+};
 
 #[derive(Debug, Clone)]
 pub struct World {

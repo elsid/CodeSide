@@ -7,11 +7,14 @@ use model::{
     Unit,
     UnitAction,
 };
-use crate::my_strategy::level::get_tile;
-use crate::my_strategy::random::{Rng, XorShiftRng};
-use crate::my_strategy::rect::Rect;
-use crate::my_strategy::vec2::Vec2;
-use crate::my_strategy::world::World;
+use crate::my_strategy::{
+    Rect,
+    Rng,
+    Vec2,
+    World,
+    XorShiftRng,
+    get_tile,
+};
 
 #[derive(Clone)]
 pub struct Simulator {

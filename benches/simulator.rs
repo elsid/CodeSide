@@ -33,5 +33,18 @@ fn simulator_tick_with_half_micro_ticks(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, simulator_tick, simulator_tick_with_half_micro_ticks);
+fn simulator_tick_with_single_micro_tick(c: &mut Criterion) {
+    c.bench_function("simulator_tick_with_single_micro_tick", |b| {
+        let world = example_world();
+        let mut simulator = Simulator::new(&world, world.me().id);
+        let time_interval = world.tick_time_interval();
+        let micro_ticks_per_tick = 1;
+        let mut rng = example_rng(7348172934612063328);
+        b.iter(move || {
+            simulator.tick(time_interval, micro_ticks_per_tick, &mut rng);
+        })
+    });
+}
+
+criterion_group!(benches, simulator_tick, simulator_tick_with_half_micro_ticks, simulator_tick_with_single_micro_tick);
 criterion_main!(benches);
