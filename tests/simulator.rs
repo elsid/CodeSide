@@ -238,6 +238,54 @@ fn test_simulator_unit_jump_from_wall_until_land() {
     );
 }
 
+#[test]
+fn test_simulator_unit_cancel_jump() {
+    let world = example_world();
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().jump = true;
+    for _ in 0..2 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(37.5, 1.331666666666674)
+    );
+    simulator.me_mut().action_mut().jump = false;
+    for _ in 2..4 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(37.5, 1.0)
+    );
+}
+
+#[test]
+fn test_simulator_unit_run_into_wall() {
+    let world = with_my_position(example_world(), Vec2::new(18.549999999, 1.000000001));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().velocity = 10.0;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(18.55, 1.0)
+    );
+}
+
 fn with_my_position(world: World, position: Vec2) -> World {
     let mut game = world.game().clone();
     let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();

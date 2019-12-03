@@ -31,11 +31,8 @@ impl Simulator {
     pub fn new(world: &World, me_id: i32) -> Self {
         let units: Vec<UnitExt> = world.units().iter()
             .map(|unit| {
-                let mut base = unit.clone();
-                base.on_ladder = is_on_ladder(&unit, &world);
-                base.on_ground = is_on_ground(&unit, &world);
                 UnitExt {
-                    base,
+                    base: unit.clone(),
                     action: UnitAction {
                         velocity: 0.0,
                         jump: false,
@@ -87,6 +84,10 @@ impl Simulator {
         self.current_tick
     }
 
+    pub fn properties(&self) -> &Properties {
+        &self.properties
+    }
+
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
@@ -119,7 +120,7 @@ impl Simulator {
             let right = unit.right() as usize;
             for y in min_y .. max_y {
                 for &(x, sign) in &[(left, -1.0), (right, 1.0)] {
-                    match get_tile(&self.level, left, y) {
+                    match get_tile(&self.level, x, y) {
                         Tile::Wall => {
                             collide_by_x(unit, x, y, sign);
                         },
@@ -143,7 +144,7 @@ impl Simulator {
                 let jump_time = shift_jump_max_time(unit, time_interval);
                 unit.shift_y(unit.base.jump_state.speed * jump_time);
                 if unit.base.jump_state.max_time == 0.0 {
-                    cancel_jump(unit, &self.properties);
+                    cancel_jump(unit);
                 }
             } else {
                 unit.shift_y(-self.properties.unit_fall_speed * time_interval);
@@ -187,7 +188,7 @@ impl Simulator {
                     Tile::Wall => {
                         collide_by_y(unit, x, top, 1.0);
                         unit.base.on_ground = true;
-                        cancel_jump(unit, &self.properties);
+                        cancel_jump(unit);
                     },
                     Tile::Ladder => {
                         unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, top);
@@ -219,52 +220,16 @@ impl UnitExt {
         self.is_me
     }
 
-    pub fn ignore(&self) -> bool {
-        self.ignore
+    pub fn base(&self) -> &Unit {
+        &self.base
     }
 
     pub fn position(&self) -> Vec2 {
         Vec2::from_model(&self.base.position)
     }
 
-    pub fn set_position(&mut self, value: Vec2) {
-        self.base.position = value.as_model();
-    }
-
-    pub fn size(&self) -> Vec2 {
-        Vec2::from_model(&self.base.size)
-    }
-
-    pub fn action(&self) -> &UnitAction {
-        &self.action
-    }
-
     pub fn action_mut(&mut self) -> &mut UnitAction {
         &mut self.action
-    }
-
-    pub fn walked_right(&self) -> bool {
-        self.base.walked_right
-    }
-
-    pub fn set_walked_right(&mut self, value: bool) {
-        self.base.walked_right = value
-    }
-
-    pub fn on_ladder(&self) -> bool {
-        self.base.on_ladder
-    }
-
-    pub fn set_on_ladder(&mut self, value: bool) {
-        self.base.on_ladder = value
-    }
-
-    pub fn on_ground(&self) -> bool {
-        self.base.on_ground
-    }
-
-    pub fn set_on_ground(&mut self, value: bool) {
-        self.base.on_ground = value
     }
 
     pub fn shift_x(&mut self, value: f64) {
@@ -299,10 +264,6 @@ impl UnitExt {
         self.base.size.y / 2.0
     }
 
-    pub fn set_x(&mut self, value: f64) {
-        self.base.position.x = value;
-    }
-
     pub fn center(&self) -> Vec2 {
         Vec2::new(self.base.position.x, self.base.position.y + self.half_height())
     }
@@ -318,15 +279,7 @@ impl UnitExt {
 
 #[derive(Clone, Debug)]
 pub struct BulletExt {
-    pub base: Bullet,
-}
-
-fn is_on_ladder(unit: &Unit, world: &World) -> bool {
-    world.tile_by_position(Vec2::from_model(&unit.position)) == Tile::Ladder
-}
-
-fn is_on_ground(unit: &Unit, world: &World) -> bool {
-    unit.on_ground
+    base: Bullet,
 }
 
 fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
@@ -336,7 +289,7 @@ fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
         && (y + 1) as f64 - center.y() >= 0.0
 }
 
-fn cancel_jump(unit: &mut UnitExt, properties: &Properties) {
+fn cancel_jump(unit: &mut UnitExt) {
     unit.base.jump_state.can_jump = false;
     unit.base.jump_state.speed = 0.0;
     unit.base.jump_state.max_time = 0.0;
