@@ -59,6 +59,10 @@ impl Vec2 {
     pub fn add_y(&mut self, value: f64) {
         self.y += value;
     }
+
+    pub fn normalized(&self) -> Self {
+        *self / self.norm()
+    }
 }
 
 impl Add for Vec2 {

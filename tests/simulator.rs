@@ -1,9 +1,11 @@
 use model::{
+    Bullet,
     JumpState,
     Properties,
     Unit,
     UnitAction,
     Vec2F64,
+    WeaponType,
 };
 use my_strategy::examples::{
     example_properties,
@@ -336,6 +338,38 @@ fn test_simulator_unit_fall_onto_unit() {
 }
 
 #[test]
+fn test_simulator_bullet_hit_unit() {
+    let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 10 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 95);
+    assert_eq!(simulator.bullets().len(), 1);
+}
+
+#[test]
+fn test_simulator_bullet_explode_unit() {
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 25 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 20);
+    assert_eq!(simulator.bullets().len(), 1);
+}
+
+#[test]
 fn test_collide_units_by_x_without_penetration() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
@@ -454,6 +488,22 @@ fn with_my_position(world: World, position: Vec2) -> World {
     let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
     game.units[me_index].position = position.as_model();
     World::new(world.config().clone(), game.units[me_index].clone(), game)
+}
+
+fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2) -> World {
+    let mut game = world.game().clone();
+    let params = &world.properties().weapon_params.get(&weapon_type).unwrap();
+    game.bullets.push(Bullet {
+        weapon_type: weapon_type,
+        unit_id: 2,
+        player_id: 1,
+        position: position.as_model(),
+        velocity: (direction.normalized() * params.bullet.speed).as_model(),
+        damage: params.bullet.damage,
+        size: params.bullet.size,
+        explosion_params: params.explosion.clone(),
+    });
+    World::new(world.config().clone(), world.me().clone(), game)
 }
 
 fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {

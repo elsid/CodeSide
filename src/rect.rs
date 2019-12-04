@@ -8,7 +8,7 @@ pub struct Rect {
 
 impl Rect {
     pub const fn new(center: Vec2, half: Vec2) -> Self {
-        Rect { center, half }
+        Self { center, half }
     }
 
     pub const fn center(&self) -> Vec2 {
@@ -19,10 +19,25 @@ impl Rect {
         self.half
     }
 
-    pub fn collide(&self, other: &Rect) -> Vec2 {
+    pub fn collide(&self, other: &Self) -> Vec2 {
         Vec2::new(
             (self.center.x() - other.center.x()).abs() - (self.half.x() + other.half.x()),
             (self.center.y() - other.center.y()).abs() - (self.half.y() + other.half.y())
         )
+    }
+
+    pub fn min(&self) -> Vec2 {
+        self.center - self.half
+    }
+
+    pub fn max(&self) -> Vec2 {
+        self.center + self.half
+    }
+
+    pub fn has_collision(&self, other: &Self) -> bool {
+        self.min().x() < other.max().x()
+            && self.max().x() > other.min().x()
+            && self.min().y() < other.max().y()
+            && self.max().y() > other.min().y()
     }
 }

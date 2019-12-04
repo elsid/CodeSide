@@ -217,7 +217,7 @@ pub fn example_opponent_1(properties: &Properties) -> Unit {
 
 pub fn example_bullet(properties: &Properties) -> Bullet {
     use model::WeaponType::AssaultRifle;
-    let params = properties.weapon_params.get(&AssaultRifle).unwrap().bullet.clone();
+    let params = &properties.weapon_params.get(&AssaultRifle).unwrap();
 
     Bullet {
         weapon_type: AssaultRifle,
@@ -228,12 +228,12 @@ pub fn example_bullet(properties: &Properties) -> Bullet {
             y: 5.93438708445076,
         },
         velocity: Vec2F64 {
-            x: params.speed,
+            x: params.bullet.speed,
             y: 0.0,
         },
-        damage: params.damage,
-        size: params.size,
-        explosion_params: None,
+        damage: params.bullet.damage,
+        size: params.bullet.size,
+        explosion_params: params.explosion.clone(),
     }
 }
 

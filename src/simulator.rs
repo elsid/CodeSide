@@ -1,5 +1,6 @@
 use model::{
     Bullet,
+    ExplosionParams,
     Level,
     Player,
     Properties,
@@ -43,11 +44,7 @@ impl Simulator {
             .collect();
         let me_index = units.iter().position(|v| v.is_me()).unwrap();
         let bullets: Vec<BulletExt> = world.bullets().iter()
-            .map(|bullet| {
-                BulletExt {
-                    base: bullet.clone(),
-                }
-            })
+            .map(|bullet| BulletExt::new(bullet.clone()))
             .collect();
         Simulator {
             players: world.players().clone(),
@@ -83,6 +80,10 @@ impl Simulator {
         &self.units
     }
 
+    pub fn bullets(&self) -> &Vec<BulletExt> {
+        &self.bullets
+    }
+
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
@@ -98,7 +99,7 @@ impl Simulator {
         rng.shuffle(&mut self.bullets[..]);
 
         for unit in self.units.iter_mut() {
-            if unit.ignore {
+            if unit.ignore() {
                 continue;
             }
             unit.base.on_ladder = false;
@@ -106,12 +107,12 @@ impl Simulator {
         }
 
         for i in 0 .. self.units.len() - 1 {
-            if self.units[i].ignore {
+            if self.units[i].ignore() {
                 continue;
             }
             let (left, right) = self.units.split_at_mut(i + 1);
             for j in 0 .. right.len() {
-                if right[j].ignore {
+                if right[j].ignore() {
                     continue;
                 }
                 collide_units_by_x(&mut left[i], &mut right[j]);
@@ -119,7 +120,7 @@ impl Simulator {
         }
 
         for unit in self.units.iter_mut() {
-            if unit.ignore {
+            if unit.ignore() {
                 continue;
             }
             let min_y = unit.bottom() as usize;
@@ -145,7 +146,7 @@ impl Simulator {
         }
 
         for unit in self.units.iter_mut() {
-            if unit.ignore {
+            if unit.ignore() {
                 continue;
             }
             if unit.base.jump_state.can_jump && (unit.action.jump || !unit.base.jump_state.can_cancel) {
@@ -161,7 +162,7 @@ impl Simulator {
         }
 
         for unit in self.units.iter_mut() {
-            if unit.ignore {
+            if unit.ignore() {
                 continue;
             }
             let min_x = unit.left() as usize;
@@ -212,17 +213,45 @@ impl Simulator {
         }
 
         for i in 0 .. self.units.len() - 1 {
-            if self.units[i].ignore {
+            if self.units[i].ignore() {
                 continue;
             }
             let (left, right) = self.units.split_at_mut(i + 1);
             for j in 0 .. right.len() {
-                if right[j].ignore {
+                if right[j].ignore() {
                     continue;
                 }
                 collide_units_by_y(&mut left[i], &mut right[j]);
             }
         }
+
+        for bullet in 0 .. self.bullets.len() {
+            if self.bullets[bullet].hit {
+                continue;
+            }
+            self.bullets[bullet].advance(time_interval);
+        }
+
+        for bullet in 0 .. self.bullets.len() {
+            if self.bullets[bullet].hit {
+                continue;
+            }
+            for unit in 0 .. self.units.len() {
+                if self.units[unit].ignore() {
+                    continue;
+                }
+                if let Some(explosion) = collide_unit_and_bullet(&mut self.bullets[bullet], &mut self.units[unit]) {
+                    for i in 0 .. self.units.len() {
+                        if self.units[i].ignore() {
+                            continue;
+                        }
+                        explode(&explosion, &mut self.units[i]);
+                    }
+                }
+            }
+        }
+
+        self.bullets = self.bullets.iter().filter(|v| !v.hit).map(|v| v.clone()).collect();
 
         self.current_micro_tick += 1;
     }
@@ -339,11 +368,69 @@ impl UnitExt {
     pub fn moved(&self) -> Vec2 {
         self.moved
     }
+
+    pub fn ignore(&self) -> bool {
+        self.ignore || self.base.health <= 0
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct BulletExt {
     base: Bullet,
+    hit: bool,
+}
+
+impl BulletExt {
+    pub fn new(base: Bullet) -> Self {
+        Self { base, hit: false }
+    }
+
+    pub fn half_size(&self) -> f64 {
+        self.base.size * 0.5
+    }
+
+    pub fn center(&self) -> Vec2 {
+        Vec2::new(self.base.position.x, self.base.position.y)
+    }
+
+    pub fn half(&self) -> Vec2 {
+        let half_size = self.half_size();
+        Vec2::new(half_size, half_size)
+    }
+
+    pub fn rect(&self) -> Rect {
+        Rect::new(self.center(), self.half())
+    }
+
+    pub fn explosion_params(&self) -> &Option<ExplosionParams> {
+        &self.base.explosion_params
+    }
+
+    pub fn advance(&mut self, time_interval: f64) {
+        self.base.position.x += self.base.velocity.x * time_interval;
+        self.base.position.y += self.base.velocity.y * time_interval;
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Explosion {
+    params: ExplosionParams,
+    position: Vec2,
+}
+
+impl Explosion {
+    pub fn half_size(&self) -> f64 {
+        self.params.radius * 0.5
+    }
+
+    pub fn half(&self) -> Vec2 {
+        let half_size = self.half_size();
+        Vec2::new(half_size, half_size)
+    }
+
+    pub fn rect(&self) -> Rect {
+        Rect::new(self.position, self.half())
+    }
 }
 
 fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
@@ -403,38 +490,57 @@ fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
 
 pub fn collide_units_by_x(a: &mut UnitExt, b: &mut UnitExt) {
     let penetration = a.rect().collide(&b.rect());
-    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-        let sum = a.moved().x().abs() + b.moved().x().abs();
-        let (a_weight, b_weight) = if sum == 0.0 {
-            if a.position().x() < b.position().x() {
-                (0.5, -0.5)
-            } else {
-                (-0.5, 0.5)
-            }
-        } else {
-            (a.moved().x() / sum, b.moved().x() / sum)
-        };
-        a.shift_by_x(penetration.x() * a_weight);
-        b.shift_by_x(penetration.x() * b_weight);
+    if penetration.x() >= -std::f64::EPSILON || penetration.y() >= -std::f64::EPSILON {
+        return;
     }
+    let sum = a.moved().x().abs() + b.moved().x().abs();
+    let (a_weight, b_weight) = if sum == 0.0 {
+        if a.position().x() < b.position().x() {
+            (0.5, -0.5)
+        } else {
+            (-0.5, 0.5)
+        }
+    } else {
+        (a.moved().x() / sum, b.moved().x() / sum)
+    };
+    a.shift_by_x(penetration.x() * a_weight);
+    b.shift_by_x(penetration.x() * b_weight);
 }
 
 fn collide_units_by_y(a: &mut UnitExt, b: &mut UnitExt) {
     let penetration = a.rect().collide(&b.rect());
-    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-        let sum = a.moved().y().abs() + b.moved().y().abs();
-        let (a_weight, b_weight) = if sum == 0.0 {
-            if a.position().y() < b.position().y() {
-                (0.5, -0.5)
-            } else {
-                (-0.5, 0.5)
-            }
-        } else {
-            (a.moved().y() / sum, b.moved().y() / sum)
-        };
-        a.shift_by_y(penetration.y() * a_weight);
-        b.shift_by_y(penetration.y() * b_weight);
+    if penetration.x() >= -std::f64::EPSILON || penetration.y() >= -std::f64::EPSILON {
+        return;
     }
+    let sum = a.moved().y().abs() + b.moved().y().abs();
+    let (a_weight, b_weight) = if sum == 0.0 {
+        if a.position().y() < b.position().y() {
+            (0.5, -0.5)
+        } else {
+            (-0.5, 0.5)
+        }
+    } else {
+        (a.moved().y() / sum, b.moved().y() / sum)
+    };
+    a.shift_by_y(penetration.y() * a_weight);
+    b.shift_by_y(penetration.y() * b_weight);
+}
+
+fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option<Explosion> {
+    if !bullet.rect().has_collision(&unit.rect()) {
+        return None;
+    }
+    bullet.hit = true;
+    unit.base.health -= bullet.base.damage;
+    bullet.explosion_params().as_ref()
+        .map(|v| Explosion {params: v.clone(), position: bullet.center()})
+}
+
+fn explode(explosion: &Explosion, unit: &mut UnitExt) {
+    if !explosion.rect().has_collision(&unit.rect()) {
+        return;
+    }
+    unit.base.health -= explosion.params.damage;
 }
 
 fn make_tile_rect(x: usize, y: usize) -> Rect {
