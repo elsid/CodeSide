@@ -46,6 +46,7 @@ impl MyStrategyImpl {
             jump_down: false,
             aim: model::Vec2F64 { x: 0.0, y: 0.0 },
             shoot: false,
+            reload: false,
             swap_weapon: false,
             plant_mine: false,
         }

@@ -52,6 +52,7 @@ impl MyStrategyImpl {
                 y: 0.0
             },
             shoot: false,
+            reload: false,
             swap_weapon: false,
             plant_mine: false,
         }

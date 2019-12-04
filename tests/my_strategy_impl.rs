@@ -22,6 +22,7 @@ fn test_first_action() {
             y: 0.0
         },
         shoot: true,
+        reload: false,
         swap_weapon: false,
         plant_mine: false,
     }));
