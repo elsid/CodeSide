@@ -16,6 +16,10 @@ impl Vec2 {
         Self { x, y }
     }
 
+    pub const fn zero() -> Self {
+        Self { x: 0.0, y: 0.0 }
+    }
+
     pub const fn from_model(value: &Vec2F64) -> Self {
         Self { x: value.x, y: value.y }
     }
@@ -42,6 +46,18 @@ impl Vec2 {
 
     pub fn distance(&self, other: Self) -> f64 {
         (other - *self).norm()
+    }
+
+    pub fn set_x(&mut self, value: f64) {
+        self.x = value;
+    }
+
+    pub fn set_y(&mut self, value: f64) {
+        self.y = value;
+    }
+
+    pub fn add_y(&mut self, value: f64) {
+        self.y += value;
     }
 }
 

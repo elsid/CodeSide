@@ -6,6 +6,7 @@ use model::{
     Tile,
     Unit,
     UnitAction,
+    Vec2F64,
 };
 use crate::my_strategy::{
     Rect,
@@ -35,25 +36,9 @@ impl Simulator {
         let player_id = world.get_unit(me_id).player_id;
         let units: Vec<UnitExt> = world.units().iter()
             .map(|unit| {
-                UnitExt {
-                    base: unit.clone(),
-                    action: UnitAction {
-                        velocity: 0.0,
-                        jump: false,
-                        jump_down: false,
-                        aim: model::Vec2F64 {
-                            x: 0.0,
-                            y: 0.0,
-                        },
-                        shoot: false,
-                        reload: false,
-                        swap_weapon: false,
-                        plant_mine: false,
-                    },
-                    is_me: unit.id == me_id,
-                    is_teammate: unit.player_id == player_id,
-                    ignore: false,
-                }
+                let is_me = unit.id == me_id;
+                let is_teammate = unit.player_id == player_id;
+                UnitExt::new(unit.clone(), is_me, is_teammate)
             })
             .collect();
         let me_index = units.iter().position(|v| v.is_me()).unwrap();
@@ -117,7 +102,20 @@ impl Simulator {
                 continue;
             }
             unit.base.on_ladder = false;
-            unit.shift_x(unit.action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval);
+            unit.move_by_x(unit.action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval);
+        }
+
+        for i in 0 .. self.units.len() - 1 {
+            if self.units[i].ignore {
+                continue;
+            }
+            let (left, right) = self.units.split_at_mut(i + 1);
+            for j in 0 .. right.len() {
+                if right[j].ignore {
+                    continue;
+                }
+                collide_units_by_x(&mut left[i], &mut right[j]);
+            }
         }
 
         for unit in self.units.iter_mut() {
@@ -152,12 +150,12 @@ impl Simulator {
             }
             if unit.base.jump_state.can_jump && (unit.action.jump || !unit.base.jump_state.can_cancel) {
                 let jump_time = shift_jump_max_time(unit, time_interval);
-                unit.shift_y(unit.base.jump_state.speed * jump_time);
+                unit.move_by_y(unit.base.jump_state.speed * jump_time);
                 if unit.base.jump_state.max_time == 0.0 {
                     cancel_jump(unit);
                 }
             } else {
-                unit.shift_y(-self.properties.unit_fall_speed * time_interval);
+                unit.move_by_y(-self.properties.unit_fall_speed * time_interval);
             }
             unit.base.on_ground = false;
         }
@@ -213,6 +211,19 @@ impl Simulator {
             }
         }
 
+        for i in 0 .. self.units.len() - 1 {
+            if self.units[i].ignore {
+                continue;
+            }
+            let (left, right) = self.units.split_at_mut(i + 1);
+            for j in 0 .. right.len() {
+                if right[j].ignore {
+                    continue;
+                }
+                collide_units_by_y(&mut left[i], &mut right[j]);
+            }
+        }
+
         self.current_micro_tick += 1;
     }
 }
@@ -224,9 +235,33 @@ pub struct UnitExt {
     is_me: bool,
     is_teammate: bool,
     ignore: bool,
+    moved: Vec2,
 }
 
 impl UnitExt {
+    pub fn new(base: Unit, is_me: bool, is_teammate: bool) -> Self {
+        Self {
+            base,
+            action: UnitAction {
+                velocity: 0.0,
+                jump: false,
+                jump_down: false,
+                aim: Vec2F64 {
+                    x: 0.0,
+                    y: 0.0,
+                },
+                shoot: false,
+                reload: false,
+                swap_weapon: false,
+                plant_mine: false,
+            },
+            is_me,
+            is_teammate,
+            ignore: false,
+            moved: Vec2::zero(),
+        }
+    }
+
     pub fn is_me(&self) -> bool {
         self.is_me
     }
@@ -239,11 +274,11 @@ impl UnitExt {
         &mut self.action
     }
 
-    pub fn shift_x(&mut self, value: f64) {
+    pub fn shift_by_x(&mut self, value: f64) {
         self.base.position.x += value;
     }
 
-    pub fn shift_y(&mut self, value: f64) {
+    pub fn shift_by_y(&mut self, value: f64) {
         self.base.position.y += value;
     }
 
@@ -264,11 +299,11 @@ impl UnitExt {
     }
 
     pub fn half_width(&self) -> f64 {
-        self.base.size.x / 2.0
+        self.base.size.x * 0.5
     }
 
     pub fn half_height(&self) -> f64 {
-        self.base.size.y / 2.0
+        self.base.size.y * 0.5
     }
 
     pub fn center(&self) -> Vec2 {
@@ -289,6 +324,20 @@ impl UnitExt {
 
     pub fn is_teammate(&self) -> bool {
         self.is_teammate
+    }
+
+    pub fn move_by_x(&mut self, value: f64) {
+        self.shift_by_x(value);
+        self.moved.set_x(value);
+    }
+
+    pub fn move_by_y(&mut self, value: f64) {
+        self.shift_by_y(value);
+        self.moved.set_y(value);
+    }
+
+    pub fn moved(&self) -> Vec2 {
+        self.moved
     }
 }
 
@@ -339,14 +388,52 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
 fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
     if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-        unit.shift_x(sign * penetration.x());
+        unit.shift_by_x(sign * penetration.x());
     }
 }
 
 fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
     if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-        unit.shift_y(sign * penetration.y());
+        let dy = sign * penetration.y();
+        unit.shift_by_y(dy);
+        unit.moved.add_y(dy);
+    }
+}
+
+pub fn collide_units_by_x(a: &mut UnitExt, b: &mut UnitExt) {
+    let penetration = a.rect().collide(&b.rect());
+    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
+        let sum = a.moved().x().abs() + b.moved().x().abs();
+        let (a_weight, b_weight) = if sum == 0.0 {
+            if a.position().x() < b.position().x() {
+                (0.5, -0.5)
+            } else {
+                (-0.5, 0.5)
+            }
+        } else {
+            (a.moved().x() / sum, b.moved().x() / sum)
+        };
+        a.shift_by_x(penetration.x() * a_weight);
+        b.shift_by_x(penetration.x() * b_weight);
+    }
+}
+
+fn collide_units_by_y(a: &mut UnitExt, b: &mut UnitExt) {
+    let penetration = a.rect().collide(&b.rect());
+    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
+        let sum = a.moved().y().abs() + b.moved().y().abs();
+        let (a_weight, b_weight) = if sum == 0.0 {
+            if a.position().y() < b.position().y() {
+                (0.5, -0.5)
+            } else {
+                (-0.5, 0.5)
+            }
+        } else {
+            (a.moved().y() / sum, b.moved().y() / sum)
+        };
+        a.shift_by_y(penetration.y() * a_weight);
+        b.shift_by_y(penetration.y() * b_weight);
     }
 }
 
