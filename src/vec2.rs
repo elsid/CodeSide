@@ -1,5 +1,8 @@
 use std::ops::{Add, Sub, Mul, Div, Neg};
-use model::Vec2F64;
+use model::{
+    Vec2F32,
+    Vec2F64,
+};
 use crate::my_strategy::Square;
 
 #[derive(Default, Clone, Copy, Debug, PartialOrd)]
@@ -19,6 +22,10 @@ impl Vec2 {
 
     pub const fn as_model(&self) -> Vec2F64 {
         Vec2F64 { x: self.x, y: self.y }
+    }
+
+    pub const fn as_model_f32(&self) -> Vec2F32 {
+        Vec2F32 { x: self.x as f32, y: self.y as f32 }
     }
 
     pub const fn x(&self) -> f64 {

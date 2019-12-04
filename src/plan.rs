@@ -1,8 +1,11 @@
 use model::{
+    ColorF32,
+    CustomData,
     Properties,
     UnitAction,
     Vec2F64,
 };
+use crate::Debug;
 use crate::my_strategy::{
     Config,
     IdGenerator,
@@ -35,8 +38,8 @@ impl<'c> Planner<'c> {
         Self { target, config, simulator }
     }
 
-    pub fn make(&self, rng: &mut XorShiftRng) -> Plan {
-        let mut visitor = VisitorImpl::new(rng);
+    pub fn make(&self, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
+        let mut visitor = VisitorImpl::new(rng, debug);
 
         let initial_state = visitor.make_initial_state(self.clone());
 
@@ -70,15 +73,17 @@ impl<'c> Planner<'c> {
     }
 }
 
-pub struct VisitorImpl<'r> {
+pub struct VisitorImpl<'r, 'd> {
     rng: &'r mut XorShiftRng,
+    debug: &'r mut Debug<'d>,
     state_id_generator: IdGenerator,
 }
 
-impl<'r> VisitorImpl<'r> {
-    pub fn new(rng: &'r mut XorShiftRng) -> Self {
+impl<'r, 'd> VisitorImpl<'r, 'd> {
+    pub fn new(rng: &'r mut XorShiftRng, debug: &'r mut Debug<'d>) -> Self {
         VisitorImpl {
             rng,
+            debug,
             state_id_generator: IdGenerator::new(),
         }
     }
@@ -88,7 +93,7 @@ impl<'r> VisitorImpl<'r> {
     }
 }
 
-impl<'r, 'c> Visitor<State<'c>, Transition> for VisitorImpl<'r> {
+impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
     fn is_final(&self, state: &State) -> bool {
         true
     }
@@ -152,6 +157,15 @@ impl<'r, 'c> Visitor<State<'c>, Transition> for VisitorImpl<'r> {
         next.id = self.state_id_generator.next();
         *next.planner.simulator.me_mut().action_mut() = transition.action.clone();
         next.planner.simulator.tick(time_interval, 3, self.rng);
+
+        #[cfg(feature = "enable_debug")]
+        self.debug.draw(CustomData::Line {
+            p1: state.me().position().as_model_f32(),
+            p2: next.me().position().as_model_f32(),
+            width: 0.1,
+            color: ColorF32 { r: 0.25, g: 0.25, b: 0.75, a: 0.25 },
+        });
+
         next
     }
 

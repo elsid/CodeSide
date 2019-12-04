@@ -15,6 +15,7 @@ debug = true
 dump_examples = []
 dump_opponent = []
 go_to_target = []
+enable_debug = []
 
 [[bench]]
 name = "simulator"
