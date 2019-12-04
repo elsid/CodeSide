@@ -7,6 +7,7 @@ use model::{
 };
 use crate::Debug;
 use crate::my_strategy::{
+    Clamp1,
     Config,
     IdGenerator,
     Identifiable,
@@ -17,7 +18,9 @@ use crate::my_strategy::{
     UnitExt,
     Vec2,
     Visitor,
+    WeightedIndex,
     XorShiftRng,
+    as_score,
 };
 
 pub struct Plan {
@@ -57,7 +60,25 @@ impl<'c> Planner<'c> {
     }
 
     pub fn get_score(&self) -> i32 {
-        -(self.simulator.me().position().distance(self.target) * 1000.0) as i32
+        let distance = self.simulator.me().position().distance(self.target);
+
+        let teammates_health = self.simulator.units().iter()
+            .filter(|v| v.is_teammate())
+            .map(|v| v.health())
+            .sum::<i32>();
+
+        let opponnents_health = self.simulator.units().iter()
+            .filter(|v| !v.is_teammate())
+            .map(|v| v.health())
+            .sum::<i32>();
+
+        let health_diff = (teammates_health - opponnents_health) as f64
+            / (self.simulator.units().len() as i32 * self.simulator.properties().unit_max_health) as f64;
+
+        as_score(
+            distance * self.config.distance_score_weight
+            + health_diff * self.config.health_diff_score_weight
+        )
     }
 
     pub fn properties(&self) -> &Properties {
@@ -101,7 +122,7 @@ impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
     fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
         let mut result = Vec::new();
 
-        match state.transition {
+        match state.allowed_transitions.current() {
             TransitionKind::None => {
                 result.push(Transition::left(state.properties()));
                 result.push(Transition::right(state.properties()));
@@ -157,9 +178,12 @@ impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
         next.id = self.state_id_generator.next();
         next.depth += 1;
         *next.planner.simulator.me_mut().action_mut() = transition.action.clone();
-        for _ in 0..next.depth.max(10) {
-            next.planner.simulator.tick(time_interval, 3, self.rng);
+        let min = state.planner.config.min_ticks_per_transition;
+        let max = state.planner.config.max_ticks_per_transition;
+        for _ in 0..next.depth.clamp1(min, max) {
+            next.planner.simulator.tick(time_interval, state.planner.config.microticks_per_tick, self.rng);
         }
+        next.allowed_transitions.next(transition.kind, &mut self.rng);
 
         #[cfg(feature = "enable_debug")]
         self.debug.draw(CustomData::Line {
@@ -173,7 +197,8 @@ impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
     }
 
     fn get_transition_cost(&mut self, source_state: &State, destination_state: &State, transition: &Transition) -> i32 {
-        1
+        // source_state.get_score() - destination_state.get_score()
+        0
     }
 
     fn get_score(&self, state: &State) -> i32 {
@@ -188,11 +213,19 @@ pub struct State<'c> {
     planner: Planner<'c>,
     transition: TransitionKind,
     depth: usize,
+    allowed_transitions: TransitionsAutotomaton,
 }
 
 impl<'c> State<'c> {
     pub fn initial(id: i32, planner: Planner<'c>) -> Self {
-        Self { id, score: 0, planner, transition: TransitionKind::None, depth: 0 }
+        Self {
+            id,
+            score: 0,
+            planner,
+            transition: TransitionKind::None,
+            depth: 0,
+            allowed_transitions: TransitionsAutotomaton::new(),
+        }
     }
 
     pub fn planner(&self) -> &Planner<'c> {
@@ -359,12 +392,61 @@ impl PartialEq for Transition {
 impl Eq for Transition {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(usize)]
 pub enum TransitionKind {
-    None,
-    Left,
-    Right,
-    Jump,
-    JumpLeft,
-    JumpRight,
-    JumpDown,
+    None = 0,
+    Left = 1,
+    Right = 2,
+    Jump = 3,
+    JumpLeft = 4,
+    JumpRight = 5,
+    JumpDown = 6,
+}
+
+impl std::convert::TryFrom<usize> for TransitionKind {
+    type Error = &'static str;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Ok(match value {
+            1 => TransitionKind::Left,
+            2 => TransitionKind::Right,
+            3 => TransitionKind::Jump,
+            4 => TransitionKind::JumpLeft,
+            5 => TransitionKind::JumpRight,
+            6 => TransitionKind::JumpDown,
+            _ => TransitionKind::None,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+struct TransitionsAutotomaton {
+    state: TransitionKind,
+    arcs: Vec<WeightedIndex>,
+}
+
+impl TransitionsAutotomaton {
+    pub fn new() -> Self {
+        Self {
+            state: TransitionKind::None,
+            arcs: vec![
+                WeightedIndex::new(vec![1, 0, 0, 0, 0, 0, 0]), // None
+                WeightedIndex::new(vec![0, 3, 0, 1, 1, 0, 1]), // Left
+                WeightedIndex::new(vec![0, 0, 3, 1, 0, 1, 1]), // Right
+                WeightedIndex::new(vec![0, 1, 1, 3, 1, 1, 0]), // Jump
+                WeightedIndex::new(vec![0, 1, 0, 1, 3, 0, 0]), // JumpLeft
+                WeightedIndex::new(vec![0, 0, 1, 1, 0, 3, 0]), // JumpRight
+                WeightedIndex::new(vec![0, 1, 1, 0, 0, 0, 3]), // JumpDown
+            ],
+        }
+    }
+
+    pub fn next(&mut self, transition: TransitionKind, rng: &mut XorShiftRng) {
+        use std::convert::TryFrom;
+        self.state = TransitionKind::try_from(self.arcs[transition as usize].sample(rng)).unwrap();
+    }
+
+    pub fn current(&self) -> TransitionKind {
+        self.state
+    }
 }

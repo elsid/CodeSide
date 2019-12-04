@@ -32,6 +32,7 @@ pub struct Simulator {
 
 impl Simulator {
     pub fn new(world: &World, me_id: i32) -> Self {
+        let player_id = world.get_unit(me_id).player_id;
         let units: Vec<UnitExt> = world.units().iter()
             .map(|unit| {
                 UnitExt {
@@ -50,6 +51,7 @@ impl Simulator {
                         plant_mine: false,
                     },
                     is_me: unit.id == me_id,
+                    is_teammate: unit.player_id == player_id,
                     ignore: false,
                 }
             })
@@ -90,6 +92,10 @@ impl Simulator {
 
     pub fn properties(&self) -> &Properties {
         &self.properties
+    }
+
+    pub fn units(&self) -> &Vec<UnitExt> {
+        &self.units
     }
 
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
@@ -216,16 +222,13 @@ pub struct UnitExt {
     base: Unit,
     action: UnitAction,
     is_me: bool,
+    is_teammate: bool,
     ignore: bool,
 }
 
 impl UnitExt {
     pub fn is_me(&self) -> bool {
         self.is_me
-    }
-
-    pub fn base(&self) -> &Unit {
-        &self.base
     }
 
     pub fn position(&self) -> Vec2 {
@@ -278,6 +281,14 @@ impl UnitExt {
 
     pub fn rect(&self) -> Rect {
         Rect::new(self.center(), self.half())
+    }
+
+    pub fn health(&self) -> i32 {
+        self.base.health
+    }
+
+    pub fn is_teammate(&self) -> bool {
+        self.is_teammate
     }
 }
 

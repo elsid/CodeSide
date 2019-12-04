@@ -82,4 +82,10 @@ impl World {
     pub fn tile_by_position(&self, position: Vec2) -> Tile {
         get_tile_by_vec2(&self.game.level, position)
     }
+
+    pub fn get_unit(&self, id: i32) -> &Unit {
+        self.game.units.iter()
+            .find(|v| v.id == id)
+            .unwrap()
+    }
 }

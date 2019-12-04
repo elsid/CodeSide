@@ -571,3 +571,22 @@ impl<T:Rand> Rand for Option<T> {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct WeightedIndex {
+    accumulated: Vec<usize>,
+}
+
+impl WeightedIndex {
+    pub fn new(mut weights: Vec<usize>) -> Self {
+        for i in 1..weights.len() {
+            weights[i] += weights[i - 1];
+        }
+        Self { accumulated: weights }
+    }
+
+    pub fn sample<R: Rng>(&self, rng: &mut R) -> usize {
+        let point = rng.gen_range(0, *self.accumulated.last().unwrap());
+        self.accumulated.iter().position(|&v| v <= point).unwrap_or(self.accumulated.len() - 1)
+    }
+}

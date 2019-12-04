@@ -21,6 +21,7 @@ pub trait Clamp1: PartialOrd + Sized {
 }
 
 impl Clamp1 for f64 {}
+impl Clamp1 for usize {}
 
 pub struct IdGenerator {
     next: i32,
@@ -36,4 +37,8 @@ impl IdGenerator {
         self.next += 1;
         result
     }
+}
+
+pub fn as_score(value: f64) -> i32 {
+    (value * 1000.0).round() as i32
 }
