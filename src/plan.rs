@@ -155,8 +155,11 @@ impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
         let mut next = state.clone();
         let time_interval = 1.0 / state.properties().ticks_per_second as f64;
         next.id = self.state_id_generator.next();
+        next.depth += 1;
         *next.planner.simulator.me_mut().action_mut() = transition.action.clone();
-        next.planner.simulator.tick(time_interval, 3, self.rng);
+        for _ in 0..next.depth.max(10) {
+            next.planner.simulator.tick(time_interval, 3, self.rng);
+        }
 
         #[cfg(feature = "enable_debug")]
         self.debug.draw(CustomData::Line {
@@ -184,11 +187,12 @@ pub struct State<'c> {
     score: i32,
     planner: Planner<'c>,
     transition: TransitionKind,
+    depth: usize,
 }
 
 impl<'c> State<'c> {
     pub fn initial(id: i32, planner: Planner<'c>) -> Self {
-        Self { id, score: 0, planner, transition: TransitionKind::None }
+        Self { id, score: 0, planner, transition: TransitionKind::None, depth: 0 }
     }
 
     pub fn planner(&self) -> &Planner<'c> {
