@@ -1,8 +1,10 @@
 use model::UnitAction;
 use my_strategy::Debug;
 use my_strategy::examples::example_world;
-use my_strategy::my_strategy::my_strategy_impl::MyStrategyImpl;
-use my_strategy::my_strategy::unit_action::UnitActionWrapper;
+use my_strategy::my_strategy::{
+    MyStrategyImpl,
+    UnitActionWrapper,
+};
 use std::io::BufWriter;
 
 #[test]

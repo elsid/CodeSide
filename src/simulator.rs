@@ -1,13 +1,17 @@
 use model::{
     Bullet,
     ExplosionParams,
+    Item,
     Level,
+    LootBox,
     Player,
     Properties,
     Tile,
     Unit,
     UnitAction,
     Vec2F64,
+    Weapon,
+    WeaponType,
 };
 use crate::my_strategy::{
     Rect,
@@ -23,6 +27,7 @@ pub struct Simulator {
     players: Vec<Player>,
     units: Vec<UnitExt>,
     bullets: Vec<BulletExt>,
+    loot_boxes: Vec<LootBoxExt>,
     properties: Properties,
     level: Level,
     borders: Vec2,
@@ -46,10 +51,14 @@ impl Simulator {
         let bullets: Vec<BulletExt> = world.bullets().iter()
             .map(|bullet| BulletExt::new(bullet.clone()))
             .collect();
+        let loot_boxes: Vec<LootBoxExt> = world.loot_boxes().iter()
+            .map(|v| LootBoxExt::new(v.clone()))
+            .collect();
         Simulator {
             players: world.players().clone(),
             units,
             bullets,
+            loot_boxes,
             properties: world.properties().clone(),
             level: world.level().clone(),
             borders: world.size(),
@@ -82,6 +91,10 @@ impl Simulator {
 
     pub fn bullets(&self) -> &Vec<BulletExt> {
         &self.bullets
+    }
+
+    pub fn loot_boxes(&self) -> &Vec<LootBoxExt> {
+        &self.loot_boxes
     }
 
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
@@ -230,16 +243,24 @@ impl Simulator {
                 continue;
             }
             self.bullets[bullet].advance(time_interval);
-        }
-
-        for bullet in 0 .. self.bullets.len() {
-            if self.bullets[bullet].hit {
-                continue;
-            }
             if self.collide_bullet_and_units(bullet) {
                 continue;
             }
             self.collide_bulles_and_tiles(bullet);
+        }
+
+        for loot_box in 0 .. self.loot_boxes.len() {
+            if self.loot_boxes[loot_box].used {
+                continue;
+            }
+            for unit in 0 .. self.units.len() {
+                if self.units[unit].ignore() {
+                    continue;
+                }
+                if pickup(&self.properties, &mut self.loot_boxes[loot_box], &mut self.units[unit]) {
+                    break;
+                }
+            }
         }
 
         self.bullets = self.bullets.iter().filter(|v| !v.hit).map(|v| v.clone()).collect();
@@ -411,6 +432,22 @@ impl UnitExt {
     pub fn ignore(&self) -> bool {
         self.ignore || self.base.health <= 0
     }
+
+    pub fn weapon(&self) -> &Option<Weapon> {
+        &self.base.weapon
+    }
+
+    pub fn damage(&mut self, value: i32) {
+        self.base.health -= value;
+    }
+
+    pub fn heal(&mut self, value: i32, properties: &Properties) {
+        self.base.health = (self.base.health + value).min(properties.unit_max_health);
+    }
+
+    pub fn mines(&self) -> i32 {
+        self.base.mines
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -474,17 +511,24 @@ pub struct Explosion {
 }
 
 impl Explosion {
-    pub fn half_size(&self) -> f64 {
-        self.params.radius * 0.5
+    pub fn rect(&self) -> Rect {
+        Rect::new(self.position, Vec2::new(self.params.radius, self.params.radius))
     }
+}
 
-    pub fn half(&self) -> Vec2 {
-        let half_size = self.half_size();
-        Vec2::new(half_size, half_size)
+#[derive(Clone, Debug)]
+pub struct LootBoxExt {
+    base: LootBox,
+    used: bool,
+}
+
+impl LootBoxExt {
+    pub fn new(base: LootBox) -> Self {
+        Self { base, used: false }
     }
 
     pub fn rect(&self) -> Rect {
-        Rect::new(self.position, self.half())
+        Rect::new(Vec2::from_model(&self.base.position), Vec2::from_model(&self.base.size))
     }
 }
 
@@ -605,7 +649,7 @@ fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option
         return None;
     }
     bullet.hit = true;
-    unit.base.health -= bullet.base.damage;
+    unit.damage(bullet.base.damage);
     bullet.explosion_params().as_ref()
         .map(|v| Explosion {params: v.clone(), position: bullet.center()})
 }
@@ -614,7 +658,7 @@ fn explode(explosion: &Explosion, unit: &mut UnitExt) {
     if !explosion.rect().has_collision(&unit.rect()) {
         return;
     }
-    unit.base.health -= explosion.params.damage;
+    unit.damage(explosion.params.damage);
 }
 
 fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<Explosion> {
@@ -626,6 +670,51 @@ fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<E
         .map(|v| Explosion {params: v.clone(), position: bullet.center()})
 }
 
+fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt) -> bool {
+    if !loot_box.rect().has_collision(&unit.rect()) {
+        return false;
+    }
+    match &loot_box.base.item {
+        Item::HealthPack {health} => {
+            if unit.health() >= properties.unit_max_health {
+                false
+            } else {
+                unit.heal(*health, properties);
+                loot_box.used = true;
+                true
+            }
+        },
+        Item::Weapon {weapon_type} => {
+            if unit.action.swap_weapon || unit.weapon().is_none() {
+                unit.base.weapon = Some(make_weapon(weapon_type.clone(), properties));
+                loot_box.used = true;
+                true
+            } else {
+                false
+            }
+        },
+        Item::Mine {} => {
+            unit.base.mines += 1;
+            loot_box.used = true;
+            true
+        },
+    }
+}
+
 fn make_tile_rect(x: usize, y: usize) -> Rect {
     Rect::new(Vec2::new(x as f64 + 0.5, y as f64 + 0.5), Vec2::new(0.5, 0.5))
+}
+
+fn make_weapon(weapon_type: WeaponType, properties: &Properties) -> Weapon {
+    let params = &properties.weapon_params[&weapon_type];
+    Weapon {
+        params: params.clone(),
+        typ: weapon_type,
+        magazine: params.magazine_size,
+        was_shooting: false,
+        spread: 0.0,
+        fire_timer: None,
+        last_angle: None,
+        last_fire_tick: None,
+    }
 }

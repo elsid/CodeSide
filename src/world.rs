@@ -2,6 +2,7 @@ use model::{
     Bullet,
     Game,
     Level,
+    LootBox,
     Player,
     Properties,
     Tile,
@@ -65,6 +66,10 @@ impl World {
 
     pub fn players(&self) -> &Vec<Player> {
         &self.game.players
+    }
+
+    pub fn loot_boxes(&self) -> &Vec<LootBox> {
+        &self.game.loot_boxes
     }
 
     pub fn level(&self) -> &Level {

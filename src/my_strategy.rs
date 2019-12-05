@@ -22,6 +22,18 @@ pub mod level;
 #[allow(unused_imports)]
 pub use level::*;
 
+#[path = "weapon_params.rs"]
+pub mod weapon_params;
+
+#[allow(unused_imports)]
+pub use weapon_params::*;
+
+#[path = "weapon.rs"]
+pub mod weapon;
+
+#[allow(unused_imports)]
+pub use weapon::*;
+
 #[path = "common.rs"]
 pub mod common;
 
@@ -89,18 +101,18 @@ pub mod my_strategy_go_to_target;
 pub mod my_strategy_impl;
 
 #[cfg(feature = "dump_examples")]
-use self::my_strategy_dump_examples::MyStrategyImpl;
+pub use self::my_strategy_dump_examples::MyStrategyImpl;
 
 #[cfg(feature = "dump_opponent")]
-use self::my_strategy_dump_opponent::MyStrategyImpl;
+pub use self::my_strategy_dump_opponent::MyStrategyImpl;
 
 #[cfg(feature = "go_to_target")]
-use self::my_strategy_go_to_target::MyStrategyImpl;
+pub use self::my_strategy_go_to_target::MyStrategyImpl;
 
 #[cfg(all(not(feature = "dump_examples"),
           not(feature = "dump_opponent"),
           not(feature = "go_to_target")))]
-use self::my_strategy_impl::MyStrategyImpl;
+pub use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
     strategy_impl: Option<MyStrategyImpl>,

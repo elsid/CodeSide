@@ -5,9 +5,9 @@ use crate::my_strategy::Vec2F64Wrapper;
 pub struct UnitActionWrapper<'a>(pub &'a UnitAction);
 
 impl<'a> PartialEq for UnitActionWrapper<'a> {
-    fn eq(&self, other: &UnitActionWrapper) -> bool {
-        let UnitActionWrapper(lhs) = self;
-        let UnitActionWrapper(rhs) = other;
+    fn eq(&self, other: &Self) -> bool {
+        let Self(lhs) = self;
+        let Self(rhs) = other;
         (
             lhs.velocity,
             lhs.jump,

@@ -1,10 +1,11 @@
 use model::{
     Bullet,
+    Item,
     JumpState,
     Properties,
     Unit,
-    UnitAction,
-    Vec2F64,
+    LootBox,
+    Weapon,
     WeaponType,
 };
 use my_strategy::examples::{
@@ -17,6 +18,7 @@ use my_strategy::my_strategy::{
     Simulator,
     UnitExt,
     Vec2,
+    WeaponWrapper,
     World,
     collide_units_by_x,
     get_shift_factors,
@@ -404,6 +406,71 @@ fn test_simulator_bullet_explode_on_hit_wall() {
 }
 
 #[test]
+fn test_simulator_unit_pickup_weapon() {
+    let world = with_loot_box(example_world(), Item::Weapon {weapon_type: WeaponType::RocketLauncher}, Vec2::new(36.0, 2.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
+    assert!(simulator.me().weapon().is_none());
+    for _ in 0 .. 5 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().weapon().as_ref().map(|v| WeaponWrapper(v)),
+        Some(WeaponWrapper(&Weapon {
+            typ: WeaponType::RocketLauncher,
+            params: world.properties().weapon_params[&WeaponType::RocketLauncher].clone(),
+            magazine: 1,
+            was_shooting: false,
+            spread: 0.0,
+            fire_timer: None,
+            last_angle: None,
+            last_fire_tick: None,
+        }))
+    );
+}
+
+#[test]
+fn test_simulator_unit_pickup_health_pack() {
+    let world = with_loot_box(example_world(), Item::HealthPack {health: 40}, Vec2::new(36.0, 2.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
+    simulator.me_mut().damage(20);
+    assert_eq!(simulator.me().health(), 80);
+    for _ in 0 .. 5 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 100);
+}
+
+#[test]
+fn test_simulator_unit_pickup_mine() {
+    let world = with_loot_box(example_world(), Item::Mine {}, Vec2::new(36.0, 2.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
+    simulator.me_mut().damage(20);
+    assert_eq!(simulator.me().mines(), 0);
+    for _ in 0 .. 5 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().mines(), 1);
+}
+
+#[test]
 fn test_collide_units_by_x_without_penetration() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
@@ -575,6 +642,16 @@ fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction:
         damage: params.bullet.damage,
         size: params.bullet.size,
         explosion_params: params.explosion.clone(),
+    });
+    World::new(world.config().clone(), world.me().clone(), game)
+}
+
+fn with_loot_box(world: World, item: Item, position: Vec2) -> World {
+    let mut game = world.game().clone();
+    game.loot_boxes.push(LootBox {
+        position: position.as_model(),
+        size: world.properties().loot_box_size.clone(),
+        item: item,
     });
     World::new(world.config().clone(), world.me().clone(), game)
 }
