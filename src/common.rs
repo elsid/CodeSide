@@ -23,6 +23,14 @@ pub trait Clamp1: PartialOrd + Sized {
 impl Clamp1 for f64 {}
 impl Clamp1 for usize {}
 
+pub trait IsBetween: PartialOrd + Copy {
+    fn is_between(self, left: Self, right: Self) -> bool {
+        left < self && self < right
+    }
+}
+
+impl IsBetween for f64 {}
+
 pub struct IdGenerator {
     next: i32,
 }

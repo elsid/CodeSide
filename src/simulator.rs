@@ -149,6 +149,7 @@ impl Simulator {
             if unit.ignore() {
                 continue;
             }
+            let u = unit.clone();
             if unit.base.jump_state.can_jump && (unit.action.jump || !unit.base.jump_state.can_cancel) {
                 let jump_time = shift_jump_max_time(unit, time_interval);
                 unit.move_by_y(unit.base.jump_state.speed * jump_time);
@@ -161,10 +162,24 @@ impl Simulator {
             unit.base.on_ground = false;
         }
 
+        for i in 0 .. self.units.len() - 1 {
+            if self.units[i].ignore() {
+                continue;
+            }
+            let (left, right) = self.units.split_at_mut(i + 1);
+            for j in 0 .. right.len() {
+                if right[j].ignore() {
+                    continue;
+                }
+                collide_units_by_y(&mut left[i], &mut right[j]);
+            }
+        }
+
         for unit in self.units.iter_mut() {
             if unit.ignore() {
                 continue;
             }
+            let u = unit.clone();
             let min_x = unit.left() as usize;
             let max_x = unit.right() as usize + 1;
             let top = unit.top() as usize;
@@ -209,19 +224,6 @@ impl Simulator {
                     },
                     _ => (),
                 }
-            }
-        }
-
-        for i in 0 .. self.units.len() - 1 {
-            if self.units[i].ignore() {
-                continue;
-            }
-            let (left, right) = self.units.split_at_mut(i + 1);
-            for j in 0 .. right.len() {
-                if right[j].ignore() {
-                    continue;
-                }
-                collide_units_by_y(&mut left[i], &mut right[j]);
             }
         }
 
@@ -474,56 +476,75 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
 
 fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
-    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-        unit.shift_by_x(sign * penetration.x());
+    if penetration.x() >= -std::f64::EPSILON
+        || penetration.y() >= -std::f64::EPSILON
+        || unit.moved().x() == 0.0 {
+        return;
     }
+    unit.shift_by_x(sign * penetration.x());
 }
 
 fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
-    if penetration.x() < -std::f64::EPSILON && penetration.y() < -std::f64::EPSILON {
-        let dy = sign * penetration.y();
-        unit.shift_by_y(dy);
-        unit.moved.add_y(dy);
+    if penetration.x() >= -std::f64::EPSILON
+        || penetration.y() >= -std::f64::EPSILON
+        || unit.moved().y() == 0.0 {
+        return;
     }
+    let dy = sign * penetration.y();
+    unit.shift_by_y(dy);
+    unit.moved.add_y(dy);
 }
 
 pub fn collide_units_by_x(a: &mut UnitExt, b: &mut UnitExt) {
     let penetration = a.rect().collide(&b.rect());
-    if penetration.x() >= -std::f64::EPSILON || penetration.y() >= -std::f64::EPSILON {
+    if penetration.x() >= -std::f64::EPSILON
+        || penetration.y() >= -std::f64::EPSILON
+        || (a.moved().x() == 0.0 && b.moved().x() == 0.0) {
         return;
     }
-    let sum = a.moved().x().abs() + b.moved().x().abs();
-    let (a_weight, b_weight) = if sum == 0.0 {
-        if a.position().x() < b.position().x() {
-            (0.5, -0.5)
-        } else {
-            (-0.5, 0.5)
-        }
+    let (a_vel, b_vel) = if a.position().x() < b.position().x() {
+        get_shift_factors(a.moved().x(), b.moved().x())
     } else {
-        (a.moved().x() / sum, b.moved().x() / sum)
+        let (b_vel, a_vel) = get_shift_factors(b.moved().x(), a.moved().x());
+        (a_vel, b_vel)
     };
-    a.shift_by_x(penetration.x() * a_weight);
-    b.shift_by_x(penetration.x() * b_weight);
+    a.shift_by_x(-penetration.x() * a_vel);
+    b.shift_by_x(-penetration.x() * b_vel);
 }
 
 fn collide_units_by_y(a: &mut UnitExt, b: &mut UnitExt) {
     let penetration = a.rect().collide(&b.rect());
-    if penetration.x() >= -std::f64::EPSILON || penetration.y() >= -std::f64::EPSILON {
+    if penetration.x() >= -std::f64::EPSILON
+        || penetration.y() >= -std::f64::EPSILON
+        || (a.moved().y() == 0.0 && b.moved().y() == 0.0) {
         return;
     }
-    let sum = a.moved().y().abs() + b.moved().y().abs();
-    let (a_weight, b_weight) = if sum == 0.0 {
-        if a.position().y() < b.position().y() {
-            (0.5, -0.5)
-        } else {
-            (-0.5, 0.5)
-        }
+    let (a_vel, b_vel) = if a.position().y() < b.position().y() {
+        get_shift_factors(a.moved().y(), b.moved().y())
     } else {
-        (a.moved().y() / sum, b.moved().y() / sum)
+        let (b_vel, a_vel) = get_shift_factors(b.moved().y(), a.moved().y());
+        (a_vel, b_vel)
     };
-    a.shift_by_y(penetration.y() * a_weight);
-    b.shift_by_y(penetration.y() * b_weight);
+    a.shift_by_y(-penetration.y() * a_vel);
+    b.shift_by_y(-penetration.y() * b_vel);
+}
+
+pub fn get_shift_factors(a_vel: f64, b_vel: f64) -> (f64, f64) {
+    if a_vel == 0.0 && b_vel == 0.0 {
+        (-0.5, 0.5)
+    } else if a_vel == 0.0 {
+        (0.0, 1.0)
+    } else if b_vel == 0.0 {
+        (-1.0, 0.0)
+    } else if a_vel < 0.0 {
+        (0.0, 1.0)
+    } else if b_vel > 0.0 {
+        (-1.0, 0.0)
+    } else {
+        let sum = a_vel.abs() + b_vel.abs();
+        (-a_vel / sum, -b_vel / sum)
+    }
 }
 
 fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option<Explosion> {

@@ -13,11 +13,13 @@ use my_strategy::examples::{
     example_world,
 };
 use my_strategy::my_strategy::{
+    IsBetween,
     Simulator,
     UnitExt,
     Vec2,
     World,
     collide_units_by_x,
+    get_shift_factors,
 };
 
 #[test]
@@ -302,7 +304,7 @@ fn test_simulator_unit_run_into_wall() {
 
 #[test]
 fn test_simulator_unit_run_into_unit() {
-    let world = with_my_position(example_world(), Vec2::new(4.5, 1.0));
+    let world = with_my_position(example_world(), Vec2::new(3.5, 1.0));
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
     simulator.me_mut().action_mut().velocity = -10.0;
@@ -321,7 +323,7 @@ fn test_simulator_unit_run_into_unit() {
 
 #[test]
 fn test_simulator_unit_fall_onto_unit() {
-    let world = with_my_position(example_world(), Vec2::new(2.5, 4.0));
+    let world = with_my_position(example_world(), Vec2::new(2.5, 3.5));
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 10 {
@@ -333,7 +335,7 @@ fn test_simulator_unit_fall_onto_unit() {
     }
     assert_eq!(
         simulator.me().position(),
-        Vec2::new(2.5, 2.8)
+        Vec2::new(2.5, 2.798333333333333)
     );
 }
 
@@ -380,16 +382,6 @@ fn test_collide_units_by_x_without_penetration() {
 }
 
 #[test]
-fn test_collide_units_by_x_not_moved() {
-    let properties = example_properties();
-    let mut a = make_unit_ext(Vec2::new(9.8, 10.0), &properties);
-    let mut b = make_unit_ext(Vec2::new(10.2, 10.0), &properties);
-    collide_units_by_x(&mut a, &mut b);
-    assert_eq!(a.position(), Vec2::new(9.55, 10.0));
-    assert_eq!(b.position(), Vec2::new(10.45, 10.0));
-}
-
-#[test]
 fn test_collide_units_by_x_moved_on_each_other_equally() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
@@ -397,6 +389,8 @@ fn test_collide_units_by_x_moved_on_each_other_equally() {
     a.move_by_x(0.3);
     b.move_by_x(-0.3);
     collide_units_by_x(&mut a, &mut b);
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
     assert_eq!(a.position(), Vec2::new(9.55, 10.0));
     assert_eq!(b.position(), Vec2::new(10.45, 10.0));
 }
@@ -409,6 +403,8 @@ fn test_collide_units_by_x_moved_on_each_other_unequally() {
     a.move_by_x(0.6);
     b.move_by_x(-0.2);
     collide_units_by_x(&mut a, &mut b);
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
     assert_eq!(a.position(), Vec2::new(9.575000000000001, 10.0));
     assert_eq!(b.position(), Vec2::new(10.475, 10.0));
 }
@@ -420,6 +416,8 @@ fn test_collide_units_by_x_moved_one_onto_other_positive() {
     let mut b = make_unit_ext(Vec2::new(10.5, 10.0), &properties);
     a.move_by_x(0.5);
     collide_units_by_x(&mut a, &mut b);
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
     assert_eq!(a.position(), Vec2::new(9.6, 10.0));
     assert_eq!(b.position(), Vec2::new(10.5, 10.0));
 }
@@ -431,6 +429,8 @@ fn test_collide_units_by_x_moved_one_onto_other_negative() {
     let mut b = make_unit_ext(Vec2::new(10.5, 10.0), &properties);
     b.move_by_x(-0.5);
     collide_units_by_x(&mut a, &mut b);
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
     assert_eq!(a.position(), Vec2::new(9.5, 10.0));
     assert_eq!(b.position(), Vec2::new(10.4, 10.0));
 }
@@ -443,8 +443,10 @@ fn test_collide_units_by_x_moved_in_same_positive_direction_unequally() {
     a.move_by_x(0.5);
     b.move_by_x(0.25);
     collide_units_by_x(&mut a, &mut b);
-    assert_eq!(a.position(), Vec2::new(9.9, 10.0));
-    assert_eq!(b.position(), Vec2::new(10.7, 10.0));
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
+    assert_eq!(a.position(), Vec2::new(9.85, 10.0));
+    assert_eq!(b.position(), Vec2::new(10.75, 10.0));
 }
 
 #[test]
@@ -455,8 +457,10 @@ fn test_collide_units_by_x_moved_in_same_negative_direction_unequally() {
     a.move_by_x(-0.25);
     b.move_by_x(-0.5);
     collide_units_by_x(&mut a, &mut b);
-    assert_eq!(a.position(), Vec2::new(9.3, 10.0));
-    assert_eq!(b.position(), Vec2::new(10.1, 10.0));
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
+    assert_eq!(a.position(), Vec2::new(9.25, 10.0));
+    assert_eq!(b.position(), Vec2::new(10.15, 10.0));
 }
 
 #[test]
@@ -467,8 +471,10 @@ fn test_collide_units_by_x_in_reverse_order_moved_in_same_positive_direction_une
     a.move_by_x(0.5);
     b.move_by_x(0.25);
     collide_units_by_x(&mut b, &mut a);
-    assert_eq!(a.position(), Vec2::new(9.9, 10.0));
-    assert_eq!(b.position(), Vec2::new(10.7, 10.0));
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
+    assert_eq!(a.position(), Vec2::new(9.85, 10.0));
+    assert_eq!(b.position(), Vec2::new(10.75, 10.0));
 }
 
 #[test]
@@ -479,8 +485,43 @@ fn test_collide_units_by_x_in_reverse_order_moved_in_same_negative_direction_une
     a.move_by_x(-0.25);
     b.move_by_x(-0.5);
     collide_units_by_x(&mut b, &mut a);
-    assert_eq!(a.position(), Vec2::new(9.3, 10.0));
-    assert_eq!(b.position(), Vec2::new(10.1, 10.0));
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
+    assert_eq!(a.position(), Vec2::new(9.25, 10.0));
+    assert_eq!(b.position(), Vec2::new(10.15, 10.0));
+}
+
+#[test]
+fn test_collide_units_by_x_1() {
+    let properties = example_properties();
+    let mut a = make_unit_ext(Vec2::new(16.388888888905484, 9.004938271796254), &properties);
+    let mut b = make_unit_ext(Vec2::new(15.549999998999999, 10.795061728203747), &properties);
+    a.move_by_x(0.05555555555555556);
+    collide_units_by_x(&mut b, &mut a);
+    let penetration = a.rect().collide(&b.rect()).x();
+    assert!(penetration.is_between(-std::f32::EPSILON as f64, std::f32::EPSILON as f64), "penetration={}", penetration);
+    assert_eq!(a.position(), Vec2::new(16.449999999, 9.004938271796254));
+    assert_eq!(b.position(), Vec2::new(15.549999998999999, 10.795061728203747));
+}
+
+#[test]
+fn test_get_shift_factors() {
+    assert_eq!(get_shift_factors(0.0, 0.0), (-0.5, 0.5));
+    assert_eq!(get_shift_factors(1.0, 0.0), (-1.0, 0.0));
+    assert_eq!(get_shift_factors(0.0, 1.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(-1.0, 0.0), (-1.0, 0.0));
+    assert_eq!(get_shift_factors(0.0, -1.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(1.0, 1.0), (-1.0, 0.0));
+    assert_eq!(get_shift_factors(-1.0, -1.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(1.0, 2.0), (-1.0, 0.0));
+    assert_eq!(get_shift_factors(2.0, 1.0), (-1.0, 0.0));
+    assert_eq!(get_shift_factors(1.0, -2.0), (-0.3333333333333333, 0.6666666666666666));
+    assert_eq!(get_shift_factors(2.0, -1.0), (-0.6666666666666666, 0.3333333333333333));
+    assert_eq!(get_shift_factors(-1.0, 2.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(-2.0, 1.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(-1.0, -2.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(-2.0, -1.0), (0.0, 1.0));
+    assert_eq!(get_shift_factors(-2.0, -1.0), (0.0, 1.0));
 }
 
 fn with_my_position(world: World, position: Vec2) -> World {
