@@ -4,6 +4,7 @@ pub struct MyStrategyImpl {
     has_loot_box: bool,
     has_bullet: bool,
     has_mine: bool,
+    has_weapon: bool,
 }
 
 impl MyStrategyImpl {
@@ -12,6 +13,7 @@ impl MyStrategyImpl {
             has_loot_box: false,
             has_bullet: false,
             has_mine: false,
+            has_weapon: false,
         }
     }
 
@@ -37,7 +39,12 @@ impl MyStrategyImpl {
             self.has_mine = true;
             println!("mine: {:?}", game.mines[0]);
         }
-        if self.has_loot_box && self.has_bullet && self.has_mine {
+        let opponent = game.units.iter().find(|v| v.id != me.id).unwrap();
+        if !self.has_weapon && opponent.weapon.is_some() {
+            self.has_weapon = true;
+            println!("weapon: {:?}", opponent.weapon.as_ref().unwrap());
+        }
+        if self.has_loot_box && self.has_bullet && self.has_mine && self.has_weapon {
             std::process::exit(0);
         }
         model::UnitAction {
