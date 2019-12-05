@@ -1,12 +1,18 @@
 use crate::Debug;
 use crate::my_strategy::{
     Config,
+    Planner,
+    SeedableRng,
+    Simulator,
+    Vec2,
     World,
+    XorShiftRng,
 };
 
 pub struct MyStrategyImpl {
     config: Config,
     world: World,
+    rng: XorShiftRng,
 }
 
 impl MyStrategyImpl {
@@ -14,6 +20,12 @@ impl MyStrategyImpl {
         Self {
             config: config.clone(),
             world: World::new(config, me, game),
+            rng: XorShiftRng::from_seed([
+                3918248293,
+                2127433321,
+                1841971383,
+                1904458926,
+            ]),
         }
     }
 
@@ -65,6 +77,17 @@ impl MyStrategyImpl {
                 x: enemy.position.x - me.position.x,
                 y: enemy.position.y - me.position.y,
             };
+        }
+        let simulator = Simulator::new(&self.world, me.id);
+        let plan = Planner::new(Vec2::from_model(&target_pos), &self.config, simulator).make(&mut self.rng, debug);
+        if !plan.transitions.is_empty() {
+            debug.draw(model::CustomData::Log {
+                text: format!("has_plan: score={}", plan.score),
+            });
+            let mut action = plan.transitions[0].action.clone();
+            action.aim = aim;
+            action.shoot = true;
+            return action;
         }
         let mut jump = target_pos.y > me.position.y;
         if target_pos.x > me.position.x

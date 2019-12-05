@@ -14,7 +14,7 @@ fn test_first_action() {
     let mut my_strategy = MyStrategyImpl::new(world.config().clone(), world.me().clone(), world.game().clone());
     let result = my_strategy.get_action(world.me(), world.game(), &mut Debug(&mut stream));
     assert_eq!(UnitActionWrapper(&result), UnitActionWrapper(&UnitAction {
-        velocity: -27.0,
+        velocity: -10.0,
         jump: true,
         jump_down: false,
         aim: model::Vec2F64 {
