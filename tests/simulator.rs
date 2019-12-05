@@ -372,6 +372,38 @@ fn test_simulator_bullet_explode_unit() {
 }
 
 #[test]
+fn test_simulator_bullet_hit_wall() {
+    let world = example_world();
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.bullets().len(), 1);
+    for _ in 0 .. 30 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.bullets().len(), 0);
+}
+
+#[test]
+fn test_simulator_bullet_explode_on_hit_wall() {
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 15 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 50);
+    assert_eq!(simulator.bullets().len(), 1);
+}
+
+#[test]
 fn test_collide_units_by_x_without_penetration() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

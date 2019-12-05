@@ -149,7 +149,6 @@ impl Simulator {
             if unit.ignore() {
                 continue;
             }
-            let u = unit.clone();
             if unit.base.jump_state.can_jump && (unit.action.jump || !unit.base.jump_state.can_cancel) {
                 let jump_time = shift_jump_max_time(unit, time_interval);
                 unit.move_by_y(unit.base.jump_state.speed * jump_time);
@@ -179,7 +178,6 @@ impl Simulator {
             if unit.ignore() {
                 continue;
             }
-            let u = unit.clone();
             let min_x = unit.left() as usize;
             let max_x = unit.right() as usize + 1;
             let top = unit.top() as usize;
@@ -238,24 +236,63 @@ impl Simulator {
             if self.bullets[bullet].hit {
                 continue;
             }
-            for unit in 0 .. self.units.len() {
-                if self.units[unit].ignore() {
-                    continue;
-                }
-                if let Some(explosion) = collide_unit_and_bullet(&mut self.bullets[bullet], &mut self.units[unit]) {
-                    for i in 0 .. self.units.len() {
-                        if self.units[i].ignore() {
-                            continue;
-                        }
-                        explode(&explosion, &mut self.units[i]);
-                    }
-                }
+            if self.collide_bullet_and_units(bullet) {
+                continue;
             }
+            self.collide_bulles_and_tiles(bullet);
         }
 
         self.bullets = self.bullets.iter().filter(|v| !v.hit).map(|v| v.clone()).collect();
 
         self.current_micro_tick += 1;
+    }
+
+    fn collide_bullet_and_units(&mut self, bullet: usize) -> bool {
+        for unit in 0 .. self.units.len() {
+            if self.units[unit].ignore() {
+                continue;
+            }
+            if let Some(explosion) = collide_unit_and_bullet(&mut self.bullets[bullet], &mut self.units[unit]) {
+                for i in 0 .. self.units.len() {
+                    if self.units[i].ignore() {
+                        continue;
+                    }
+                    explode(&explosion, &mut self.units[i]);
+                }
+            }
+            if self.bullets[bullet].hit {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn collide_bulles_and_tiles(&mut self, bullet: usize) -> bool {
+        let min_x = self.bullets[bullet].left() as usize;
+        let max_x = self.bullets[bullet].right() as usize + 1;
+        let min_y = self.bullets[bullet].bottom() as usize;
+        let max_y = self.bullets[bullet].top() as usize + 1;
+        for x in min_x .. max_x {
+            for y in min_y .. max_y {
+                match get_tile(&self.level, x, y) {
+                    Tile::Wall => {
+                        if let Some(explosion) = collide_unit_and_tile(x, y, &mut self.bullets[bullet]) {
+                            for unit in 0 .. self.units.len() {
+                                if self.units[unit].ignore() {
+                                    continue;
+                                }
+                                explode(&explosion, &mut self.units[unit]);
+                            }
+                        }
+                        if self.bullets[bullet].hit {
+                            return true;
+                        }
+                    },
+                    _ => (),
+                }
+            }
+        }
+        false
     }
 }
 
@@ -412,6 +449,22 @@ impl BulletExt {
         self.base.position.x += self.base.velocity.x * time_interval;
         self.base.position.y += self.base.velocity.y * time_interval;
     }
+
+    pub fn right(&self) -> f64 {
+        self.base.position.x + self.half_size()
+    }
+
+    pub fn left(&self) -> f64 {
+        self.base.position.x - self.half_size()
+    }
+
+    pub fn top(&self) -> f64 {
+        self.base.position.y + self.half_size()
+    }
+
+    pub fn bottom(&self) -> f64 {
+        self.base.position.y - self.half_size()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -562,6 +615,15 @@ fn explode(explosion: &Explosion, unit: &mut UnitExt) {
         return;
     }
     unit.base.health -= explosion.params.damage;
+}
+
+fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<Explosion> {
+    if !make_tile_rect(x, y).has_collision(&bullet.rect()) {
+        return None;
+    }
+    bullet.hit = true;
+    bullet.explosion_params().as_ref()
+        .map(|v| Explosion {params: v.clone(), position: bullet.center()})
 }
 
 fn make_tile_rect(x: usize, y: usize) -> Rect {
