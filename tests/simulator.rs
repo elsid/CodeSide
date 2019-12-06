@@ -471,6 +471,22 @@ fn test_simulator_unit_pickup_mine() {
 }
 
 #[test]
+fn test_simulator_single_tick_unit_on_edge() {
+    let world = with_my_position(example_world(), Vec2::new(38.55, 24.55555555555557));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(38.55, 24.388888888889056)
+    );
+}
+
+#[test]
 fn test_collide_units_by_x_without_penetration() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

@@ -17,6 +17,7 @@ dump_opponent = []
 go_to_target = []
 enable_debug = []
 disable_output = []
+dump_level = []
 
 [[bench]]
 name = "simulator"

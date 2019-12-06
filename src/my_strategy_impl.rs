@@ -10,6 +10,9 @@ use crate::my_strategy::{
     XorShiftRng,
 };
 
+#[cfg(feature = "dump_level")]
+use crate::my_strategy::dump_level;
+
 pub struct MyStrategyImpl {
     config: Config,
     world: World,
@@ -23,6 +26,8 @@ pub struct MyStrategyImpl {
 
 impl MyStrategyImpl {
     pub fn new(config: Config, me: model::Unit, game: model::Game) -> Self {
+        #[cfg(feature = "dump_level")]
+        println!("{}", dump_level(&game.level));
         Self {
             config: config.clone(),
             world: World::new(config, me, game),

@@ -137,7 +137,7 @@ impl Simulator {
                 continue;
             }
             let min_y = unit.bottom() as usize;
-            let max_y = unit.top() as usize + 1;
+            let max_y = (unit.top() as usize + 1).min(self.level.tiles[0].len());
             let left = unit.left() as usize;
             let right = unit.right() as usize;
             for y in min_y .. max_y {
@@ -192,7 +192,7 @@ impl Simulator {
                 continue;
             }
             let min_x = unit.left() as usize;
-            let max_x = unit.right() as usize + 1;
+            let max_x = (unit.right() as usize + 1).min(self.level.tiles.len());
             let top = unit.top() as usize;
             let bottom = unit.bottom() as usize;
             for x in min_x .. max_x {
@@ -290,9 +290,9 @@ impl Simulator {
 
     fn collide_bulles_and_tiles(&mut self, bullet: usize) -> bool {
         let min_x = self.bullets[bullet].left() as usize;
-        let max_x = self.bullets[bullet].right() as usize + 1;
+        let max_x = (self.bullets[bullet].right() as usize + 1).min(self.level.tiles.len());
         let min_y = self.bullets[bullet].bottom() as usize;
-        let max_y = self.bullets[bullet].top() as usize + 1;
+        let max_y = (self.bullets[bullet].top() as usize + 1).min(self.level.tiles[0].len());
         for x in min_x .. max_x {
             for y in min_y .. max_y {
                 match get_tile(&self.level, x, y) {
