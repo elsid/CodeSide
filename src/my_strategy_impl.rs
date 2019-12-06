@@ -91,6 +91,7 @@ impl MyStrategyImpl {
         } else if let Some(enemy) = nearest_enemy {
             target_pos = enemy.position.clone();
         }
+        #[cfg(feature = "enable_debug")]
         debug.draw(model::CustomData::Log {
             text: format!("Target pos: {:?}", target_pos),
         });
@@ -104,6 +105,7 @@ impl MyStrategyImpl {
         let simulator = Simulator::new(&self.world, me.id);
         let plan = Planner::new(Vec2::from_model(&target_pos), &self.config, simulator).make(&mut self.rng, debug);
         if !plan.transitions.is_empty() {
+            #[cfg(feature = "enable_debug")]
             debug.draw(model::CustomData::Log {
                 text: format!("has_plan: score={}", plan.score),
             });
