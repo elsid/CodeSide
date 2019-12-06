@@ -1,3 +1,4 @@
+use std::time::{Instant, Duration};
 use crate::Debug;
 use crate::my_strategy::{
     Config,
@@ -13,6 +14,11 @@ pub struct MyStrategyImpl {
     config: Config,
     world: World,
     rng: XorShiftRng,
+    start_time: Instant,
+    tick_start_time: Instant,
+    time_spent: Duration,
+    cpu_time_spent: Duration,
+    max_cpu_time_spent: Duration,
 }
 
 impl MyStrategyImpl {
@@ -26,10 +32,22 @@ impl MyStrategyImpl {
                 1841971383,
                 1904458926,
             ]),
+            start_time: Instant::now(),
+            tick_start_time: Instant::now(),
+            time_spent: Duration::default(),
+            cpu_time_spent: Duration::default(),
+            max_cpu_time_spent: Duration::default(),
         }
     }
 
     pub fn get_action(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
+        self.on_start();
+        let result = self.get_action_measured(me, game, debug);
+        self.on_finish();
+        result
+    }
+
+    pub fn get_action_measured(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
         fn distance_sqr(a: &model::Vec2F64, b: &model::Vec2F64) -> f64 {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
@@ -112,5 +130,24 @@ impl MyStrategyImpl {
             swap_weapon: false,
             plant_mine: false,
         }
+    }
+
+    fn on_start(&mut self) {
+        self.tick_start_time = Instant::now();
+    }
+
+    fn on_finish(&mut self) {
+        let finish = Instant::now();
+        let cpu_time_spent = finish - self.tick_start_time;
+        self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
+        self.cpu_time_spent += cpu_time_spent;
+        self.time_spent = finish - self.start_time;
+    }
+}
+
+impl Drop for MyStrategyImpl {
+    fn drop(&mut self) {
+        #[cfg(not(feature = "disable_output"))]
+        eprintln!("{} {:?} {:?} {:?}", self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent);
     }
 }
