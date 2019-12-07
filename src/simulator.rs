@@ -141,10 +141,10 @@ impl Simulator {
             let left = unit.left() as usize;
             let right = unit.right() as usize;
             for y in min_y .. max_y {
-                for &(x, sign) in &[(left, -1.0), (right, 1.0)] {
+                for &x in &[left, right] {
                     match get_tile(&self.level, x, y) {
                         Tile::Wall => {
-                            collide_by_x(unit, x, y, sign);
+                            collide_by_x(unit, x, y);
                         },
                         Tile::Ladder => {
                             unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, y);
@@ -198,19 +198,19 @@ impl Simulator {
             for x in min_x .. max_x {
                 match get_tile(&self.level, x, bottom) {
                     Tile::Wall => {
-                        collide_by_y(unit, x, bottom, -1.0);
+                        collide_by_y(unit, x, bottom);
                         allow_jump(unit, &self.properties);
                     },
                     Tile::Ladder => {
                         unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, bottom);
                         if !unit.base.on_ladder {
-                            collide_by_y(unit, x, bottom, -1.0);
+                            collide_by_y(unit, x, bottom);
                             allow_jump(unit, &self.properties);
                         }
                     },
                     Tile::Platform => {
                         if !unit.action.jump_down {
-                            collide_by_y(unit, x, bottom, -1.0);
+                            collide_by_y(unit, x, bottom);
                             allow_jump(unit, &self.properties);
                         }
                     },
@@ -221,7 +221,7 @@ impl Simulator {
                 }
                 match get_tile(&self.level, x, top) {
                     Tile::Wall => {
-                        collide_by_y(unit, x, top, 1.0);
+                        collide_by_y(unit, x, top);
                         unit.base.on_ground = true;
                         cancel_jump(unit);
                     },
@@ -571,24 +571,26 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
     }
 }
 
-fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
+fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
     if penetration.x() >= -std::f64::EPSILON
         || penetration.y() >= -std::f64::EPSILON
         || unit.moved().x() == 0.0 {
         return;
     }
-    unit.shift_by_x(sign * penetration.x());
+    let dx = -penetration.x().abs().min(unit.moved().x().abs()).copysign(unit.moved().x());
+    unit.shift_by_x(dx);
+    unit.moved.add_x(dx);
 }
 
-fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize, sign: f64) {
+fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
     if penetration.x() >= -std::f64::EPSILON
         || penetration.y() >= -std::f64::EPSILON
         || unit.moved().y() == 0.0 {
         return;
     }
-    let dy = sign * penetration.y();
+    let dy = -penetration.y().abs().min(unit.moved.y().abs()).copysign(unit.moved().y());
     unit.shift_by_y(dy);
     unit.moved.add_y(dy);
 }

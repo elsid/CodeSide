@@ -56,6 +56,10 @@ impl Vec2 {
         self.y = value;
     }
 
+    pub fn add_x(&mut self, value: f64) {
+        self.x += value;
+    }
+
     pub fn add_y(&mut self, value: f64) {
         self.y += value;
     }
