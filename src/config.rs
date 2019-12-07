@@ -11,7 +11,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         Self {
-            max_plan_iterations: 1000,
+            max_plan_iterations: 100,
             min_ticks_per_transition: 5,
             max_ticks_per_transition: 30,
             microticks_per_tick: 3,
