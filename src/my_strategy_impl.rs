@@ -86,9 +86,28 @@ impl MyStrategyImpl {
                 )
                 .unwrap()
             });
+        let nearest_health_pack = self.world.game()
+            .loot_boxes
+            .iter()
+            .filter(|loot| {
+                if let model::Item::HealthPack { .. } = loot.item {
+                    true
+                } else {
+                    false
+                }
+            })
+            .min_by(|a, b| {
+                std::cmp::PartialOrd::partial_cmp(
+                    &distance_sqr(&a.position, &me.position),
+                    &distance_sqr(&b.position, &me.position),
+                )
+                .unwrap()
+            });
         let mut target_pos = me.position.clone();
         if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
             target_pos = weapon.position.clone();
+        } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
+            target_pos = health_pack.position.clone();
         } else if let Some(opponent) = nearest_opponent {
             target_pos = opponent.position.clone();
         }
