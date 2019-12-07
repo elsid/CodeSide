@@ -8,6 +8,7 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
+    get_hit_probalibity,
 };
 
 #[cfg(feature = "dump_level")]
@@ -57,7 +58,7 @@ impl MyStrategyImpl {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
         self.world.update(me, game);
-        let nearest_enemy = self.world.game()
+        let nearest_opponent = self.world.game()
             .units
             .iter()
             .filter(|other| other.player_id != me.player_id)
@@ -88,20 +89,25 @@ impl MyStrategyImpl {
         let mut target_pos = me.position.clone();
         if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
             target_pos = weapon.position.clone();
-        } else if let Some(enemy) = nearest_enemy {
-            target_pos = enemy.position.clone();
+        } else if let Some(opponent) = nearest_opponent {
+            target_pos = opponent.position.clone();
         }
         #[cfg(feature = "enable_debug")]
         debug.draw(model::CustomData::Log {
             text: format!("Target pos: {:?}", target_pos),
         });
-        let mut aim = model::Vec2F64 { x: 0.0, y: 0.0 };
-        if let Some(enemy) = nearest_enemy {
-            aim = model::Vec2F64 {
-                x: enemy.position.x - me.position.x,
-                y: enemy.position.y - me.position.y,
-            };
-        }
+        let aim: Option<model::Vec2F64> = if let Some(opponent) = nearest_opponent {
+            if get_hit_probalibity(&me, opponent, self.world.level()) > 0.0 {
+                Some(model::Vec2F64 {
+                    x: opponent.position.x - me.position.x,
+                    y: opponent.position.y - me.position.y,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         let simulator = Simulator::new(&self.world, me.id);
         let plan = Planner::new(Vec2::from_model(&target_pos), &self.config, simulator).make(&mut self.rng, debug);
         if !plan.transitions.is_empty() {
@@ -110,8 +116,8 @@ impl MyStrategyImpl {
                 text: format!("has_plan: score={}", plan.score),
             });
             let mut action = plan.transitions[0].action.clone();
-            action.aim = aim;
-            action.shoot = true;
+            action.shoot = aim.is_some();
+            action.aim = aim.unwrap_or(model::Vec2F64 { x: 0.0, y: 0.0 });
             return action;
         }
         let mut jump = target_pos.y > me.position.y;
@@ -131,8 +137,8 @@ impl MyStrategyImpl {
             velocity: target_pos.x - me.position.x,
             jump,
             jump_down: target_pos.y < me.position.y,
-            aim,
-            shoot: true,
+            shoot: aim.is_some(),
+            aim: aim.unwrap_or(model::Vec2F64 { x: 0.0, y: 0.0 }),
             reload: false,
             swap_weapon: false,
             plant_mine: false,

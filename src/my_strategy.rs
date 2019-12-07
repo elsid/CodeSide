@@ -46,11 +46,41 @@ pub mod vec2;
 #[allow(unused_imports)]
 pub use vec2::*;
 
+#[path = "walk_grid.rs"]
+pub mod walk_grid;
+
+#[allow(unused_imports)]
+pub use walk_grid::*;
+
+#[path = "positionable.rs"]
+pub mod positionable;
+
+#[allow(unused_imports)]
+pub use positionable::*;
+
 #[path = "rect.rs"]
 pub mod rect;
 
 #[allow(unused_imports)]
 pub use rect::*;
+
+#[path = "rectangular.rs"]
+pub mod rectangular;
+
+#[allow(unused_imports)]
+pub use rectangular::*;
+
+#[path = "unit.rs"]
+pub mod unit;
+
+#[allow(unused_imports)]
+pub use unit::*;
+
+#[path = "hit.rs"]
+pub mod hit;
+
+#[allow(unused_imports)]
+pub use hit::*;
 
 #[path = "config.rs"]
 pub mod config;

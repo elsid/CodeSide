@@ -20,10 +20,10 @@ fn test_first_action() {
         jump: true,
         jump_down: false,
         aim: model::Vec2F64 {
-            x: -35.0,
+            x: 0.0,
             y: 0.0
         },
-        shoot: true,
+        shoot: false,
         reload: false,
         swap_weapon: false,
         plant_mine: false,
