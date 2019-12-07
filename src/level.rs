@@ -4,14 +4,17 @@ use model::{
 };
 use crate::my_strategy::vec2::Vec2;
 
+#[inline(always)]
 pub fn get_tile_by_vec2(level: &Level, position: Vec2) -> Tile {
     get_tile_by_f64(level, position.x(), position.y())
 }
 
+#[inline(always)]
 pub fn get_tile_by_f64(level: &Level, x: f64, y: f64) -> Tile {
     get_tile(level, x as usize, y as usize)
 }
 
+#[inline(always)]
 pub fn get_tile(level: &Level, x: usize, y: usize) -> Tile {
     level.tiles[x][y].clone()
 }
