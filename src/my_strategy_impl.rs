@@ -99,24 +99,33 @@ impl MyStrategyImpl {
                 )
                 .unwrap()
             });
-        let mut target_pos = me.position.clone();
+        let mut target = me.position.clone();
         if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
-            target_pos = weapon.position.clone();
+            target = weapon.position.clone();
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
-            target_pos = health_pack.position.clone();
+            target = health_pack.position.clone();
         } else if let Some(opponent) = nearest_opponent {
             if let Some((tile_x, tile_y)) = get_optimal_tile(&self.world, debug) {
-                target_pos = Vec2::new(tile_x as f64 + 0.5, tile_y as f64).as_model();
+                #[cfg(feature = "enable_debug")]
+                debug.draw(model::CustomData::Log {
+                    text: format!("optimal_tile: x={} y={}", tile_x, tile_y),
+                });
+                target = Vec2::new(tile_x as f64 + 0.5, tile_y as f64).as_model();
             } else {
-                target_pos = opponent.position.clone();
+                target = opponent.position.clone();
             }
         }
         #[cfg(feature = "enable_debug")]
         debug.draw(model::CustomData::Log {
-            text: format!("Target pos: {:?}", target_pos),
+            text: format!("target: {:?}", target),
         });
         let aim: Option<model::Vec2F64> = if let Some(opponent) = nearest_opponent {
-            if get_hit_probability(&me.rect(), &opponent.rect(), self.world.level()) > 0.0 {
+            let hit_probability = get_hit_probability(&me.rect(), &opponent.rect(), self.world.level());
+            #[cfg(feature = "enable_debug")]
+                debug.draw(model::CustomData::Log {
+                    text: format!("hit_probability={}", hit_probability),
+                });
+            if hit_probability > 0.0 {
                 Some(model::Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
@@ -128,34 +137,34 @@ impl MyStrategyImpl {
             None
         };
         let simulator = Simulator::new(&self.world, me.id);
-        let plan = Planner::new(Vec2::from_model(&target_pos), &self.config, simulator).make(&mut self.rng, debug);
+        let plan = Planner::new(Vec2::from_model(&target), &self.config, simulator).make(&mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
             debug.draw(model::CustomData::Log {
-                text: format!("has_plan: score={}", plan.score),
+                text: format!("plan: score={}", plan.score),
             });
             let mut action = plan.transitions[0].action.clone();
             action.shoot = aim.is_some();
             action.aim = aim.unwrap_or(model::Vec2F64 { x: 0.0, y: 0.0 });
             return action;
         }
-        let mut jump = target_pos.y > me.position.y;
-        if target_pos.x > me.position.x
+        let mut jump = target.y > me.position.y;
+        if target.x > me.position.x
             && self.world.game().level.tiles[(me.position.x + 1.0) as usize][(me.position.y) as usize]
                 == model::Tile::Wall
         {
             jump = true
         }
-        if target_pos.x < me.position.x
+        if target.x < me.position.x
             && self.world.game().level.tiles[(me.position.x - 1.0) as usize][(me.position.y) as usize]
                 == model::Tile::Wall
         {
             jump = true
         }
         model::UnitAction {
-            velocity: target_pos.x - me.position.x,
+            velocity: target.x - me.position.x,
             jump,
-            jump_down: target_pos.y < me.position.y,
+            jump_down: target.y < me.position.y,
             shoot: aim.is_some(),
             aim: aim.unwrap_or(model::Vec2F64 { x: 0.0, y: 0.0 }),
             reload: false,
