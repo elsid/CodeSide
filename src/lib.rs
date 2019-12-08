@@ -1,4 +1,5 @@
 pub mod my_strategy;
+pub mod examples;
 
 pub struct Debug<'a>(pub &'a mut dyn std::io::Write);
 

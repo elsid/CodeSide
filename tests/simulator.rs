@@ -1,4 +1,3 @@
-mod examples;
 mod weapon;
 
 use model::{
@@ -11,7 +10,7 @@ use model::{
     Weapon,
     WeaponType,
 };
-use examples::{
+use aicup2019::examples::{
     example_properties,
     example_rng,
     example_world,

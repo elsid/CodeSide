@@ -1,7 +1,5 @@
-mod examples;
-
 use model::UnitAction;
-use examples::example_world;
+use aicup2019::examples::example_world;
 use aicup2019::{
     Debug,
     my_strategy::{

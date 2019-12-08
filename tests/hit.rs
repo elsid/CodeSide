@@ -1,11 +1,9 @@
-mod examples;
-
 use model::{
     Level,
     Properties,
     Tile,
 };
-use examples::{
+use aicup2019::examples::{
     example_properties,
 };
 use aicup2019::my_strategy::{

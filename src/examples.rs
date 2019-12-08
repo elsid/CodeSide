@@ -9,7 +9,7 @@ use model::{
     Unit,
     Vec2F64,
 };
-use aicup2019::my_strategy::{
+use crate::my_strategy::{
     Config,
     SeedableRng,
     World,
