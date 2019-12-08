@@ -74,7 +74,7 @@ pub fn get_tile_score(world: &World, x: usize, y: usize) -> f64 {
     let center = Vec2::new(x as f64 + 0.5, y as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
     let max_distance = world.size().norm();
-    let hit_score = world.units().iter()
+    let distance_to_opponent_score = world.units().iter()
         .filter(|unit| unit.player_id != world.me().player_id)
         .map(|unit| {
             get_hit_probability(&me, &unit.rect(), world.level()) * center.distance(unit.position())
@@ -95,12 +95,19 @@ pub fn get_tile_score(world: &World, x: usize, y: usize) -> f64 {
         },
         _ => false,
     }) as i32 as f64;
+    let hit_score = world.units().iter()
+        .filter(|unit| unit.player_id != world.me().player_id)
+        .map(|unit| {
+            max_distance - get_hit_probability(&unit.rect(), &me, world.level()) * center.distance(unit.position())
+        })
+        .sum::<f64>() / (world.units().len() as f64 * max_distance);
 
-    hit_score * world.config().optimal_tile_distance_to_opponent_score_weight
+    distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight
     + distance_to_position_score * world.config().optimal_tile_distance_to_position_score_weight
     + health_pack_score * world.config().optimal_tile_health_pack_score_weight
     + weapon_score * world.config().optimal_tile_first_weapon_score_weight
     + swap_weapon_score * world.config().optimal_tile_swap_weapon_score_weight
+    + hit_score * world.config().optimal_tile_hit_score_weight
 }
 
 pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
