@@ -48,6 +48,8 @@ pub struct MyStrategyImpl {
     time_spent: Duration,
     cpu_time_spent: Duration,
     max_cpu_time_spent: Duration,
+    max_time_budget_spent: f64,
+    max_cpu_time_budget_spent: f64,
 }
 
 impl MyStrategyImpl {
@@ -68,6 +70,8 @@ impl MyStrategyImpl {
             time_spent: Duration::default(),
             cpu_time_spent: Duration::default(),
             max_cpu_time_spent: Duration::default(),
+            max_time_budget_spent: 0.0,
+            max_cpu_time_budget_spent: 0.0,
         }
     }
 
@@ -218,6 +222,8 @@ impl MyStrategyImpl {
         self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
         self.cpu_time_spent += cpu_time_spent;
         self.time_spent = finish - self.start_time;
+        self.max_cpu_time_budget_spent = self.max_time_budget_spent.max(time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent));
+        self.max_time_budget_spent = self.max_time_budget_spent.max(time_bugdet_spent(self.world.game().current_tick, &self.time_spent));
     }
 
     fn should_swap_weapon(&self) -> bool {
@@ -238,6 +244,17 @@ impl MyStrategyImpl {
 impl Drop for MyStrategyImpl {
     fn drop(&mut self) {
         #[cfg(not(feature = "disable_output"))]
-        eprintln!("{} {:?} {:?} {:?}", self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent);
+        eprintln!(
+            "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+            self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
+            time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent),
+            time_bugdet_spent(self.world.game().current_tick, &self.time_spent),
+            self.max_time_budget_spent,
+            self.max_cpu_time_budget_spent
+        );
     }
+}
+
+fn time_bugdet_spent(current_tick: i32, time_spent: &Duration) -> f64 {
+    time_spent.as_secs_f64() / ((current_tick * 20 + 20000) as f64 / 1000.0) * 100.0
 }
