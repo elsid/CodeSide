@@ -8,7 +8,7 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
-    get_hit_probalibity,
+    get_hit_probability,
 };
 
 #[cfg(feature = "dump_level")]
@@ -116,7 +116,7 @@ impl MyStrategyImpl {
             text: format!("Target pos: {:?}", target_pos),
         });
         let aim: Option<model::Vec2F64> = if let Some(opponent) = nearest_opponent {
-            if get_hit_probalibity(&me, opponent, self.world.level()) > 0.0 {
+            if get_hit_probability(&me, opponent, self.world.level()) > 0.0 {
                 Some(model::Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,

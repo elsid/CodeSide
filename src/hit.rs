@@ -10,7 +10,7 @@ use crate::my_strategy::{
     get_tile,
 };
 
-pub fn get_hit_probalibity(shooter: &Unit, target: &Unit, level: &Level) -> f64 {
+pub fn get_hit_probability(shooter: &Unit, target: &Unit, level: &Level) -> f64 {
     let begin = shooter.rect().center();
     let end = target.rect().center();
     if begin.x() as i32 == end.x() as i32 && begin.y() as i32 == end.y() as i32 {
