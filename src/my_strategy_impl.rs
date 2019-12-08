@@ -1,8 +1,30 @@
-use std::time::{Instant, Duration};
+use std::time::{
+    Instant,
+    Duration,
+};
+
+use model::{
+    Game,
+    Item,
+    Tile,
+    Unit,
+    UnitAction,
+    Vec2F64,
+};
+
+#[cfg(feature = "enable_debug")]
+use model::{
+    ColorF32,
+    CustomData,
+    Vec2F32,
+};
+
 use crate::Debug;
+
 use crate::my_strategy::{
     Config,
     Planner,
+    Positionable,
     Rectangular,
     SeedableRng,
     Simulator,
@@ -11,6 +33,7 @@ use crate::my_strategy::{
     XorShiftRng,
     get_hit_probability,
     get_optimal_tile,
+    get_weapon_score,
 };
 
 #[cfg(feature = "dump_level")]
@@ -28,7 +51,7 @@ pub struct MyStrategyImpl {
 }
 
 impl MyStrategyImpl {
-    pub fn new(config: Config, me: model::Unit, game: model::Game) -> Self {
+    pub fn new(config: Config, me: Unit, game: Game) -> Self {
         #[cfg(feature = "dump_level")]
         println!("{}", dump_level(&game.level));
         Self {
@@ -48,15 +71,15 @@ impl MyStrategyImpl {
         }
     }
 
-    pub fn get_action(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
+    pub fn get_action(&mut self, me: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
         self.on_start();
         let result = self.get_action_measured(me, game, debug);
         self.on_finish();
         result
     }
 
-    pub fn get_action_measured(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
-        fn distance_sqr(a: &model::Vec2F64, b: &model::Vec2F64) -> f64 {
+    pub fn get_action_measured(&mut self, me: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
+        fn distance_sqr(a: &Vec2F64, b: &Vec2F64) -> f64 {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
         self.world.update(me, game);
@@ -71,7 +94,7 @@ impl MyStrategyImpl {
             });
         let nearest_weapon = self.world.loot_boxes().iter()
             .filter(|loot| {
-                if let model::Item::Weapon { .. } = loot.item {
+                if let Item::Weapon { .. } = loot.item {
                     true
                 } else {
                     false
@@ -86,7 +109,7 @@ impl MyStrategyImpl {
             });
         let nearest_health_pack = self.world.loot_boxes().iter()
             .filter(|loot| {
-                if let model::Item::HealthPack { .. } = loot.item {
+                if let Item::HealthPack { .. } = loot.item {
                     true
                 } else {
                     false
@@ -100,33 +123,44 @@ impl MyStrategyImpl {
                 .unwrap()
             });
         let mut target = me.position.clone();
-        if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
+        if let Some((tile_x, tile_y)) = get_optimal_tile(&self.world, debug) {
+            #[cfg(feature = "enable_debug")]
+            debug.draw(CustomData::Log {
+                text: format!("optimal_tile: x={} y={}", tile_x, tile_y),
+            });
+            #[cfg(feature = "enable_debug")]
+            debug.draw(CustomData::Rect {
+                pos: Vec2F32 { x: tile_x as f32, y: tile_y as f32 },
+                size: Vec2F32 { x: 1.0, y: 1.0 },
+                color: ColorF32 { a: 0.5, r: 0.0, g: 0.0, b: 0.0 },
+            });
+            #[cfg(feature = "enable_debug")]
+            debug.draw(CustomData::Line {
+                p1: self.world.me().position().as_model_f32(),
+                p2: Vec2F32 { x: tile_x as f32 + 0.5, y: tile_y as f32 + 0.5 },
+                width: 0.1,
+                color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
+            });
+            target = Vec2::new(tile_x as f64 + 0.5, tile_y as f64).as_model();
+        } else if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
             target = weapon.position.clone();
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
             target = health_pack.position.clone();
         } else if let Some(opponent) = nearest_opponent {
-            if let Some((tile_x, tile_y)) = get_optimal_tile(&self.world, debug) {
-                #[cfg(feature = "enable_debug")]
-                debug.draw(model::CustomData::Log {
-                    text: format!("optimal_tile: x={} y={}", tile_x, tile_y),
-                });
-                target = Vec2::new(tile_x as f64 + 0.5, tile_y as f64).as_model();
-            } else {
-                target = opponent.position.clone();
-            }
+            target = opponent.position.clone();
         }
         #[cfg(feature = "enable_debug")]
-        debug.draw(model::CustomData::Log {
+        debug.draw(CustomData::Log {
             text: format!("target: {:?}", target),
         });
-        let aim: Option<model::Vec2F64> = if let Some(opponent) = nearest_opponent {
+        let aim: Option<Vec2F64> = if let Some(opponent) = nearest_opponent {
             let hit_probability = get_hit_probability(&me.rect(), &opponent.rect(), self.world.level());
             #[cfg(feature = "enable_debug")]
-                debug.draw(model::CustomData::Log {
+                debug.draw(CustomData::Log {
                     text: format!("hit_probability={}", hit_probability),
                 });
             if hit_probability > 0.0 {
-                Some(model::Vec2F64 {
+                Some(Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
                 })
@@ -140,35 +174,36 @@ impl MyStrategyImpl {
         let plan = Planner::new(Vec2::from_model(&target), &self.config, simulator).make(&mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
-            debug.draw(model::CustomData::Log {
+            debug.draw(CustomData::Log {
                 text: format!("plan: score={}", plan.score),
             });
             let mut action = plan.transitions[0].action.clone();
             action.shoot = aim.is_some();
-            action.aim = aim.unwrap_or(model::Vec2F64 { x: 0.0, y: 0.0 });
+            action.aim = aim.unwrap_or(Vec2F64 { x: 0.0, y: 0.0 });
+            action.swap_weapon = self.should_swap_weapon();
             return action;
         }
         let mut jump = target.y > me.position.y;
         if target.x > me.position.x
             && self.world.game().level.tiles[(me.position.x + 1.0) as usize][(me.position.y) as usize]
-                == model::Tile::Wall
+                == Tile::Wall
         {
             jump = true
         }
         if target.x < me.position.x
             && self.world.game().level.tiles[(me.position.x - 1.0) as usize][(me.position.y) as usize]
-                == model::Tile::Wall
+                == Tile::Wall
         {
             jump = true
         }
-        model::UnitAction {
+        UnitAction {
             velocity: target.x - me.position.x,
             jump,
             jump_down: target.y < me.position.y,
             shoot: aim.is_some(),
-            aim: aim.unwrap_or(model::Vec2F64 { x: 0.0, y: 0.0 }),
+            aim: aim.unwrap_or(Vec2F64 { x: 0.0, y: 0.0 }),
             reload: false,
-            swap_weapon: false,
+            swap_weapon: self.should_swap_weapon(),
             plant_mine: false,
         }
     }
@@ -183,6 +218,20 @@ impl MyStrategyImpl {
         self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
         self.cpu_time_spent += cpu_time_spent;
         self.time_spent = finish - self.start_time;
+    }
+
+    fn should_swap_weapon(&self) -> bool {
+        if let Some(weapon) = self.world.me().weapon.as_ref() {
+            let position = self.world.me().position();
+            match self.world.tile_item(position.x() as usize, position.y() as usize) {
+                Some(&Item::Weapon { ref weapon_type }) => {
+                    get_weapon_score(&weapon.typ) < get_weapon_score(weapon_type)
+                }
+                _ => false,
+            }
+        } else {
+            false
+        }
     }
 }
 

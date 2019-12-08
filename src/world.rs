@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
 use model::{
     Bullet,
     Game,
+    Item,
     Level,
     LootBox,
     Player,
@@ -21,6 +23,7 @@ pub struct World {
     me: Unit,
     game: Game,
     size: Vec2,
+    items_by_tile: BTreeMap<(usize, usize), Item>,
 }
 
 impl World {
@@ -30,6 +33,9 @@ impl World {
                 game.level.tiles.len() as f64,
                 game.level.tiles.iter().max_by_key(|v| v.len()).unwrap().len() as f64
             ),
+            items_by_tile: game.loot_boxes.iter()
+                .map(|v| ((v.position.x as usize, v.position.y as usize), v.item.clone()))
+                .collect(),
             config,
             me,
             game,
@@ -39,6 +45,9 @@ impl World {
     pub fn update(&mut self, me: &Unit, game: &Game) {
         self.me = me.clone();
         self.game = game.clone();
+        self.items_by_tile = game.loot_boxes.iter()
+            .map(|v| ((v.position.x as usize, v.position.y as usize), v.item.clone()))
+            .collect();
     }
 
     pub fn config(&self) -> &Config {
@@ -97,5 +106,9 @@ impl World {
         self.game.units.iter()
             .find(|v| v.id == id)
             .unwrap()
+    }
+
+    pub fn tile_item(&self, x: usize, y: usize) -> Option<&Item> {
+        self.items_by_tile.get(&(x, y))
     }
 }

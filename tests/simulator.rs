@@ -14,7 +14,6 @@ use my_strategy::examples::{
     example_world,
 };
 use my_strategy::my_strategy::{
-    Rectangular,
     Simulator,
     UnitExt,
     Vec2,
