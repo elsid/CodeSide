@@ -2,9 +2,9 @@ use model::{
     Bullet,
     Item,
     JumpState,
+    LootBox,
     Properties,
     Unit,
-    LootBox,
     Weapon,
     WeaponType,
 };
@@ -14,6 +14,7 @@ use my_strategy::examples::{
     example_world,
 };
 use my_strategy::my_strategy::{
+    Rectangular,
     Simulator,
     UnitExt,
     Vec2,
@@ -340,7 +341,7 @@ fn test_simulator_unit_fall_onto_unit() {
 
 #[test]
 fn test_simulator_bullet_hit_unit() {
-    let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0));
+    let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), 0);
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 10 {
@@ -355,8 +356,28 @@ fn test_simulator_bullet_hit_unit() {
 }
 
 #[test]
+fn test_simulator_bullet_does_not_hit_its_shooter() {
+    let world = {
+        let world = example_world();
+        let unit_id = world.me().id;
+        with_bullet(world, WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), unit_id)
+    };
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 10 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 100);
+    assert_eq!(simulator.bullets().len(), 2);
+}
+
+#[test]
 fn test_simulator_bullet_explode_unit() {
-    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0));
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), 0);
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 25 {
@@ -388,7 +409,7 @@ fn test_simulator_bullet_hit_wall() {
 
 #[test]
 fn test_simulator_bullet_explode_on_hit_wall() {
-    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0));
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), 0);
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 15 {
@@ -682,13 +703,13 @@ fn with_my_position(world: World, position: Vec2) -> World {
     World::new(world.config().clone(), game.units[me_index].clone(), game)
 }
 
-fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2) -> World {
+fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2, unit_id: i32) -> World {
     let mut game = world.game().clone();
     let params = &world.properties().weapon_params.get(&weapon_type).unwrap();
     game.bullets.push(Bullet {
         weapon_type: weapon_type,
-        unit_id: 2,
-        player_id: 1,
+        unit_id: unit_id,
+        player_id: 0,
         position: position.as_model(),
         velocity: (direction.normalized() * params.bullet.speed).as_model(),
         damage: params.bullet.damage,

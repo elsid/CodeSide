@@ -802,7 +802,7 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
 }
 
 fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option<Explosion> {
-    if !bullet.rect().has_collision(&unit.holding_rect()) {
+    if bullet.base.unit_id == unit.base.id || !bullet.rect().has_collision(&unit.holding_rect()) {
         return None;
     }
     bullet.hit = true;
