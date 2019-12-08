@@ -19,7 +19,7 @@ impl Config {
         Self {
             max_plan_iterations: 100,
             min_ticks_per_transition: 5,
-            max_ticks_per_transition: 30,
+            max_ticks_per_transition: 10,
             microticks_per_tick: 3,
             distance_score_weight: -0.5,
             health_diff_score_weight: 1.0,
