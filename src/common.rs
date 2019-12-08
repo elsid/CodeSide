@@ -20,6 +20,7 @@ pub trait Clamp1: PartialOrd + Sized {
     }
 }
 
+impl Clamp1 for f32 {}
 impl Clamp1 for f64 {}
 impl Clamp1 for usize {}
 

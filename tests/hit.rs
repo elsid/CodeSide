@@ -1,14 +1,13 @@
 use model::{
-    JumpState,
     Level,
     Properties,
     Tile,
-    Unit,
 };
 use my_strategy::examples::{
     example_properties,
 };
 use my_strategy::my_strategy::{
+    Rect,
     Vec2,
     get_hit_probability,
     will_hit_by_horizontal,
@@ -74,29 +73,14 @@ fn test_get_hit_probability() {
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
         ]
     };
-    let shooter = make_unit_at(Vec2::new(0.2312, 0.6423), &properties);
-    let target = make_unit_at(Vec2::new(2.653, 1.234), &properties);
+    let shooter = make_unit_rect(Vec2::new(0.2312, 0.6423), &properties);
+    let target = make_unit_rect(Vec2::new(2.653, 1.234), &properties);
     assert_eq!(get_hit_probability(&shooter, &target, &level), 0.0);
 }
 
-fn make_unit_at(position: Vec2, properties: &Properties) -> Unit {
-    Unit {
-        player_id: 3,
-        id: 4,
-        health: 100,
-        position: position.as_model(),
-        size: properties.unit_size.clone(),
-        jump_state: JumpState {
-            can_jump: false,
-            speed: 0.0,
-            max_time: 0.0,
-            can_cancel: false,
-        },
-        walked_right: false,
-        stand: true,
-        on_ground: false,
-        on_ladder: false,
-        mines: 0,
-        weapon: None,
-    }
+fn make_unit_rect(position: Vec2, properties: &Properties) -> Rect {
+    Rect::new(
+        position + Vec2::new(0.0, properties.unit_size.y / 2.0),
+        Vec2::from_model(&properties.unit_size)
+    )
 }

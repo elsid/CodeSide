@@ -6,6 +6,8 @@ pub struct Config {
     pub microticks_per_tick: usize,
     pub distance_score_weight: f64,
     pub health_diff_score_weight: f64,
+    pub optimal_tile_distance_to_position_weight: f64,
+    pub optimal_tile_distance_to_opponent_weight: f64,
 }
 
 impl Config {
@@ -16,7 +18,9 @@ impl Config {
             max_ticks_per_transition: 30,
             microticks_per_tick: 3,
             distance_score_weight: -1.0,
-            health_diff_score_weight: 1.0,
+            health_diff_score_weight: 0.5,
+            optimal_tile_distance_to_position_weight: -0.5,
+            optimal_tile_distance_to_opponent_weight: 1.0,
         }
     }
 }

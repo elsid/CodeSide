@@ -11,6 +11,7 @@ use model::{
 use crate::my_strategy::{
     Config,
     Vec2,
+    get_tile,
     get_tile_by_vec2,
 };
 
@@ -82,6 +83,10 @@ impl World {
 
     pub fn tick_time_interval(&self) -> f64 {
         1.0 / self.game.properties.ticks_per_second as f64
+    }
+
+    pub fn tile(&self, x: usize, y: usize) -> Tile {
+        get_tile(&self.game.level, x, y)
     }
 
     pub fn tile_by_position(&self, position: Vec2) -> Tile {

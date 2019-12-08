@@ -1,18 +1,17 @@
 use model::{
     Level,
     Tile,
-    Unit,
 };
 use crate::my_strategy::{
-    Rectangular,
+    Rect,
     Vec2,
     WalkGrid,
     get_tile,
 };
 
-pub fn get_hit_probability(shooter: &Unit, target: &Unit, level: &Level) -> f64 {
-    let begin = shooter.rect().center();
-    let end = target.rect().center();
+pub fn get_hit_probability(shooter: &Rect, target: &Rect, level: &Level) -> f64 {
+    let begin = shooter.center();
+    let end = target.center();
     if begin.x() as i32 == end.x() as i32 && begin.y() as i32 == end.y() as i32 {
         return (get_tile(level, begin.x() as usize, begin.y() as usize) != Tile::Wall) as i32 as f64;
     }

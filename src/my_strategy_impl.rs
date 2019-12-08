@@ -3,12 +3,14 @@ use crate::Debug;
 use crate::my_strategy::{
     Config,
     Planner,
+    Rectangular,
     SeedableRng,
     Simulator,
     Vec2,
     World,
     XorShiftRng,
     get_hit_probability,
+    get_optimal_tile,
 };
 
 #[cfg(feature = "dump_level")]
@@ -58,9 +60,7 @@ impl MyStrategyImpl {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
         self.world.update(me, game);
-        let nearest_opponent = self.world.game()
-            .units
-            .iter()
+        let nearest_opponent = self.world.units().iter()
             .filter(|other| other.player_id != me.player_id)
             .min_by(|a, b| {
                 std::cmp::PartialOrd::partial_cmp(
@@ -69,9 +69,7 @@ impl MyStrategyImpl {
                 )
                 .unwrap()
             });
-        let nearest_weapon = self.world.game()
-            .loot_boxes
-            .iter()
+        let nearest_weapon = self.world.loot_boxes().iter()
             .filter(|loot| {
                 if let model::Item::Weapon { .. } = loot.item {
                     true
@@ -86,9 +84,7 @@ impl MyStrategyImpl {
                 )
                 .unwrap()
             });
-        let nearest_health_pack = self.world.game()
-            .loot_boxes
-            .iter()
+        let nearest_health_pack = self.world.loot_boxes().iter()
             .filter(|loot| {
                 if let model::Item::HealthPack { .. } = loot.item {
                     true
@@ -109,14 +105,18 @@ impl MyStrategyImpl {
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
             target_pos = health_pack.position.clone();
         } else if let Some(opponent) = nearest_opponent {
-            target_pos = opponent.position.clone();
+            if let Some((tile_x, tile_y)) = get_optimal_tile(&self.world, debug) {
+                target_pos = Vec2::new(tile_x as f64 + 0.5, tile_y as f64).as_model();
+            } else {
+                target_pos = opponent.position.clone();
+            }
         }
         #[cfg(feature = "enable_debug")]
         debug.draw(model::CustomData::Log {
             text: format!("Target pos: {:?}", target_pos),
         });
         let aim: Option<model::Vec2F64> = if let Some(opponent) = nearest_opponent {
-            if get_hit_probability(&me, opponent, self.world.level()) > 0.0 {
+            if get_hit_probability(&me.rect(), &opponent.rect(), self.world.level()) > 0.0 {
                 Some(model::Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,

@@ -40,6 +40,13 @@ pub mod common;
 #[allow(unused_imports)]
 pub use common::*;
 
+#[cfg(feature = "enable_debug")]
+#[path = "debug.rs"]
+pub mod debug;
+
+#[cfg(feature = "enable_debug")]
+pub use debug::*;
+
 #[path = "vec2.rs"]
 pub mod vec2;
 
@@ -111,6 +118,12 @@ pub mod plan;
 
 #[allow(unused_imports)]
 pub use plan::*;
+
+#[path = "optimal_tile.rs"]
+pub mod optimal_tile;
+
+#[allow(unused_imports)]
+pub use optimal_tile::*;
 
 #[cfg(feature = "dump_examples")]
 #[path = "my_strategy_dump_examples.rs"]
