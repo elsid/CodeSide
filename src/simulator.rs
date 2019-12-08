@@ -37,6 +37,8 @@ pub struct Simulator {
     me_index: usize,
 }
 
+const EPSILON: f64 = 1e-9;
+
 impl Simulator {
     pub fn new(world: &World, me_id: i32) -> Self {
         let player_id = world.get_unit(me_id).player_id;
@@ -116,123 +118,47 @@ impl Simulator {
                 continue;
             }
 
-            self.units[unit].base.on_ladder = false;
-
             let velocity_x = self.units[unit].action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval;
-            self.units[unit].move_by_x(velocity_x);
 
-            let (left, right) = self.units.split_at_mut(unit + 1);
-            let (left_left, left_right) = left.split_at_mut(left.len() - 1);
-
-            for i in 0 .. left_left.len() {
-                if left_left[i].ignore() {
-                    continue;
-                }
-                collide_units_by_x(&mut left_right[0], &mut left_left[i]);
+            if velocity_x != 0.0 {
+                self.units[unit].start_move_by_x(velocity_x);
+                self.collide_moving_unit_and_tiles_by_x(unit);
+                self.collide_units_by_x(unit);
+                self.units[unit].finish_move_by_x();
             }
 
-            for i in 0 .. right.len() {
-                if right[i].ignore() {
-                    continue;
-                }
-                collide_units_by_x(&mut left_right[0], &mut right[i]);
-            }
+            self.collide_holding_unit_and_tiles(unit);
 
-            let min_y = self.units[unit].bottom() as usize;
-            let max_y = (self.units[unit].top() as usize + 1).min(self.level.tiles[0].len());
-            let left = self.units[unit].left() as usize;
-            let right = self.units[unit].right() as usize;
-            for y in min_y .. max_y {
-                for &x in &[left, right] {
-                    match get_tile(&self.level, x, y) {
-                        Tile::Wall => {
-                            collide_by_x(&mut self.units[unit], x, y);
-                        },
-                        Tile::Ladder => {
-                            self.units[unit].base.on_ladder = self.units[unit].base.on_ladder || can_use_ladder(&self.units[unit], x, y);
-                        },
-                        Tile::JumpPad => {
-                            start_pad_jump(&mut self.units[unit], &self.properties);
-                        },
-                        _ => (),
-                    }
-                }
-            }
-
-            if self.units[unit].base.jump_state.can_jump && (self.units[unit].action.jump || !self.units[unit].base.jump_state.can_cancel) {
-                let jump_time = shift_jump_max_time(&mut self.units[unit], time_interval);
-                let velocity_y = self.units[unit].base.jump_state.speed * jump_time;
-                self.units[unit].move_by_y(velocity_y);
-                if self.units[unit].base.jump_state.max_time == 0.0 {
-                    cancel_jump(&mut self.units[unit]);
-                }
-            } else {
-                self.units[unit].move_by_y(-self.properties.unit_fall_speed * time_interval);
-            }
-            self.units[unit].base.on_ground = false;
-
-            let (left, right) = self.units.split_at_mut(unit + 1);
-            let (left_left, left_right) = left.split_at_mut(left.len() - 1);
-
-            for i in 0 .. left_left.len() {
-                if left_left[i].ignore() {
-                    continue;
-                }
-                collide_units_by_y(&mut left_right[0], &mut left_left[i]);
-            }
-
-            for i in 0 .. right.len() {
-                if right[i].ignore() {
-                    continue;
-                }
-                collide_units_by_y(&mut left_right[0], &mut right[i]);
-            }
-
-            let min_x = self.units[unit].left() as usize;
-            let max_x = (self.units[unit].right() as usize + 1).min(self.level.tiles.len());
-            let top = self.units[unit].top() as usize;
-            let bottom = self.units[unit].bottom() as usize;
-            for x in min_x .. max_x {
-                match get_tile(&self.level, x, bottom) {
-                    Tile::Wall => {
-                        collide_by_y(&mut self.units[unit], x, bottom);
-                        allow_jump(&mut self.units[unit], &self.properties);
-                    },
-                    Tile::Ladder => {
-                        self.units[unit].base.on_ladder = self.units[unit].base.on_ladder || can_use_ladder(&self.units[unit], x, bottom);
-                        if !self.units[unit].base.on_ladder {
-                            collide_by_y(&mut self.units[unit], x, bottom);
-                            allow_jump(&mut self.units[unit], &self.properties);
-                        }
-                    },
-                    Tile::Platform => {
-                        if !self.units[unit].action.jump_down {
-                            collide_by_y(&mut self.units[unit], x, bottom);
-                            allow_jump(&mut self.units[unit], &self.properties);
-                        }
-                    },
-                    Tile::JumpPad => {
-                        start_pad_jump(&mut self.units[unit], &self.properties);
-                    },
-                    _ => (),
-                }
-                match get_tile(&self.level, x, top) {
-                    Tile::Wall => {
-                        collide_by_y(&mut self.units[unit], x, top);
-                        self.units[unit].base.on_ground = true;
+            if !self.units[unit].base.on_ladder || self.units[unit].action.jump_down || self.units[unit].action.jump {
+                if self.units[unit].base.jump_state.can_jump && (self.units[unit].action.jump || !self.units[unit].base.jump_state.can_cancel) {
+                    let jump_time = shift_jump_max_time(&mut self.units[unit], time_interval);
+                    let velocity_y = self.units[unit].base.jump_state.speed * jump_time;
+                    self.units[unit].start_move_by_y(velocity_y);
+                    if self.units[unit].base.jump_state.max_time == 0.0 {
                         cancel_jump(&mut self.units[unit]);
-                    },
-                    Tile::Ladder => {
-                        self.units[unit].base.on_ladder = self.units[unit].base.on_ladder || can_use_ladder(&self.units[unit], x, top);
-                        self.units[unit].base.on_ground = true;
-                        allow_jump(&mut self.units[unit], &self.properties);
-                    },
-                    Tile::JumpPad => {
-                        start_pad_jump(&mut self.units[unit], &self.properties);
-                    },
-                    _ => (),
+                    }
+                } else {
+                    self.units[unit].start_move_by_y(-self.properties.unit_fall_speed * time_interval);
                 }
+                self.units[unit].base.on_ground = false;
             }
+
+            if self.units[unit].velocity_y != 0.0 {
+                if self.units[unit].velocity_y > 0.0 {
+                    self.collide_moving_up_unit_and_tiles_by_y(unit);
+                } else {
+                    self.collide_moving_down_unit_and_tiles_by_y(unit);
+                }
+
+                self.collide_units_by_y(unit);
+
+                self.units[unit].finish_move_by_y();
+            }
+
+            self.collide_holding_unit_and_tiles(unit);
+
+            #[cfg(feature = "verify_collisions")]
+            self.verify_collisions(unit, "after_y");
         }
 
         for bullet in 0 .. self.bullets.len() {
@@ -265,6 +191,147 @@ impl Simulator {
         self.current_micro_tick += 1;
     }
 
+    fn collide_moving_unit_and_tiles_by_x(&mut self, unit: usize) {
+        let min_x = self.units[unit].moving_left().max(0.0) as usize;
+        let max_x = (self.units[unit].moving_right() as usize + 1).min(self.level.tiles.len());
+        let min_y = self.units[unit].holding_bottom() as usize;
+        let max_y = self.units[unit].holding_top() as usize + 1;
+
+        for x in min_x .. max_x {
+            for y in min_y .. max_y {
+                match get_tile(&self.level, x, y) {
+                    Tile::Wall => {
+                        self.units[unit].collide_with_tile_by_x(x, y);
+                    },
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    fn collide_holding_unit_and_tiles(&mut self, unit: usize) {
+        self.units[unit].base.on_ladder = false;
+
+        let min_x = self.units[unit].holding_left() as usize;
+        let max_x = self.units[unit].holding_right() as usize + 1;
+        let min_y = self.units[unit].holding_bottom() as usize;
+        let max_y = self.units[unit].holding_top() as usize + 1;
+
+        for x in min_x .. max_x {
+            for y in min_y .. max_y {
+                match get_tile(&self.level, x, y) {
+                    Tile::Ladder => {
+                        if !self.units[unit].base.on_ladder && can_use_ladder(&self.units[unit], x, y) {
+                            self.units[unit].base.on_ladder = true;
+                            self.units[unit].base.on_ground = true;
+                            allow_jump(&mut self.units[unit], &self.properties);
+                        }
+                    },
+                    Tile::JumpPad => {
+                        start_pad_jump(&mut self.units[unit], &self.properties);
+                    },
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    fn collide_units_by_x(&mut self, unit: usize) {
+        let (left, right) = self.units.split_at_mut(unit + 1);
+        let (left_left, left_right) = left.split_at_mut(left.len() - 1);
+
+        for i in 0 .. left_left.len() {
+            if left_left[i].ignore() {
+                continue;
+            }
+            left_right[0].collide_with_unit_by_x(&left_left[i]);
+        }
+
+        for i in 0 .. right.len() {
+            if right[i].ignore() {
+                continue;
+            }
+            left_right[0].collide_with_unit_by_x(&right[i]);
+        }
+    }
+
+    fn collide_moving_down_unit_and_tiles_by_y(&mut self, unit: usize) {
+        let min_x = self.units[unit].holding_left() as usize;
+        let max_x = self.units[unit].holding_right() as usize + 1;
+        let min_y = self.units[unit].moving_bottom().max(0.0) as usize;
+        let max_y = (self.units[unit].holding_center_y() as usize + 1).min(self.level.tiles[0].len());
+
+        for x in min_x .. max_x {
+            for y in min_y .. max_y {
+                match get_tile(&self.level, x, y) {
+                    Tile::Wall => {
+                        if self.units[unit].collide_with_tile_by_y(x, y) {
+                            self.units[unit].base.on_ground = true;
+                            allow_jump(&mut self.units[unit], &self.properties);
+                        }
+                    },
+                    Tile::Ladder => {
+                        if !self.units[unit].base.on_ladder && !self.units[unit].action.jump_down {
+                            if can_use_ladder(&self.units[unit], x, y) && self.units[unit].collide_with_tile_by_y(x, y) {
+                                self.units[unit].base.on_ladder = true;
+                                self.units[unit].base.on_ground = true;
+                                allow_jump(&mut self.units[unit], &self.properties);
+                            }
+                        }
+                    },
+                    Tile::Platform => {
+                        if !self.units[unit].action.jump_down {
+                            if self.units[unit].collide_with_tile_by_y(x, y) {
+                                self.units[unit].base.on_ground = true;
+                                allow_jump(&mut self.units[unit], &self.properties);
+                            }
+                        }
+                    },
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    fn collide_moving_up_unit_and_tiles_by_y(&mut self, unit: usize) {
+        let min_x = self.units[unit].holding_left() as usize;
+        let max_x = self.units[unit].holding_right() as usize + 1;
+        let min_y = self.units[unit].holding_center_y().max(0.0) as usize;
+        let max_y = (self.units[unit].moving_top() as usize + 1).min(self.level.tiles[0].len());
+
+        for x in min_x .. max_x {
+            for y in min_y .. max_y {
+                match get_tile(&self.level, x, y) {
+                    Tile::Wall => {
+                        if self.units[unit].collide_with_tile_by_y(x, y) {
+                            cancel_jump(&mut self.units[unit]);
+                        }
+                    },
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    fn collide_units_by_y(&mut self, unit: usize) {
+        let (left, right) = self.units.split_at_mut(unit + 1);
+        let (left_left, left_right) = left.split_at_mut(left.len() - 1);
+
+        for i in 0 .. left_left.len() {
+            if left_left[i].ignore() {
+                continue;
+            }
+            left_right[0].collide_with_unit_by_y(&left_left[i]);
+        }
+
+        for i in 0 .. right.len() {
+            if right[i].ignore() {
+                continue;
+            }
+            left_right[0].collide_with_unit_by_y(&right[i]);
+        }
+    }
+
     fn collide_bullet_and_units(&mut self, bullet: usize) -> bool {
         for unit in 0 .. self.units.len() {
             if self.units[unit].ignore() {
@@ -290,6 +357,7 @@ impl Simulator {
         let max_x = (self.bullets[bullet].right() as usize + 1).min(self.level.tiles.len());
         let min_y = self.bullets[bullet].bottom() as usize;
         let max_y = (self.bullets[bullet].top() as usize + 1).min(self.level.tiles[0].len());
+
         for x in min_x .. max_x {
             for y in min_y .. max_y {
                 match get_tile(&self.level, x, y) {
@@ -312,6 +380,35 @@ impl Simulator {
         }
         false
     }
+
+    #[cfg(feature = "verify_collisions")]
+    fn verify_collisions(&self, unit: usize, place: &str) {
+        assert_eq!(self.units[unit].velocity_x, 0.0);
+        assert_eq!(self.units[unit].velocity_y, 0.0);
+
+        for x in 0 .. self.level.tiles.len() {
+            for y in 0 .. self.level.tiles[0].len() {
+                match get_tile(&self.level, x, y) {
+                    Tile::Wall => {
+                        let tile_size = 1.0;
+                        let tile_y = y as f64 + 0.5;
+                        let half_size_sum_y = (self.units[unit].holding_size_y() + tile_size) / 2.0;
+                        let distance_by_y = (self.units[unit].holding_center_y() - tile_y).abs();
+                        let penetration_by_y = half_size_sum_y - distance_by_y;
+                        let tile_x = x as f64 + 0.5;
+                        let half_size_sum_x = (self.units[unit].holding_size_x() + tile_size) / 2.0;
+                        let distance_by_x = (self.units[unit].holding_center_x() - tile_x).abs();
+                        let penetration_by_x = half_size_sum_x - distance_by_x;
+                        assert!(
+                            penetration_by_x <= EPSILON || penetration_by_y <= EPSILON,
+                            "\n[{}] {} x={} y={} penetration_by_x={} penetration_by_y={}\n{:?}\n", self.units[unit].base.id, place, x, y, penetration_by_x, penetration_by_y, self.units[unit]
+                        );
+                    },
+                    _ => (),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -321,7 +418,8 @@ pub struct UnitExt {
     is_me: bool,
     is_teammate: bool,
     ignore: bool,
-    velocity: Vec2,
+    velocity_x: f64,
+    velocity_y: f64,
 }
 
 impl UnitExt {
@@ -344,7 +442,8 @@ impl UnitExt {
             is_me,
             is_teammate,
             ignore: false,
-            velocity: Vec2::zero(),
+            velocity_x: 0.0,
+            velocity_y: 0.0,
         }
     }
 
@@ -360,48 +459,43 @@ impl UnitExt {
         &mut self.action
     }
 
-    pub fn shift_by_x(&mut self, value: f64) {
-        self.base.position.x += value;
+    pub fn holding_right(&self) -> f64 {
+        self.base.position.x + self.base.size.x / 2.0
     }
 
-    pub fn shift_by_y(&mut self, value: f64) {
-        self.base.position.y += value;
+    pub fn holding_left(&self) -> f64 {
+        self.base.position.x - self.base.size.x / 2.0
     }
 
-    pub fn right(&self) -> f64 {
-        self.base.position.x + self.half_width()
-    }
-
-    pub fn left(&self) -> f64 {
-        self.base.position.x - self.half_width()
-    }
-
-    pub fn top(&self) -> f64 {
+    pub fn holding_top(&self) -> f64 {
         self.base.position.y + self.base.size.y
     }
 
-    pub fn bottom(&self) -> f64 {
+    pub fn holding_bottom(&self) -> f64 {
         self.base.position.y
     }
 
-    pub fn half_width(&self) -> f64 {
-        self.base.size.x * 0.5
+    pub fn moving_right(&self) -> f64 {
+        self.moving_center_x() + self.moving_size_x() / 2.0
     }
 
-    pub fn half_height(&self) -> f64 {
-        self.base.size.y * 0.5
+    pub fn moving_left(&self) -> f64 {
+        self.moving_center_x() - self.moving_size_x() / 2.0
     }
 
-    pub fn center(&self) -> Vec2 {
-        Vec2::new(self.base.position.x, self.base.position.y + self.half_height())
+    pub fn moving_top(&self) -> f64 {
+        self.moving_center_y() + self.moving_size_y() / 2.0
     }
 
-    pub fn half(&self) -> Vec2 {
-        Vec2::new(self.half_width(), self.half_height())
+    pub fn moving_bottom(&self) -> f64 {
+        self.moving_center_y() - self.moving_size_y() / 2.0
     }
 
-    pub fn rect(&self) -> Rect {
-        Rect::new(self.center(), self.half())
+    pub fn holding_rect(&self) -> Rect {
+        Rect::new(
+            Vec2::new(self.holding_center_x(), self.holding_center_y()),
+            Vec2::new(self.holding_size_x(), self.holding_size_y()) / 2.0
+        )
     }
 
     pub fn health(&self) -> i32 {
@@ -412,14 +506,131 @@ impl UnitExt {
         self.is_teammate
     }
 
-    pub fn move_by_x(&mut self, value: f64) {
-        self.shift_by_x(value);
-        self.velocity.set_x(value);
+    pub fn start_move_by_x(&mut self, value: f64) {
+        self.velocity_x = value;
     }
 
-    pub fn move_by_y(&mut self, value: f64) {
-        self.shift_by_y(value);
-        self.velocity.set_y(value);
+    pub fn start_move_by_y(&mut self, value: f64) {
+        self.velocity_y = value;
+    }
+
+    pub fn holding_size_x(&self) -> f64 {
+        self.base.size.x
+    }
+
+    pub fn holding_size_y(&self) -> f64 {
+        self.base.size.y
+    }
+
+    pub fn moving_size_x(&self) -> f64 {
+        self.base.size.x + self.velocity_x.abs()
+    }
+
+    pub fn moving_size_y(&self) -> f64 {
+        self.base.size.y + self.velocity_y.abs()
+    }
+
+    pub fn holding_center_x(&self) -> f64 {
+        self.base.position.x
+    }
+
+    pub fn holding_center_y(&self) -> f64 {
+        self.base.position.y + self.base.size.y / 2.0
+    }
+
+    pub fn moving_center_x(&self) -> f64 {
+        self.base.position.x + self.velocity_x / 2.0
+    }
+
+    pub fn moving_center_y(&self) -> f64 {
+        self.base.position.y + (self.velocity_y + self.base.size.y) / 2.0
+    }
+
+    pub fn collide_with_tile_by_x(&mut self, x: usize, y: usize) {
+        if self.velocity_x == 0.0 {
+            return;
+        }
+        let tile_size = 1.0;
+        let tile_y = y as f64 + 0.5;
+        let half_size_sum_y = (self.holding_size_y() + tile_size) / 2.0;
+        let distance_by_y = (self.holding_center_y() - tile_y).abs();
+        let penetration_by_y = half_size_sum_y - distance_by_y;
+        if penetration_by_y <= 0.0 {
+            return;
+        }
+        let tile_x = x as f64 + 0.5;
+        let half_size_sum_x = (self.moving_size_x() + tile_size) / 2.0;
+        let distance_by_x = (self.moving_center_x() - tile_x).abs();
+        let penetration_by_x = half_size_sum_x - distance_by_x;
+        if penetration_by_x <= 0.0 {
+            return;
+        }
+        self.velocity_x -= (penetration_by_x + EPSILON).copysign(self.velocity_x);
+    }
+
+    pub fn collide_with_tile_by_y(&mut self, x: usize, y: usize) -> bool {
+        if self.velocity_y == 0.0 {
+            return false;
+        }
+        let tile_size = 1.0;
+        let tile_x = x as f64 + 0.5;
+        let half_size_sum_x = (self.holding_size_x() + tile_size) / 2.0;
+        let distance_by_x = (self.holding_center_x() - tile_x).abs();
+        let penetration_by_x = half_size_sum_x - distance_by_x;
+        if penetration_by_x <= 0.0 {
+            return false;
+        }
+        let tile_y = y as f64 + 0.5;
+        let half_size_sum_y = (self.moving_size_y() + tile_size) / 2.0;
+        let distance_by_y = (self.moving_center_y() - tile_y).abs();
+        let penetration_by_y = half_size_sum_y - distance_by_y;
+        if penetration_by_y <= 0.0 {
+            return false;
+        }
+        self.velocity_y -= (penetration_by_y + EPSILON).copysign(self.velocity_y);
+        true
+    }
+
+    pub fn collide_with_unit_by_x(&mut self, other: &UnitExt) {
+        let half_size_sum_y = (self.holding_size_y() + other.holding_size_y()) / 2.0;
+        let distance_by_y = (self.holding_center_y() - other.holding_center_y()).abs();
+        let penetration_by_y = half_size_sum_y - distance_by_y;
+        if penetration_by_y <= 0.0 {
+            return;
+        }
+        let half_size_sum_x = (self.moving_size_x() + other.holding_size_x()) / 2.0;
+        let distance_by_x = (self.moving_center_x() - other.holding_center_x()).abs();
+        let penetration_by_x = half_size_sum_x - distance_by_x;
+        if penetration_by_x <= 0.0 {
+            return;
+        }
+        self.velocity_x -= (penetration_by_x + EPSILON).copysign(self.velocity_x);
+    }
+
+    pub fn collide_with_unit_by_y(&mut self, other: &UnitExt) {
+        let half_size_sum_x = (self.holding_size_x() + other.holding_size_x()) / 2.0;
+        let distance_by_x = (self.holding_center_x() - other.holding_center_x()).abs();
+        let penetration_by_x = half_size_sum_x - distance_by_x;
+        if penetration_by_x <= 0.0 {
+            return;
+        }
+        let half_size_sum_y = (self.moving_size_y() + other.holding_size_y()) / 2.0;
+        let distance_by_y = (self.moving_center_y() - other.holding_center_y()).abs();
+        let penetration_by_y = half_size_sum_y - distance_by_y;
+        if penetration_by_y <= 0.0 {
+            return;
+        }
+        self.velocity_y -= (penetration_by_y + EPSILON).copysign(self.velocity_y);
+    }
+
+    pub fn finish_move_by_x(&mut self) {
+        self.base.position.x += self.velocity_x;
+        self.velocity_x = 0.0;
+    }
+
+    pub fn finish_move_by_y(&mut self) {
+        self.base.position.y += self.velocity_y;
+        self.velocity_y = 0.0;
     }
 
     pub fn ignore(&self) -> bool {
@@ -525,11 +736,12 @@ impl LootBoxExt {
     }
 }
 
-fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
-    let center = unit.center();
-    (center.x() - (x as f64 + 0.5)).abs() <= 0.5
-        && unit.top() - y as f64 >= 0.0
-        && (y + 1) as f64 - center.y() >= 0.0
+pub fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
+    unit.holding_center_x() as usize >= x && unit.holding_center_x() <= (x + 1) as f64
+    && (
+        (unit.holding_bottom() as usize >= y && (unit.holding_bottom() <= (y + 1) as f64))
+        || (unit.holding_center_y() as usize >= y && (unit.holding_center_y() <= (y + 1) as f64))
+    )
 }
 
 fn cancel_jump(unit: &mut UnitExt) {
@@ -564,83 +776,8 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
     }
 }
 
-fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize) {
-    let penetration = make_tile_rect(x, y).collide(&unit.rect());
-    if penetration.x() >= -std::f64::EPSILON
-        || penetration.y() >= -std::f64::EPSILON
-        || unit.velocity.x() == 0.0 {
-        return;
-    }
-    let dx = -penetration.x().abs().min(unit.velocity.x().abs()).copysign(unit.velocity.x());
-    unit.shift_by_x(dx);
-    unit.velocity.add_x(dx);
-}
-
-fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize) {
-    let penetration = make_tile_rect(x, y).collide(&unit.rect());
-    if penetration.x() >= -std::f64::EPSILON
-        || penetration.y() >= -std::f64::EPSILON
-        || unit.velocity.y() == 0.0 {
-        return;
-    }
-    let dy = -penetration.y().abs().min(unit.velocity.y().abs()).copysign(unit.velocity.y());
-    unit.shift_by_y(dy);
-    unit.velocity.add_y(dy);
-}
-
-pub fn collide_units_by_x(a: &mut UnitExt, b: &mut UnitExt) {
-    let penetration = a.rect().collide(&b.rect());
-    if penetration.x() >= -std::f64::EPSILON
-        || penetration.y() >= -std::f64::EPSILON
-        || (a.velocity.x() == 0.0 && b.velocity.x() == 0.0) {
-        return;
-    }
-    let (a_vel, b_vel) = if a.position().x() < b.position().x() {
-        get_shift_factors(a.velocity.x(), b.velocity.x())
-    } else {
-        let (b_vel, a_vel) = get_shift_factors(b.velocity.x(), a.velocity.x());
-        (a_vel, b_vel)
-    };
-    a.shift_by_x(-penetration.x() * a_vel);
-    b.shift_by_x(-penetration.x() * b_vel);
-}
-
-fn collide_units_by_y(a: &mut UnitExt, b: &mut UnitExt) {
-    let penetration = a.rect().collide(&b.rect());
-    if penetration.x() >= -std::f64::EPSILON
-        || penetration.y() >= -std::f64::EPSILON
-        || (a.velocity.y() == 0.0 && b.velocity.y() == 0.0) {
-        return;
-    }
-    let (a_vel, b_vel) = if a.position().y() < b.position().y() {
-        get_shift_factors(a.velocity.y(), b.velocity.y())
-    } else {
-        let (b_vel, a_vel) = get_shift_factors(b.velocity.y(), a.velocity.y());
-        (a_vel, b_vel)
-    };
-    a.shift_by_y(-penetration.y() * a_vel);
-    b.shift_by_y(-penetration.y() * b_vel);
-}
-
-pub fn get_shift_factors(a_vel: f64, b_vel: f64) -> (f64, f64) {
-    if a_vel == 0.0 && b_vel == 0.0 {
-        (-0.5, 0.5)
-    } else if a_vel == 0.0 {
-        (0.0, 1.0)
-    } else if b_vel == 0.0 {
-        (-1.0, 0.0)
-    } else if a_vel < 0.0 {
-        (0.0, 1.0)
-    } else if b_vel > 0.0 {
-        (-1.0, 0.0)
-    } else {
-        let sum = a_vel.abs() + b_vel.abs();
-        (-a_vel / sum, -b_vel / sum)
-    }
-}
-
 fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option<Explosion> {
-    if !bullet.rect().has_collision(&unit.rect()) {
+    if !bullet.rect().has_collision(&unit.holding_rect()) {
         return None;
     }
     bullet.hit = true;
@@ -650,7 +787,7 @@ fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option
 }
 
 fn explode(explosion: &Explosion, unit: &mut UnitExt) {
-    if !explosion.rect().has_collision(&unit.rect()) {
+    if !explosion.rect().has_collision(&unit.holding_rect()) {
         return;
     }
     unit.damage(explosion.params.damage);
@@ -666,7 +803,7 @@ fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<E
 }
 
 fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt) -> bool {
-    if !loot_box.rect().has_collision(&unit.rect()) {
+    if !loot_box.rect().has_collision(&unit.holding_rect()) {
         return false;
     }
     match &loot_box.base.item {

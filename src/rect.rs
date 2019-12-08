@@ -23,14 +23,6 @@ impl Rect {
     }
 
     #[inline(always)]
-    pub fn collide(&self, other: &Self) -> Vec2 {
-        Vec2::new(
-            (self.center.x() - other.center.x()).abs() - (self.half.x() + other.half.x()),
-            (self.center.y() - other.center.y()).abs() - (self.half.y() + other.half.y())
-        )
-    }
-
-    #[inline(always)]
     pub fn min(&self) -> Vec2 {
         self.center - self.half
     }
