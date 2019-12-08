@@ -534,6 +534,22 @@ fn test_simulator_unit_fall_through_ladder_for_one_tick() {
 }
 
 #[test]
+fn test_simulator_unit_fall_through_platform_for_one_tick() {
+    let world = with_my_position(example_world(), Vec2::new(7.5, 7.5));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(7.5, 7.333333333333307)
+    );
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

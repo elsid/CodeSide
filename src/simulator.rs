@@ -205,6 +205,9 @@ impl Simulator {
                     },
                     _ => (),
                 }
+                if self.units[unit].velocity_x == 0.0 {
+                    return;
+                }
             }
         }
     }
@@ -245,6 +248,9 @@ impl Simulator {
                 continue;
             }
             left_right[0].collide_with_unit_by_x(&left_left[i]);
+            if left_right[0].velocity_x == 0.0 {
+                return;
+            }
         }
 
         for i in 0 .. right.len() {
@@ -252,6 +258,9 @@ impl Simulator {
                 continue;
             }
             left_right[0].collide_with_unit_by_x(&right[i]);
+            if left_right[0].velocity_x == 0.0 {
+                return;
+            }
         }
     }
 
@@ -280,7 +289,7 @@ impl Simulator {
                         }
                     },
                     Tile::Platform => {
-                        if !self.units[unit].action.jump_down {
+                        if !self.units[unit].action.jump_down && cross_platform(&self.units[unit], y) {
                             if self.units[unit].collide_with_tile_by_y(x, y) {
                                 self.units[unit].base.on_ground = true;
                                 allow_jump(&mut self.units[unit], &self.properties);
@@ -288,6 +297,9 @@ impl Simulator {
                         }
                     },
                     _ => (),
+                }
+                if self.units[unit].velocity_y == 0.0 {
+                    return;
                 }
             }
         }
@@ -309,6 +321,9 @@ impl Simulator {
                     },
                     _ => (),
                 }
+                if self.units[unit].velocity_y == 0.0 {
+                    return;
+                }
             }
         }
     }
@@ -322,6 +337,9 @@ impl Simulator {
                 continue;
             }
             left_right[0].collide_with_unit_by_y(&left_left[i]);
+            if left_right[0].velocity_y == 0.0 {
+                return;
+            }
         }
 
         for i in 0 .. right.len() {
@@ -329,6 +347,9 @@ impl Simulator {
                 continue;
             }
             left_right[0].collide_with_unit_by_y(&right[i]);
+            if left_right[0].velocity_y == 0.0 {
+                return;
+            }
         }
     }
 
@@ -555,7 +576,7 @@ impl UnitExt {
         let half_size_sum_y = (self.holding_size_y() + tile_size) / 2.0;
         let distance_by_y = (self.holding_center_y() - tile_y).abs();
         let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= 0.0 {
+        if penetration_by_y <= EPSILON {
             return;
         }
         let tile_x = x as f64 + 0.5;
@@ -577,7 +598,7 @@ impl UnitExt {
         let half_size_sum_x = (self.holding_size_x() + tile_size) / 2.0;
         let distance_by_x = (self.holding_center_x() - tile_x).abs();
         let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= 0.0 {
+        if penetration_by_x <= EPSILON {
             return false;
         }
         let tile_y = y as f64 + 0.5;
@@ -595,7 +616,7 @@ impl UnitExt {
         let half_size_sum_y = (self.holding_size_y() + other.holding_size_y()) / 2.0;
         let distance_by_y = (self.holding_center_y() - other.holding_center_y()).abs();
         let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= 0.0 {
+        if penetration_by_y <= EPSILON {
             return;
         }
         let half_size_sum_x = (self.moving_size_x() + other.holding_size_x()) / 2.0;
@@ -611,7 +632,7 @@ impl UnitExt {
         let half_size_sum_x = (self.holding_size_x() + other.holding_size_x()) / 2.0;
         let distance_by_x = (self.holding_center_x() - other.holding_center_x()).abs();
         let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= 0.0 {
+        if penetration_by_x <= EPSILON {
             return;
         }
         let half_size_sum_y = (self.moving_size_y() + other.holding_size_y()) / 2.0;
@@ -742,6 +763,10 @@ pub fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
         (unit.holding_bottom() as usize >= y && (unit.holding_bottom() <= (y + 1) as f64))
         || (unit.holding_center_y() as usize >= y && (unit.holding_center_y() <= (y + 1) as f64))
     )
+}
+
+pub fn cross_platform(unit: &UnitExt, y: usize) -> bool {
+    unit.holding_bottom() as usize >= y + 1 && unit.moving_bottom() < (y + 1) as f64
 }
 
 fn cancel_jump(unit: &mut UnitExt) {
