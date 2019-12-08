@@ -321,7 +321,7 @@ pub struct UnitExt {
     is_me: bool,
     is_teammate: bool,
     ignore: bool,
-    moved: Vec2,
+    velocity: Vec2,
 }
 
 impl UnitExt {
@@ -344,7 +344,7 @@ impl UnitExt {
             is_me,
             is_teammate,
             ignore: false,
-            moved: Vec2::zero(),
+            velocity: Vec2::zero(),
         }
     }
 
@@ -414,12 +414,12 @@ impl UnitExt {
 
     pub fn move_by_x(&mut self, value: f64) {
         self.shift_by_x(value);
-        self.moved.set_x(value);
+        self.velocity.set_x(value);
     }
 
     pub fn move_by_y(&mut self, value: f64) {
         self.shift_by_y(value);
-        self.moved.set_y(value);
+        self.velocity.set_y(value);
     }
 
     pub fn ignore(&self) -> bool {
@@ -568,37 +568,37 @@ fn collide_by_x(unit: &mut UnitExt, x: usize, y: usize) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
     if penetration.x() >= -std::f64::EPSILON
         || penetration.y() >= -std::f64::EPSILON
-        || unit.moved.x() == 0.0 {
+        || unit.velocity.x() == 0.0 {
         return;
     }
-    let dx = -penetration.x().abs().min(unit.moved.x().abs()).copysign(unit.moved.x());
+    let dx = -penetration.x().abs().min(unit.velocity.x().abs()).copysign(unit.velocity.x());
     unit.shift_by_x(dx);
-    unit.moved.add_x(dx);
+    unit.velocity.add_x(dx);
 }
 
 fn collide_by_y(unit: &mut UnitExt, x: usize, y: usize) {
     let penetration = make_tile_rect(x, y).collide(&unit.rect());
     if penetration.x() >= -std::f64::EPSILON
         || penetration.y() >= -std::f64::EPSILON
-        || unit.moved.y() == 0.0 {
+        || unit.velocity.y() == 0.0 {
         return;
     }
-    let dy = -penetration.y().abs().min(unit.moved.y().abs()).copysign(unit.moved.y());
+    let dy = -penetration.y().abs().min(unit.velocity.y().abs()).copysign(unit.velocity.y());
     unit.shift_by_y(dy);
-    unit.moved.add_y(dy);
+    unit.velocity.add_y(dy);
 }
 
 pub fn collide_units_by_x(a: &mut UnitExt, b: &mut UnitExt) {
     let penetration = a.rect().collide(&b.rect());
     if penetration.x() >= -std::f64::EPSILON
         || penetration.y() >= -std::f64::EPSILON
-        || (a.moved.x() == 0.0 && b.moved.x() == 0.0) {
+        || (a.velocity.x() == 0.0 && b.velocity.x() == 0.0) {
         return;
     }
     let (a_vel, b_vel) = if a.position().x() < b.position().x() {
-        get_shift_factors(a.moved.x(), b.moved.x())
+        get_shift_factors(a.velocity.x(), b.velocity.x())
     } else {
-        let (b_vel, a_vel) = get_shift_factors(b.moved.x(), a.moved.x());
+        let (b_vel, a_vel) = get_shift_factors(b.velocity.x(), a.velocity.x());
         (a_vel, b_vel)
     };
     a.shift_by_x(-penetration.x() * a_vel);
@@ -609,13 +609,13 @@ fn collide_units_by_y(a: &mut UnitExt, b: &mut UnitExt) {
     let penetration = a.rect().collide(&b.rect());
     if penetration.x() >= -std::f64::EPSILON
         || penetration.y() >= -std::f64::EPSILON
-        || (a.moved.y() == 0.0 && b.moved.y() == 0.0) {
+        || (a.velocity.y() == 0.0 && b.velocity.y() == 0.0) {
         return;
     }
     let (a_vel, b_vel) = if a.position().y() < b.position().y() {
-        get_shift_factors(a.moved.y(), b.moved.y())
+        get_shift_factors(a.velocity.y(), b.velocity.y())
     } else {
-        let (b_vel, a_vel) = get_shift_factors(b.moved.y(), a.moved.y());
+        let (b_vel, a_vel) = get_shift_factors(b.velocity.y(), a.velocity.y());
         (a_vel, b_vel)
     };
     a.shift_by_y(-penetration.y() * a_vel);
