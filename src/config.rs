@@ -22,7 +22,7 @@ impl Config {
             microticks_per_tick: 3,
             distance_score_weight: -1.0,
             health_diff_score_weight: 0.5,
-            optimal_tile_distance_to_position_score_weight: -1.0,
+            optimal_tile_distance_to_position_score_weight: -0.25,
             optimal_tile_distance_to_opponent_score_weight: 0.5,
             optimal_tile_health_pack_score_weight: 2.0,
             optimal_tile_first_weapon_score_weight: 3.0,

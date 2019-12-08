@@ -21,7 +21,13 @@ pub fn get_hit_probability(shooter: &Rect, target: &Rect, level: &Level) -> f64 
     if begin.y() as i32 == end.y() as i32 {
         return will_hit_by_horizontal(begin, end, level) as i32 as f64;
     }
-    will_hit_by_line(begin, end, level) as i32 as f64
+    let lower = target.center() - Vec2::new(0.0, target.half().y() / 2.0);
+    let upper = target.center() + Vec2::new(0.0, target.half().y() / 2.0);
+    (
+        will_hit_by_line(begin, end, level) as i32
+        + will_hit_by_line(begin, lower, level) as i32
+        + will_hit_by_line(begin, upper, level) as i32
+    ) as f64 / 3.0
 }
 
 pub fn will_hit_by_vertical(begin: Vec2, end: Vec2, level: &Level) -> bool {
