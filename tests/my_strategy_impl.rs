@@ -1,9 +1,13 @@
+mod examples;
+
 use model::UnitAction;
-use my_strategy::Debug;
-use my_strategy::examples::example_world;
-use my_strategy::my_strategy::{
-    MyStrategyImpl,
-    UnitActionWrapper,
+use examples::example_world;
+use aicup2019::{
+    Debug,
+    my_strategy::{
+        MyStrategyImpl,
+        UnitActionWrapper,
+    }
 };
 use std::io::BufWriter;
 

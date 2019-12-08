@@ -1,12 +1,14 @@
+mod examples;
+
 use model::{
     Level,
     Properties,
     Tile,
 };
-use my_strategy::examples::{
+use examples::{
     example_properties,
 };
-use my_strategy::my_strategy::{
+use aicup2019::my_strategy::{
     Rect,
     Vec2,
     get_hit_probability,

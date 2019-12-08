@@ -9,9 +9,12 @@ use model::{
     Unit,
     Vec2F64,
 };
-use crate::my_strategy::world::World;
-use crate::my_strategy::config::Config;
-use crate::my_strategy::random::{XorShiftRng, SeedableRng};
+use aicup2019::my_strategy::{
+    Config,
+    SeedableRng,
+    World,
+    XorShiftRng,
+};
 
 pub fn example_rng(seed: u64) -> XorShiftRng {
     XorShiftRng::from_seed([

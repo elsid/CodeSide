@@ -4,35 +4,23 @@ pub mod random;
 #[allow(unused_imports)]
 pub use random::*;
 
-#[path = "unit_action.rs"]
-pub mod unit_action;
-
-#[allow(unused_imports)]
-pub use unit_action::*;
-
 #[path = "vec2_f64.rs"]
 pub mod vec2_f64;
 
 #[allow(unused_imports)]
 pub use vec2_f64::*;
 
+#[path = "unit_action.rs"]
+pub mod unit_action;
+
+#[allow(unused_imports)]
+pub use unit_action::*;
+
 #[path = "level.rs"]
 pub mod level;
 
 #[allow(unused_imports)]
 pub use level::*;
-
-#[path = "weapon_params.rs"]
-pub mod weapon_params;
-
-#[allow(unused_imports)]
-pub use weapon_params::*;
-
-#[path = "weapon.rs"]
-pub mod weapon;
-
-#[allow(unused_imports)]
-pub use weapon::*;
 
 #[path = "common.rs"]
 pub mod common;

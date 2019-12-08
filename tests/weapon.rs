@@ -1,5 +1,8 @@
+#[path = "weapon_params.rs"]
+mod weapon_params;
+
 use model::Weapon;
-use crate::my_strategy::WeaponParamsWrapper;
+use weapon_params::WeaponParamsWrapper;
 
 #[derive(Debug)]
 pub struct WeaponWrapper<'a>(pub &'a Weapon);

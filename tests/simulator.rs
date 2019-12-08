@@ -1,3 +1,6 @@
+mod examples;
+mod weapon;
+
 use model::{
     Bullet,
     Item,
@@ -8,16 +11,16 @@ use model::{
     Weapon,
     WeaponType,
 };
-use my_strategy::examples::{
+use examples::{
     example_properties,
     example_rng,
     example_world,
 };
-use my_strategy::my_strategy::{
+use weapon::WeaponWrapper;
+use aicup2019::my_strategy::{
     Simulator,
     UnitExt,
     Vec2,
-    WeaponWrapper,
     World,
 };
 

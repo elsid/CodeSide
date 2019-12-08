@@ -1,9 +1,11 @@
+mod examples;
+
 use model::{
     Level,
     Tile,
 };
-use my_strategy::examples::example_level;
-use my_strategy::my_strategy::dump_level;
+use examples::example_level;
+use aicup2019::my_strategy::dump_level;
 
 #[test]
 fn test_dump_level_1x1() {
