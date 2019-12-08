@@ -337,7 +337,7 @@ fn test_simulator_unit_fall_onto_unit() {
     }
     assert_eq!(
         simulator.me().position(),
-        Vec2::new(2.5, 2.798333333333333)
+        Vec2::new(2.5, 2.8)
     );
 }
 

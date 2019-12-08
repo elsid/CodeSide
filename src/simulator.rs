@@ -111,127 +111,124 @@ impl Simulator {
         rng.shuffle(&mut self.units[..]);
         rng.shuffle(&mut self.bullets[..]);
 
-        for unit in self.units.iter_mut() {
-            if unit.ignore() {
+        for unit in 0 .. self.units.len() {
+            if self.units[unit].ignore() {
                 continue;
             }
-            unit.base.on_ladder = false;
-            unit.move_by_x(unit.action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval);
-        }
 
-        for i in 0 .. self.units.len() - 1 {
-            if self.units[i].ignore() {
-                continue;
-            }
-            let (left, right) = self.units.split_at_mut(i + 1);
-            for j in 0 .. right.len() {
-                if right[j].ignore() {
+            self.units[unit].base.on_ladder = false;
+
+            let velocity_x = self.units[unit].action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval;
+            self.units[unit].move_by_x(velocity_x);
+
+            let (left, right) = self.units.split_at_mut(unit + 1);
+            let (left_left, left_right) = left.split_at_mut(left.len() - 1);
+
+            for i in 0 .. left_left.len() {
+                if left_left[i].ignore() {
                     continue;
                 }
-                collide_units_by_x(&mut left[i], &mut right[j]);
+                collide_units_by_x(&mut left_right[0], &mut left_left[i]);
             }
-        }
 
-        for unit in self.units.iter_mut() {
-            if unit.ignore() {
-                continue;
+            for i in 0 .. right.len() {
+                if right[i].ignore() {
+                    continue;
+                }
+                collide_units_by_x(&mut left_right[0], &mut right[i]);
             }
-            let min_y = unit.bottom() as usize;
-            let max_y = (unit.top() as usize + 1).min(self.level.tiles[0].len());
-            let left = unit.left() as usize;
-            let right = unit.right() as usize;
+
+            let min_y = self.units[unit].bottom() as usize;
+            let max_y = (self.units[unit].top() as usize + 1).min(self.level.tiles[0].len());
+            let left = self.units[unit].left() as usize;
+            let right = self.units[unit].right() as usize;
             for y in min_y .. max_y {
                 for &x in &[left, right] {
                     match get_tile(&self.level, x, y) {
                         Tile::Wall => {
-                            collide_by_x(unit, x, y);
+                            collide_by_x(&mut self.units[unit], x, y);
                         },
                         Tile::Ladder => {
-                            unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, y);
+                            self.units[unit].base.on_ladder = self.units[unit].base.on_ladder || can_use_ladder(&self.units[unit], x, y);
                         },
                         Tile::JumpPad => {
-                            start_pad_jump(unit, &self.properties);
+                            start_pad_jump(&mut self.units[unit], &self.properties);
                         },
                         _ => (),
                     }
                 }
             }
-        }
 
-        for unit in self.units.iter_mut() {
-            if unit.ignore() {
-                continue;
-            }
-            if unit.base.jump_state.can_jump && (unit.action.jump || !unit.base.jump_state.can_cancel) {
-                let jump_time = shift_jump_max_time(unit, time_interval);
-                unit.move_by_y(unit.base.jump_state.speed * jump_time);
-                if unit.base.jump_state.max_time == 0.0 {
-                    cancel_jump(unit);
+            if self.units[unit].base.jump_state.can_jump && (self.units[unit].action.jump || !self.units[unit].base.jump_state.can_cancel) {
+                let jump_time = shift_jump_max_time(&mut self.units[unit], time_interval);
+                let velocity_y = self.units[unit].base.jump_state.speed * jump_time;
+                self.units[unit].move_by_y(velocity_y);
+                if self.units[unit].base.jump_state.max_time == 0.0 {
+                    cancel_jump(&mut self.units[unit]);
                 }
             } else {
-                unit.move_by_y(-self.properties.unit_fall_speed * time_interval);
+                self.units[unit].move_by_y(-self.properties.unit_fall_speed * time_interval);
             }
-            unit.base.on_ground = false;
-        }
+            self.units[unit].base.on_ground = false;
 
-        for i in 0 .. self.units.len() - 1 {
-            if self.units[i].ignore() {
-                continue;
-            }
-            let (left, right) = self.units.split_at_mut(i + 1);
-            for j in 0 .. right.len() {
-                if right[j].ignore() {
+            let (left, right) = self.units.split_at_mut(unit + 1);
+            let (left_left, left_right) = left.split_at_mut(left.len() - 1);
+
+            for i in 0 .. left_left.len() {
+                if left_left[i].ignore() {
                     continue;
                 }
-                collide_units_by_y(&mut left[i], &mut right[j]);
+                collide_units_by_y(&mut left_right[0], &mut left_left[i]);
             }
-        }
 
-        for unit in self.units.iter_mut() {
-            if unit.ignore() {
-                continue;
+            for i in 0 .. right.len() {
+                if right[i].ignore() {
+                    continue;
+                }
+                collide_units_by_y(&mut left_right[0], &mut right[i]);
             }
-            let min_x = unit.left() as usize;
-            let max_x = (unit.right() as usize + 1).min(self.level.tiles.len());
-            let top = unit.top() as usize;
-            let bottom = unit.bottom() as usize;
+
+            let min_x = self.units[unit].left() as usize;
+            let max_x = (self.units[unit].right() as usize + 1).min(self.level.tiles.len());
+            let top = self.units[unit].top() as usize;
+            let bottom = self.units[unit].bottom() as usize;
             for x in min_x .. max_x {
                 match get_tile(&self.level, x, bottom) {
                     Tile::Wall => {
-                        collide_by_y(unit, x, bottom);
-                        allow_jump(unit, &self.properties);
+                        collide_by_y(&mut self.units[unit], x, bottom);
+                        allow_jump(&mut self.units[unit], &self.properties);
                     },
                     Tile::Ladder => {
-                        unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, bottom);
-                        if !unit.base.on_ladder {
-                            collide_by_y(unit, x, bottom);
-                            allow_jump(unit, &self.properties);
+                        self.units[unit].base.on_ladder = self.units[unit].base.on_ladder || can_use_ladder(&self.units[unit], x, bottom);
+                        if !self.units[unit].base.on_ladder {
+                            collide_by_y(&mut self.units[unit], x, bottom);
+                            allow_jump(&mut self.units[unit], &self.properties);
                         }
                     },
                     Tile::Platform => {
-                        if !unit.action.jump_down {
-                            collide_by_y(unit, x, bottom);
-                            allow_jump(unit, &self.properties);
+                        if !self.units[unit].action.jump_down {
+                            collide_by_y(&mut self.units[unit], x, bottom);
+                            allow_jump(&mut self.units[unit], &self.properties);
                         }
                     },
                     Tile::JumpPad => {
-                        start_pad_jump(unit, &self.properties);
+                        start_pad_jump(&mut self.units[unit], &self.properties);
                     },
                     _ => (),
                 }
                 match get_tile(&self.level, x, top) {
                     Tile::Wall => {
-                        collide_by_y(unit, x, top);
-                        unit.base.on_ground = true;
-                        cancel_jump(unit);
+                        collide_by_y(&mut self.units[unit], x, top);
+                        self.units[unit].base.on_ground = true;
+                        cancel_jump(&mut self.units[unit]);
                     },
                     Tile::Ladder => {
-                        unit.base.on_ladder = unit.base.on_ladder || can_use_ladder(&unit, x, top);
-                        unit.base.on_ground = true;
-                        allow_jump(unit, &self.properties);
+                        self.units[unit].base.on_ladder = self.units[unit].base.on_ladder || can_use_ladder(&self.units[unit], x, top);
+                        self.units[unit].base.on_ground = true;
+                        allow_jump(&mut self.units[unit], &self.properties);
                     },
                     Tile::JumpPad => {
-                        start_pad_jump(unit, &self.properties);
+                        start_pad_jump(&mut self.units[unit], &self.properties);
                     },
                     _ => (),
                 }
