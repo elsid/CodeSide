@@ -193,9 +193,15 @@ impl MyStrategyImpl {
             text: format!("target: {:?}", target),
         });
         let (shoot, aim) = if let (Some(opponent), Some(weapon)) = (nearest_opponent, self.world.me().weapon.as_ref()) {
+            let hit_probability_by_spread = get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread);
+            let hit_probability_over_obstacles = get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level());
+            #[cfg(feature = "enable_debug")]
+            debug.draw(CustomData::Log { text: format!("hit_probability_by_spread: {:?}", hit_probability_by_spread) });
+            #[cfg(feature = "enable_debug")]
+            debug.draw(CustomData::Log { text: format!("hit_probability_over_obstacles: {:?}", hit_probability_over_obstacles) });
             (
-                get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread) >= self.world.config().min_hit_probability_by_spread_to_shoot
-                && get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level()) >= self.world.config().min_hit_probability_over_obstacles_to_shoot,
+                hit_probability_by_spread >= self.world.config().min_hit_probability_by_spread_to_shoot
+                && hit_probability_over_obstacles >= self.world.config().min_hit_probability_over_obstacles_to_shoot,
                 Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
