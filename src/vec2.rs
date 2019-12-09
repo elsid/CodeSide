@@ -93,9 +93,23 @@ impl Vec2 {
 
     #[inline(always)]
     pub fn rotated(&self, angle: f64) -> Self {
-        let sin = angle.sin();
-        let cos = angle.cos();
+        let (sin, cos) = angle.sin_cos();
         Self::new(self.x * cos - self.y * sin, self.y * cos + self.x * sin)
+    }
+
+    #[inline(always)]
+    pub fn atan(&self) -> f64 {
+        self.y.atan2(self.x)
+    }
+
+    #[inline(always)]
+    pub fn cos(&self, other: Self) -> f64 {
+        self.dot(other) / (self.norm() * other.norm())
+    }
+
+    #[inline(always)]
+    pub fn dot(&self, other: Self) -> f64 {
+        self.x * other.x + self.y * other.y
     }
 }
 

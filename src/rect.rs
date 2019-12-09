@@ -39,4 +39,48 @@ impl Rect {
             && self.min().y() < other.max().y()
             && self.max().y() > other.min().y()
     }
+
+    pub fn top_left(&self) -> Vec2 {
+        self.center + Vec2::new(-self.half.x(), self.half.y())
+    }
+
+    pub fn top_right(&self) -> Vec2 {
+        self.center + Vec2::new(self.half.x(), self.half.y())
+    }
+
+    pub fn bottom_left(&self) -> Vec2 {
+        self.center + Vec2::new(-self.half.x(), -self.half.y())
+    }
+
+    pub fn bottom_right(&self) -> Vec2 {
+        self.center + Vec2::new(self.half.x(), -self.half.y())
+    }
+
+    pub fn get_max_cross_section_from(&self, origin: Vec2, spread: f64) -> f64 {
+        if origin == self.center() {
+            return 1.0;
+        }
+        let top_left = self.top_left();
+        let top_right = self.top_right();
+        let bottom_left = self.bottom_left();
+        let bottom_right = self.bottom_right();
+        let to_center = self.center() - origin;
+        let pairs = [
+            (top_left, top_right),
+            (top_left, bottom_left),
+            (top_left, bottom_right),
+            (top_right, bottom_left),
+            (top_right, bottom_right),
+            (bottom_left, bottom_right),
+        ];
+        let get_priority = |&(a, b)| {
+            (to_center.cos(a - b).abs(), origin.distance((a + b) / 2.0))
+        };
+        let &(a, b) = pairs.into_iter()
+            .min_by(|l, r| {
+                get_priority(l).partial_cmp(&get_priority(r)).unwrap()
+            })
+            .unwrap();
+        (((a - origin).atan() - (b - origin).atan()).abs() / (2.0 * spread)).min(1.0)
+    }
 }

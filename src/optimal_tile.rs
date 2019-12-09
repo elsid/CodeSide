@@ -22,7 +22,7 @@ use crate::my_strategy::{
     Rectangular,
     Vec2,
     World,
-    get_hit_probability,
+    get_hit_probability_over_obstacles,
 };
 
 pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<(usize, usize)> {
@@ -51,7 +51,7 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<(usize, usiz
     if let Some(v) = optimal {
         #[cfg(feature = "enable_debug")]
         {
-            let max = Vec2::new(40.0, 30.0).norm() * (
+            let max = world.size().norm() * (
                 world.config().optimal_tile_distance_to_position_score_weight.abs()
                 + world.config().optimal_tile_distance_to_opponent_score_weight.abs()
                 + world.config().optimal_tile_health_pack_score_weight.abs()
@@ -77,7 +77,7 @@ pub fn get_tile_score(world: &World, x: usize, y: usize) -> f64 {
     let distance_to_opponent_score = world.units().iter()
         .filter(|unit| unit.player_id != world.me().player_id)
         .map(|unit| {
-            get_hit_probability(&me, &unit.rect(), world.level()) * center.distance(unit.position())
+            get_hit_probability_over_obstacles(&me, &unit.rect(), world.level()) * center.distance(unit.position())
         })
         .sum::<f64>() / (world.units().len() as f64 * max_distance);
     let distance_to_position_score = world.me().position().distance(center) / max_distance;
@@ -98,7 +98,7 @@ pub fn get_tile_score(world: &World, x: usize, y: usize) -> f64 {
     let hit_score = world.units().iter()
         .filter(|unit| unit.player_id != world.me().player_id)
         .map(|unit| {
-            max_distance - get_hit_probability(&unit.rect(), &me, world.level()) * center.distance(unit.position())
+            max_distance - get_hit_probability_over_obstacles(&unit.rect(), &me, world.level()) * center.distance(unit.position())
         })
         .sum::<f64>() / (world.units().len() as f64 * max_distance);
 

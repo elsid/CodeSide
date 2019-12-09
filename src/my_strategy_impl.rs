@@ -25,13 +25,15 @@ use crate::my_strategy::{
     Config,
     Planner,
     Positionable,
+    Rect,
     Rectangular,
     SeedableRng,
     Simulator,
     Vec2,
     World,
     XorShiftRng,
-    get_hit_probability,
+    get_hit_probability_by_spread,
+    get_hit_probability_over_obstacles,
     get_optimal_tile,
     get_weapon_score,
 };
@@ -190,22 +192,17 @@ impl MyStrategyImpl {
         debug.draw(CustomData::Log {
             text: format!("target: {:?}", target),
         });
-        let aim: Option<Vec2F64> = if let Some(opponent) = nearest_opponent {
-            let hit_probability = get_hit_probability(&me.rect(), &opponent.rect(), self.world.level());
-            #[cfg(feature = "enable_debug")]
-                debug.draw(CustomData::Log {
-                    text: format!("hit_probability={}", hit_probability),
-                });
-            if hit_probability > 0.0 {
-                Some(Vec2F64 {
+        let (shoot, aim) = if let (Some(opponent), Some(weapon)) = (nearest_opponent, self.world.me().weapon.as_ref()) {
+            (
+                get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread) >= self.world.config().min_hit_probability_by_spread_to_shoot
+                && get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level()) >= self.world.config().min_hit_probability_over_obstacles_to_shoot,
+                Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
-                })
-            } else {
-                None
-            }
+                }
+            )
         } else {
-            None
+            (false, model::Vec2F64 { x: 0.0, y: 0.0 })
         };
         let simulator = Simulator::new(&self.world, me.id);
         let plan = Planner::new(Vec2::from_model(&target), &self.config, simulator).make(&mut self.rng, debug);
@@ -215,9 +212,9 @@ impl MyStrategyImpl {
                 text: format!("plan: score={}", plan.score),
             });
             let mut action = plan.transitions[0].action.clone();
-            action.shoot = aim.is_some();
-            action.aim = aim.unwrap_or(Vec2F64 { x: 0.0, y: 0.0 });
-            action.swap_weapon = self.should_swap_weapon();
+            action.shoot = shoot;
+            action.aim = aim;
+            action.swap_weapon = !shoot && self.should_swap_weapon();
             return action;
         }
         let mut jump = target.y > me.position.y;
@@ -237,10 +234,10 @@ impl MyStrategyImpl {
             velocity: target.x - me.position.x,
             jump,
             jump_down: target.y < me.position.y,
-            shoot: aim.is_some(),
-            aim: aim.unwrap_or(Vec2F64 { x: 0.0, y: 0.0 }),
+            shoot,
+            aim,
             reload: false,
-            swap_weapon: self.should_swap_weapon(),
+            swap_weapon: !shoot && self.should_swap_weapon(),
             plant_mine: false,
         }
     }

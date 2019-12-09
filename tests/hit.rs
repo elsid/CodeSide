@@ -9,7 +9,7 @@ use aicup2019::examples::{
 use aicup2019::my_strategy::{
     Rect,
     Vec2,
-    get_hit_probability,
+    get_hit_probability_over_obstacles,
     will_hit_by_horizontal,
     will_hit_by_line,
     will_hit_by_vertical,
@@ -64,7 +64,7 @@ fn test_will_hit_by_line_through_wall() {
 }
 
 #[test]
-fn test_get_hit_probability() {
+fn test_get_hit_probability_over_obstacles() {
     let properties = example_properties();
     let level = Level {
         tiles: vec![
@@ -75,7 +75,7 @@ fn test_get_hit_probability() {
     };
     let shooter = make_unit_rect(Vec2::new(0.2312, 0.6423), &properties);
     let target = make_unit_rect(Vec2::new(2.653, 1.234), &properties);
-    assert_eq!(get_hit_probability(&shooter, &target, &level), 0.0);
+    assert_eq!(get_hit_probability_over_obstacles(&shooter, &target, &level), 0.0);
 }
 
 fn make_unit_rect(position: Vec2, properties: &Properties) -> Rect {

@@ -9,7 +9,11 @@ use crate::my_strategy::{
     get_tile,
 };
 
-pub fn get_hit_probability(shooter: &Rect, target: &Rect, level: &Level) -> f64 {
+pub fn get_hit_probability_by_spread(shooter: Vec2, target: &Rect, spread: f64) -> f64 {
+    target.get_max_cross_section_from(shooter, spread)
+}
+
+pub fn get_hit_probability_over_obstacles(shooter: &Rect, target: &Rect, level: &Level) -> f64 {
     let begin = shooter.center();
     let end = target.center();
     if begin.x() as i32 == end.x() as i32 && begin.y() as i32 == end.y() as i32 {
