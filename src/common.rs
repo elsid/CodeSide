@@ -51,3 +51,14 @@ impl IdGenerator {
 pub fn as_score(value: f64) -> i32 {
     (value * 1000.0).round() as i32
 }
+
+pub fn normalize_angle(value: f64) -> f64 {
+    use std::f64::consts::{PI, FRAC_1_PI};
+    if value > PI {
+        value - (value * 0.5 * FRAC_1_PI).round() * 2.0 * PI
+    } else if value < -PI {
+        value - (value.abs() * 0.5 * FRAC_1_PI).round() * 2.0 * PI
+    } else {
+        value
+    }
+}

@@ -22,6 +22,14 @@ impl Vec2 {
         Self { x: 0.0, y: 0.0 }
     }
 
+    pub const fn i() -> Self {
+        Self::only_x(1.0)
+    }
+
+    pub const fn only_x(x: f64) -> Self {
+        Self { x, y: 0.0 }
+    }
+
     #[inline(always)]
     pub const fn from_model(value: &Vec2F64) -> Self {
         Self { x: value.x, y: value.y }
@@ -81,6 +89,13 @@ impl Vec2 {
     #[inline(always)]
     pub fn normalized(&self) -> Self {
         *self / self.norm()
+    }
+
+    #[inline(always)]
+    pub fn rotated(&self, angle: f64) -> Self {
+        let sin = angle.sin();
+        let cos = angle.cos();
+        Self::new(self.x * cos - self.y * sin, self.y * cos + self.x * sin)
     }
 }
 

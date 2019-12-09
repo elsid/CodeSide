@@ -36,6 +36,11 @@ use crate::my_strategy::{
     get_weapon_score,
 };
 
+#[cfg(feature = "enable_debug")]
+use crate::my_strategy::{
+    normalize_angle,
+};
+
 #[cfg(feature = "dump_level")]
 use crate::my_strategy::dump_level;
 
@@ -87,6 +92,34 @@ impl MyStrategyImpl {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
         self.world.update(me, game);
+        #[cfg(feature = "enable_debug")]
+        for unit in self.world.units().iter() {
+            if let Some(weapon) = unit.weapon.as_ref() {
+                if let Some(last_angle) = weapon.last_angle {
+                    let direction = Vec2::i().rotated(normalize_angle(last_angle));
+                    let lower_spread = Vec2::i().rotated(normalize_angle(last_angle - weapon.spread));
+                    let upper_spread = Vec2::i().rotated(normalize_angle(last_angle + weapon.spread));
+                    debug.draw(CustomData::Line {
+                        p1: unit.rect().center().as_model_f32(),
+                        p2: (unit.rect().center() + direction * 100.0).as_model_f32(),
+                        width: 0.1,
+                        color: ColorF32 { a: 0.66, r: 0.66, g: 0.0, b: 0.0 },
+                    });
+                    debug.draw(CustomData::Line {
+                        p1: unit.rect().center().as_model_f32(),
+                        p2: (unit.rect().center() + lower_spread * 100.0).as_model_f32(),
+                        width: 0.1,
+                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
+                    });
+                    debug.draw(CustomData::Line {
+                        p1: unit.rect().center().as_model_f32(),
+                        p2: (unit.rect().center() + upper_spread * 100.0).as_model_f32(),
+                        width: 0.1,
+                        color: ColorF32 { a: 0.66, r: 0.66, g: 0.0, b: 0.0 },
+                    });
+                }
+            }
+        }
         let nearest_opponent = self.world.units().iter()
             .filter(|other| other.player_id != me.player_id)
             .min_by(|a, b| {
