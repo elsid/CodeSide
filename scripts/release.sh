@@ -38,8 +38,7 @@ cd ${DIR}/
 zip ${SRC}/release/${VERSION}.zip -r Cargo.toml src model
 
 cp ${SRC}/src/lib.rs src/
-
-cd ..
+cp ${SRC}/src/examples.rs src/
 
 cp -r ${SRC}/tests ${DIR}/
 
