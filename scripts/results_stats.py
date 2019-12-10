@@ -44,7 +44,7 @@ def main():
     print()
     fig, ax = matplotlib.pyplot.subplots()
     ax.set_title('scores distribution')
-    bins = numpy.arange(0, max(max(v['scores']) for v in players.values()) + 1)
+    bins = numpy.linspace(0, max(max(v['scores']) for v in players.values()) + 1)
     for k, v in players.items():
         ax.hist(v['scores'], bins=bins, label=k, alpha=0.5)
         ax.set_xticks(bins)
@@ -72,12 +72,12 @@ def main():
         ax.legend()
     fig, ax = matplotlib.pyplot.subplots()
     ax.set_title('scores diffs')
-    bins = numpy.arange(
+    bins = numpy.linspace(
         min(min(v['score_diffs']) for v in players.values()),
         max(max(v['score_diffs']) for v in players.values()) + 1
     )
     for k, v in players.items():
-        ax.hist(v['score_diffs'], bins=bins, label=k, alpha=0.5)
+        ax.hist(v['score_diffs'], bins=50, label=k, alpha=0.5)
         ax.set_xticks(bins)
         ax.grid(True)
         ax.legend()
