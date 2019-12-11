@@ -39,18 +39,12 @@ pub fn example_properties() -> Properties {
     };
 
     Properties {
-        max_tick_count: 10000,
+        max_tick_count: 3600,
         team_size: 1,
         ticks_per_second: 60.0,
         updates_per_tick: 100,
-        loot_box_size: Vec2F64 {
-            x: 0.5,
-            y: 0.5,
-        },
-        unit_size: Vec2F64 {
-            x: 0.9,
-            y: 1.8,
-        },
+        loot_box_size: Vec2F64 { x: 0.5, y: 0.5 },
+        unit_size: Vec2F64 { x: 0.9, y: 1.8 },
         unit_max_horizontal_speed: 10.0,
         unit_fall_speed: 10.0,
         unit_jump_time: 0.55,
@@ -67,9 +61,9 @@ pub fn example_properties() -> Properties {
                     fire_rate: 1.0,
                     reload_time: 1.0,
                     min_spread: 0.1,
-                    max_spread: 0.7,
+                    max_spread: 0.5,
                     recoil: 1.0,
-                    aim_speed: 0.5,
+                    aim_speed: 1.0,
                     bullet: BulletParams {
                         speed: 20.0,
                         size: 0.4,
@@ -88,7 +82,7 @@ pub fn example_properties() -> Properties {
                     fire_rate: 0.4,
                     reload_time: 1.0,
                     min_spread: 0.05,
-                    max_spread: 0.7,
+                    max_spread: 0.5,
                     recoil: 0.5,
                     aim_speed: 1.0,
                     bullet: BulletParams {
@@ -97,7 +91,7 @@ pub fn example_properties() -> Properties {
                         damage: 20,
                     },
                     explosion: None,
-                }
+                },
             ),
             (
                 AssaultRifle,
@@ -106,7 +100,7 @@ pub fn example_properties() -> Properties {
                     fire_rate: 0.1,
                     reload_time: 1.0,
                     min_spread: 0.1,
-                    max_spread: 0.7,
+                    max_spread: 0.5,
                     recoil: 0.2,
                     aim_speed: 1.9,
                     bullet: BulletParams {
@@ -116,12 +110,9 @@ pub fn example_properties() -> Properties {
                     },
                     explosion: None,
                 },
-            )
+            ),
         ].iter().cloned().collect(),
-        mine_size: Vec2F64 {
-            x: 0.5,
-            y: 0.5,
-        },
+        mine_size: Vec2F64 { x: 0.5, y: 0.5 },
         mine_explosion_params: ExplosionParams {
             radius: 3.0,
             damage: 50,
@@ -129,7 +120,7 @@ pub fn example_properties() -> Properties {
         mine_prepare_time: 1.0,
         mine_trigger_time: 0.5,
         mine_trigger_radius: 1.0,
-        kill_score: 100,
+        kill_score: 1000,
     }
 }
 

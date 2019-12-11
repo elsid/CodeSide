@@ -19,30 +19,32 @@ impl MyStrategyImpl {
 
     pub fn get_action(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
         if game.current_tick == 0 {
-            println!("player: {:?}", game.players[0]);
-            println!("me: {:?}", me);
-            println!("unit0: {:?}", game.units[0]);
-            println!("unit1: {:?}", game.units[1]);
-            println!("properties: {:?}", game.properties);
-            println!("game: {:?}", get_game_without_repeatable(game.clone()));
-            println!("level: {:?}", game.level);
+            println!("fn player() {{ {:?}; }}", game.players[0]);
+            println!("fn me() {{ {:?}; }}", me);
+            println!("fn unit0() {{ {:?}; }}", game.units[0]);
+            println!("fn unit1() {{ {:?}; }}", game.units[1]);
+            println!("// fn properties() {{ {:?}; }}", game.properties);
+            println!("fn properties_without_weapon_params() {{ {:?}; }}", get_properties_without_weapon_params(game.properties.clone()));
+            println!("// fn game() {{ {:?}; }}", get_game_without_repeatable(game.clone()));
+            println!("fn level() {{ {:?}; }}", game.level);
+            println!("fn weapon_params() {{ {:?}; }}", game.properties.weapon_params.iter().map(|(k, v)| (k, v)).collect::<Vec<_>>());
         }
         if !self.has_loot_box && game.loot_boxes.len() > 0 {
             self.has_loot_box = true;
-            println!("loot_box: {:?}", game.loot_boxes[0]);
+            println!("fn loot_box() {{ {:?}; }}", game.loot_boxes[0]);
         }
         if !self.has_bullet && game.bullets.len() > 0 {
             self.has_bullet = true;
-            println!("bullet: {:?}", game.bullets[0]);
+            println!("fn bullet() {{ {:?}; }}", game.bullets[0]);
         }
         if !self.has_mine && game.mines.len() > 0 {
             self.has_mine = true;
-            println!("mine: {:?}", game.mines[0]);
+            println!("fn mine() {{ {:?}; }}", game.mines[0]);
         }
         let opponent = game.units.iter().find(|v| v.id != me.id).unwrap();
         if !self.has_weapon && opponent.weapon.is_some() {
             self.has_weapon = true;
-            println!("weapon: {:?}", opponent.weapon.as_ref().unwrap());
+            println!("fn weapon() {{ {:?}; }}", opponent.weapon.as_ref().unwrap());
         }
         if self.has_loot_box && self.has_bullet && self.has_mine && self.has_weapon {
             std::process::exit(0);
@@ -58,6 +60,11 @@ impl MyStrategyImpl {
             plant_mine: false,
         }
     }
+}
+
+fn get_properties_without_weapon_params(mut properties: model::Properties) -> model::Properties {
+    properties.weapon_params.clear();
+    properties
 }
 
 fn get_game_without_repeatable(mut game: model::Game) -> model::Game {
