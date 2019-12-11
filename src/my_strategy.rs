@@ -145,13 +145,8 @@ pub mod my_strategy_dump_examples;
 #[path = "my_strategy_dump_opponent.rs"]
 pub mod my_strategy_dump_opponent;
 
-#[cfg(feature = "go_to_target")]
-#[path = "my_strategy_go_to_target.rs"]
-pub mod my_strategy_go_to_target;
-
 #[cfg(all(not(feature = "dump_examples"),
-          not(feature = "dump_opponent"),
-          not(feature = "go_to_target")))]
+          not(feature = "dump_opponent")))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
 
@@ -161,12 +156,8 @@ pub use self::my_strategy_dump_examples::MyStrategyImpl;
 #[cfg(feature = "dump_opponent")]
 pub use self::my_strategy_dump_opponent::MyStrategyImpl;
 
-#[cfg(feature = "go_to_target")]
-pub use self::my_strategy_go_to_target::MyStrategyImpl;
-
 #[cfg(all(not(feature = "dump_examples"),
-          not(feature = "dump_opponent"),
-          not(feature = "go_to_target")))]
+          not(feature = "dump_opponent")))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
@@ -186,8 +177,7 @@ impl MyStrategy {
     ) -> model::UnitAction {
         if self.strategy_impl.is_none() {
             let config = Config::new();
-            #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent")),
-                      feature = "go_to_target"))]
+            #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"))))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
             }

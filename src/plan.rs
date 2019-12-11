@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use model::{
     Properties,
     UnitAction,
@@ -17,9 +19,11 @@ use crate::my_strategy::{
     Config,
     IdGenerator,
     Identifiable,
+    Location,
     Rng,
     Search,
     Simulator,
+    TilePathInfo,
     UnitActionWrapper,
     UnitExt,
     Vec2,
@@ -36,15 +40,16 @@ pub struct Plan {
 }
 
 #[derive(Clone)]
-pub struct Planner<'c> {
+pub struct Planner<'c, 'p> {
     target: Vec2,
     config: &'c Config,
+    paths: &'p BTreeMap<(Location, Location), TilePathInfo>,
     simulator: Simulator,
 }
 
-impl<'c> Planner<'c> {
-    pub fn new(target: Vec2, config: &'c Config, simulator: Simulator) -> Self {
-        Self { target, config, simulator }
+impl<'c, 'p> Planner<'c, 'p> {
+    pub fn new(target: Vec2, config: &'c Config, paths: &'p BTreeMap<(Location, Location), TilePathInfo>, simulator: Simulator) -> Self {
+        Self { target, config, paths, simulator }
     }
 
     pub fn make(&self, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
@@ -66,7 +71,13 @@ impl<'c> Planner<'c> {
     }
 
     pub fn get_score(&self) -> i32 {
-        let distance = self.simulator.me().position().distance(self.target);
+        let max_distance = self.simulator.world_size().norm();
+
+        let distance = self.simulator.me().position().distance(self.target) / max_distance;
+
+        let tiles_distance = self.paths.get(&(self.simulator.me().location(), self.target.as_location()))
+            .map(|v| v.distance())
+            .unwrap_or(0.0) / max_distance;
 
         let teammates_health = self.simulator.units().iter()
             .filter(|v| v.is_teammate())
@@ -82,8 +93,10 @@ impl<'c> Planner<'c> {
             / (self.simulator.units().len() as i32 * self.simulator.properties().unit_max_health) as f64;
 
         as_score(
-            distance * self.config.distance_score_weight
-            + health_diff * self.config.health_diff_score_weight
+            0.0
+            + distance * self.config.plan_distance_score_weight
+            + health_diff * self.config.plan_health_diff_score_weight
+            + tiles_distance * self.config.plan_tiles_distance_score_weight
         )
     }
 
@@ -115,12 +128,12 @@ impl<'r, 'd> VisitorImpl<'r, 'd> {
         }
     }
 
-    pub fn make_initial_state<'c>(&mut self, planner: Planner<'c>) -> State<'c> {
+    pub fn make_initial_state<'c, 'p>(&mut self, planner: Planner<'c, 'p>) -> State<'c, 'p> {
         State::initial(self.state_id_generator.next(), planner)
     }
 }
 
-impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
+impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> {
     fn is_final(&self, state: &State) -> bool {
         true
     }
@@ -178,7 +191,7 @@ impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
         result
     }
 
-    fn apply(&mut self, iteration: usize, state: &State<'c>, transition: &Transition) -> State<'c> {
+    fn apply(&mut self, iteration: usize, state: &State<'c, 'p>, transition: &Transition) -> State<'c, 'p> {
         let mut next = state.clone();
         let time_interval = 1.0 / state.properties().ticks_per_second as f64;
         next.id = self.state_id_generator.next();
@@ -212,17 +225,17 @@ impl<'r, 'c, 'd> Visitor<State<'c>, Transition> for VisitorImpl<'r, 'd> {
 }
 
 #[derive(Clone)]
-pub struct State<'c> {
+pub struct State<'c, 'p> {
     id: i32,
     score: i32,
-    planner: Planner<'c>,
+    planner: Planner<'c, 'p>,
     transition: TransitionKind,
     depth: usize,
     allowed_transitions: TransitionsAutotomaton,
 }
 
-impl<'c> State<'c> {
-    pub fn initial(id: i32, planner: Planner<'c>) -> Self {
+impl<'c, 'p> State<'c, 'p> {
+    pub fn initial(id: i32, planner: Planner<'c, 'p>) -> Self {
         Self {
             id,
             score: 0,
@@ -233,7 +246,7 @@ impl<'c> State<'c> {
         }
     }
 
-    pub fn planner(&self) -> &Planner<'c> {
+    pub fn planner(&self) -> &Planner<'c, 'p> {
         &self.planner
     }
 
@@ -254,13 +267,13 @@ impl<'c> State<'c> {
     }
 }
 
-impl<'c> std::fmt::Debug for State<'c> {
+impl<'c, 'p> std::fmt::Debug for State<'c, 'p> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.id)
     }
 }
 
-impl<'c> Identifiable for State<'c> {
+impl<'c, 'p> Identifiable for State<'c, 'p> {
     fn id(&self) -> i32 {
         self.id
     }

@@ -38,6 +38,7 @@ pub struct Simulator {
     current_time: f64,
     current_micro_tick: i32,
     me_index: usize,
+    world_size: Vec2,
 }
 
 const EPSILON: f64 = 1e-9;
@@ -71,6 +72,7 @@ impl Simulator {
             current_time: 0.0,
             current_micro_tick: 0,
             me_index,
+            world_size: world.size(),
         }
     }
 
@@ -100,6 +102,10 @@ impl Simulator {
 
     pub fn loot_boxes(&self) -> &Vec<LootBoxExt> {
         &self.loot_boxes
+    }
+
+    pub fn world_size(&self) -> Vec2 {
+        self.world_size
     }
 
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
@@ -477,6 +483,10 @@ impl UnitExt {
 
     pub fn position(&self) -> Vec2 {
         Vec2::from_model(&self.base.position)
+    }
+
+    pub fn location(&self) -> Location {
+        self.position().as_location()
     }
 
     pub fn action_mut(&mut self) -> &mut UnitAction {

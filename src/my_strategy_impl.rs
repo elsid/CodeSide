@@ -210,7 +210,8 @@ impl MyStrategyImpl {
             (false, model::Vec2F64 { x: 0.0, y: 0.0 })
         };
         let simulator = Simulator::new(&self.world, me.id);
-        let plan = Planner::new(Vec2::from_model(&target), &self.config, simulator).make(&mut self.rng, debug);
+        let plan = Planner::new(Vec2::from_model(&target), &self.config, self.world.paths(), simulator)
+            .make(&mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log {

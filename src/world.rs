@@ -140,6 +140,10 @@ impl World {
             })
             .is_some()
     }
+
+    pub fn paths(&self) -> &BTreeMap<(Location, Location), TilePathInfo> {
+        &self.paths
+    }
 }
 
 #[derive(Clone, Debug)]
