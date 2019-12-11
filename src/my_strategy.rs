@@ -89,6 +89,18 @@ pub mod loot_box;
 #[allow(unused_imports)]
 pub use loot_box::*;
 
+#[path = "bullet.rs"]
+pub mod bullet;
+
+#[allow(unused_imports)]
+pub use bullet::*;
+
+#[path = "mine.rs"]
+pub mod mine;
+
+#[allow(unused_imports)]
+pub use mine::*;
+
 #[path = "properties.rs"]
 pub mod properties;
 

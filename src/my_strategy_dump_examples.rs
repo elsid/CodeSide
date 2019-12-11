@@ -28,6 +28,7 @@ impl MyStrategyImpl {
             println!("// fn game() {{ {:?}; }}", get_game_without_repeatable(game.clone()));
             println!("fn level() {{ {:?}; }}", game.level);
             println!("fn weapon_params() {{ {:?}; }}", game.properties.weapon_params.iter().map(|(k, v)| (k, v)).collect::<Vec<_>>());
+            println!("fn loot_boxes() {{ {:?}; }}", game.loot_boxes);
         }
         if !self.has_loot_box && game.loot_boxes.len() > 0 {
             self.has_loot_box = true;

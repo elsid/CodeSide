@@ -19,7 +19,7 @@ fn test_first_action() {
     let result = my_strategy.get_action(world.me(), world.game(), &mut Debug(&mut stream));
     assert_eq!(UnitActionWrapper(&result), UnitActionWrapper(&UnitAction {
         velocity: -10.0,
-        jump: true,
+        jump: false,
         jump_down: false,
         aim: model::Vec2F64 {
             x: 0.0,

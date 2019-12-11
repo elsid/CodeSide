@@ -2,7 +2,6 @@ use crate::Debug;
 
 #[cfg(feature = "enable_debug")]
 use model::{
-    ColorF32,
     CustomData,
     Vec2F32,
 };

@@ -433,7 +433,7 @@ fn test_simulator_unit_pickup_weapon() {
     let mut rng = example_rng(7348172934612063328);
     simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     assert!(simulator.me().weapon().is_none());
-    assert_eq!(simulator.loot_boxes().len(), 2);
+    assert_eq!(simulator.loot_boxes().len(), 20);
     for _ in 0 .. 5 {
         simulator.tick(
             world.tick_time_interval(),
@@ -441,7 +441,7 @@ fn test_simulator_unit_pickup_weapon() {
             &mut rng,
         );
     }
-    assert_eq!(simulator.loot_boxes().len(), 1);
+    assert_eq!(simulator.loot_boxes().len(), 19);
     assert_eq!(
         simulator.me().weapon().as_ref().map(|v| WeaponWrapper(v)),
         Some(WeaponWrapper(&Weapon {
@@ -464,7 +464,7 @@ fn test_simulator_unit_pickup_health_pack() {
     let mut rng = example_rng(7348172934612063328);
     simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     simulator.me_mut().damage(20);
-    assert_eq!(simulator.loot_boxes().len(), 2);
+    assert_eq!(simulator.loot_boxes().len(), 20);
     assert_eq!(simulator.me().health(), 80);
     for _ in 0 .. 5 {
         simulator.tick(
@@ -473,7 +473,7 @@ fn test_simulator_unit_pickup_health_pack() {
             &mut rng,
         );
     }
-    assert_eq!(simulator.loot_boxes().len(), 1);
+    assert_eq!(simulator.loot_boxes().len(), 19);
     assert_eq!(simulator.me().health(), 100);
 }
 
@@ -484,8 +484,8 @@ fn test_simulator_unit_pickup_mine() {
     let mut rng = example_rng(7348172934612063328);
     simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     simulator.me_mut().damage(20);
+    assert_eq!(simulator.loot_boxes().len(), 20);
     assert_eq!(simulator.me().mines(), 0);
-    assert_eq!(simulator.loot_boxes().len(), 2);
     for _ in 0 .. 5 {
         simulator.tick(
             world.tick_time_interval(),
@@ -493,7 +493,7 @@ fn test_simulator_unit_pickup_mine() {
             &mut rng,
         );
     }
-    assert_eq!(simulator.loot_boxes().len(), 1);
+    assert_eq!(simulator.loot_boxes().len(), 19);
     assert_eq!(simulator.me().mines(), 1);
 }
 
