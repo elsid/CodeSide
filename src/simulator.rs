@@ -704,16 +704,12 @@ impl BulletExt {
     }
 
     pub fn center(&self) -> Vec2 {
-        Vec2::new(self.base.position.x, self.base.position.y)
-    }
-
-    pub fn half(&self) -> Vec2 {
-        let half_size = self.half_size();
-        Vec2::new(half_size, half_size)
+        Vec2::from_model(&self.base.position)
     }
 
     pub fn rect(&self) -> Rect {
-        Rect::new(self.center(), self.half())
+        let half_size = self.base.size * 0.5;
+        Rect::new(self.center(), Vec2::new(half_size, half_size))
     }
 
     pub fn explosion_params(&self) -> &Option<ExplosionParams> {
@@ -766,7 +762,10 @@ impl LootBoxExt {
     }
 
     pub fn rect(&self) -> Rect {
-        Rect::new(Vec2::from_model(&self.base.position), Vec2::from_model(&self.base.size))
+        Rect::new(
+            Vec2::from_model(&self.base.position) + Vec2::only_y(self.base.size.y / 2.0),
+            Vec2::from_model(&self.base.size) / 2.0
+        )
     }
 }
 
