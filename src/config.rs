@@ -12,6 +12,7 @@ pub struct Config {
     pub optimal_tile_first_weapon_score_weight: f64,
     pub optimal_tile_swap_weapon_score_weight: f64,
     pub optimal_tile_hit_score_weight: f64,
+    pub optimal_tile_opponent_obstacle_score_weight: f64,
     pub min_hit_probability_by_spread_to_shoot: f64,
     pub min_hit_probability_over_obstacles_to_shoot: f64,
 }
@@ -31,6 +32,7 @@ impl Config {
             optimal_tile_first_weapon_score_weight: 3.0,
             optimal_tile_swap_weapon_score_weight: 1.0,
             optimal_tile_hit_score_weight: -1.0,
+            optimal_tile_opponent_obstacle_score_weight: -1.0,
             min_hit_probability_by_spread_to_shoot: 0.3,
             min_hit_probability_over_obstacles_to_shoot: 0.1,
         }

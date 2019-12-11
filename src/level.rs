@@ -2,30 +2,43 @@ use model::{
     Level,
     Tile,
 };
-use crate::my_strategy::vec2::Vec2;
+use crate::my_strategy::{
+    Location,
+    Vec2,
+};
 
 #[inline(always)]
 pub fn get_tile_by_vec2(level: &Level, position: Vec2) -> Tile {
-    get_tile_by_f64(level, position.x(), position.y())
+    get_tile(level, position.as_location())
 }
 
 #[inline(always)]
-pub fn get_tile_by_f64(level: &Level, x: f64, y: f64) -> Tile {
-    get_tile(level, x as usize, y as usize)
+pub fn get_tile(level: &Level, location: Location) -> Tile {
+    level.tiles[location.x()][location.y()].clone()
 }
 
 #[inline(always)]
-pub fn get_tile(level: &Level, x: usize, y: usize) -> Tile {
-    level.tiles[x][y].clone()
+pub fn get_tile_index(level: &Level, location: Location) -> usize {
+    location.y() + location.x() * get_level_size_y(level)
+}
+
+#[inline(always)]
+pub fn get_level_size_x(level: &Level) -> usize {
+    level.tiles.len()
+}
+
+#[inline(always)]
+pub fn get_level_size_y(level: &Level) -> usize {
+    level.tiles[0].len()
 }
 
 pub fn dump_level(level: &Level) -> String {
-    let get_index = |x: usize, y: usize| -> usize { x + (level.tiles[0].len() - y - 1) * (level.tiles.len() + 1) };
     let mut buffer: Vec<u8> = std::iter::repeat('\n' as u8)
-        .take((level.tiles.len() + 1) * level.tiles[0].len())
+        .take((get_level_size_x(level) + 1) * get_level_size_y(level))
         .collect();
-    for x in 0 .. level.tiles.len() {
-        for y in 0 .. level.tiles[0].len() {
+    let get_index = |x: usize, y: usize| -> usize { x + (get_level_size_y(level) - y - 1) * (get_level_size_x(level) + 1) };
+    for x in 0 .. get_level_size_x(level) {
+        for y in 0 .. get_level_size_y(level) {
             buffer[get_index(x, y)] = match level.tiles[x][y] {
                 Tile::Empty => '.' as u8,
                 Tile::Wall => '#' as u8,

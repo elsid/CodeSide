@@ -1,9 +1,14 @@
 use std::ops::{Add, Sub, Mul, Div, Neg};
-use model::{
-    Vec2F32,
-    Vec2F64,
+
+use model::Vec2F64;
+
+#[cfg(feature = "enable_debug")]
+use model::Vec2F32;
+
+use crate::my_strategy::{
+    Location,
+    Square,
 };
-use crate::my_strategy::Square;
 
 #[derive(Default, Clone, Copy, Debug, PartialOrd)]
 pub struct Vec2 {
@@ -22,10 +27,12 @@ impl Vec2 {
         Self { x: 0.0, y: 0.0 }
     }
 
+    #[inline(always)]
     pub const fn i() -> Self {
         Self::only_x(1.0)
     }
 
+    #[inline(always)]
     pub const fn only_x(x: f64) -> Self {
         Self { x, y: 0.0 }
     }
@@ -111,12 +118,18 @@ impl Vec2 {
     pub fn dot(&self, other: Self) -> f64 {
         self.x * other.x + self.y * other.y
     }
+
+    #[inline(always)]
+    pub fn as_location(&self) -> Location {
+        Location::new(self.x as usize, self.y as usize)
+    }
 }
 
 impl Add for Vec2 {
     type Output = Vec2;
 
-    fn add(self, rhs: Vec2) -> Vec2 {
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self::Output {
         Vec2::new(self.x + rhs.x, self.y + rhs.y)
     }
 }
@@ -125,7 +138,7 @@ impl Sub for Vec2 {
     type Output = Vec2;
 
     #[inline(always)]
-    fn sub(self, rhs: Vec2) -> Vec2 {
+    fn sub(self, rhs: Self) -> Self::Output {
         Vec2::new(self.x - rhs.x, self.y - rhs.y)
     }
 }
@@ -134,7 +147,7 @@ impl Mul<f64> for Vec2 {
     type Output = Vec2;
 
     #[inline(always)]
-    fn mul(self, rhs: f64) -> Vec2 {
+    fn mul(self, rhs: f64) -> Self::Output {
         Vec2::new(self.x * rhs, self.y * rhs)
     }
 }
@@ -143,7 +156,7 @@ impl Div<f64> for Vec2 {
     type Output = Vec2;
 
     #[inline(always)]
-    fn div(self, rhs: f64) -> Vec2 {
+    fn div(self, rhs: f64) -> Self::Output {
         Vec2::new(self.x / rhs, self.y / rhs)
     }
 }
@@ -152,14 +165,14 @@ impl Neg for Vec2 {
     type Output = Vec2;
 
     #[inline(always)]
-    fn neg(self) -> Vec2 {
+    fn neg(self) -> Self::Output {
         Vec2::new(-self.x, -self.y)
     }
 }
 
 impl PartialEq for Vec2 {
     #[inline(always)]
-    fn eq(&self, rhs: &Vec2) -> bool {
+    fn eq(&self, rhs: &Self) -> bool {
         (self.x, self.y).eq(&(rhs.x, rhs.y))
     }
 }

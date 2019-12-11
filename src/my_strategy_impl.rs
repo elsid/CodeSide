@@ -25,7 +25,6 @@ use crate::my_strategy::{
     Config,
     Planner,
     Positionable,
-    Rect,
     Rectangular,
     SeedableRng,
     Simulator,
@@ -162,25 +161,25 @@ impl MyStrategyImpl {
                 .unwrap()
             });
         let mut target = me.position.clone();
-        if let Some((tile_x, tile_y)) = get_optimal_tile(&self.world, debug) {
+        if let Some(location) = get_optimal_tile(&self.world, debug) {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log {
-                text: format!("optimal_tile: x={} y={}", tile_x, tile_y),
+                text: format!("optimal_tile: {:?}", location),
             });
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Rect {
-                pos: Vec2F32 { x: tile_x as f32, y: tile_y as f32 },
+                pos: location.as_model_f32(),
                 size: Vec2F32 { x: 1.0, y: 1.0 },
                 color: ColorF32 { a: 0.5, r: 0.0, g: 0.0, b: 0.0 },
             });
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Line {
                 p1: self.world.me().position().as_model_f32(),
-                p2: Vec2F32 { x: tile_x as f32 + 0.5, y: tile_y as f32 + 0.5 },
+                p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
                 width: 0.1,
                 color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
             });
-            target = Vec2::new(tile_x as f64 + 0.5, tile_y as f64).as_model();
+            target = Vec2::new(location.x() as f64 + 0.5, location.y() as f64).as_model();
         } else if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
             target = weapon.position.clone();
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
@@ -264,8 +263,7 @@ impl MyStrategyImpl {
 
     fn should_swap_weapon(&self) -> bool {
         if let Some(weapon) = self.world.me().weapon.as_ref() {
-            let position = self.world.me().position();
-            match self.world.tile_item(position.x() as usize, position.y() as usize) {
+            match self.world.tile_item(self.world.me().location()) {
                 Some(&Item::Weapon { ref weapon_type }) => {
                     get_weapon_score(&weapon.typ) < get_weapon_score(weapon_type)
                 }

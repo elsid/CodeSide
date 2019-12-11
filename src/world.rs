@@ -12,9 +12,17 @@ use model::{
 };
 use crate::my_strategy::{
     Config,
+    ImplicitProperties,
+    Location,
+    Positionable,
     Vec2,
+    Vec2i,
+    as_score,
+    get_level_size_x,
+    get_level_size_y,
     get_tile,
     get_tile_by_vec2,
+    get_tile_index,
 };
 
 #[derive(Debug, Clone)]
@@ -23,19 +31,18 @@ pub struct World {
     me: Unit,
     game: Game,
     size: Vec2,
-    items_by_tile: BTreeMap<(usize, usize), Item>,
+    items_by_tile: BTreeMap<Location, Item>,
+    paths: BTreeMap<(Location, Location), TilePathInfo>,
 }
 
 impl World {
     pub fn new(config: Config, me: Unit, game: Game) -> Self {
         Self {
-            size: Vec2::new(
-                game.level.tiles.len() as f64,
-                game.level.tiles.iter().max_by_key(|v| v.len()).unwrap().len() as f64
-            ),
+            size: Vec2::new(get_level_size_x(&game.level) as f64, get_level_size_y(&game.level) as f64),
             items_by_tile: game.loot_boxes.iter()
-                .map(|v| ((v.position.x as usize, v.position.y as usize), v.item.clone()))
+                .map(|v| (v.location(), v.item.clone()))
                 .collect(),
+            paths: BTreeMap::new(),
             config,
             me,
             game,
@@ -43,11 +50,19 @@ impl World {
     }
 
     pub fn update(&mut self, me: &Unit, game: &Game) {
+        let old_units_locations = get_units_locations(&self.game.units);
         self.me = me.clone();
         self.game = game.clone();
         self.items_by_tile = game.loot_boxes.iter()
-            .map(|v| ((v.position.x as usize, v.position.y as usize), v.item.clone()))
+            .map(|v| (v.location(), v.item.clone()))
             .collect();
+        let new_units_locations = get_units_locations(&self.game.units);
+        if self.paths.is_empty() || old_units_locations != new_units_locations {
+            let source = me.location();
+            for (destination, info) in get_tile_path_infos(source, self).into_iter() {
+                self.paths.insert((source, destination), info);
+            }
+        }
     }
 
     pub fn config(&self) -> &Config {
@@ -94,8 +109,8 @@ impl World {
         1.0 / self.game.properties.ticks_per_second as f64
     }
 
-    pub fn tile(&self, x: usize, y: usize) -> Tile {
-        get_tile(&self.game.level, x, y)
+    pub fn tile(&self, location: Location) -> Tile {
+        get_tile(&self.game.level, location)
     }
 
     pub fn tile_by_position(&self, position: Vec2) -> Tile {
@@ -108,7 +123,178 @@ impl World {
             .unwrap()
     }
 
-    pub fn tile_item(&self, x: usize, y: usize) -> Option<&Item> {
-        self.items_by_tile.get(&(x, y))
+    pub fn tile_item(&self, location: Location) -> Option<&Item> {
+        self.items_by_tile.get(&location)
     }
+
+    pub fn path_info(&self, source: Location, destination: Location) -> Option<&TilePathInfo> {
+        self.paths.get(&(source, destination))
+    }
+
+    pub fn has_opponent_unit(&self, location: Location) -> bool {
+        self.game.units.iter()
+            .filter(|v| v.player_id != self.me.player_id)
+            .find(|v| {
+                let unit_location = v.location();
+                unit_location == location || unit_location + Vec2i::new(0, 1) == location
+            })
+            .is_some()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TilePathInfo {
+    has_opponent_unit: bool,
+    distance: f64,
+}
+
+impl TilePathInfo {
+    #[inline(always)]
+    pub fn has_opponent_unit(&self) -> bool {
+        self.has_opponent_unit
+    }
+
+    #[inline(always)]
+    pub fn distance(&self) -> f64 {
+        self.distance
+    }
+}
+
+pub fn get_tile_path_infos(from: Location, world: &World) -> Vec<(Location, TilePathInfo)> {
+    use std::collections::{BTreeSet, BinaryHeap};
+
+    let size_x = get_level_size_x(world.level());
+    let size_y = get_level_size_y(world.level());
+
+    let mut distances: Vec<f64> = std::iter::repeat(std::f64::MAX).take(size_x * size_y).collect();
+    distances[get_tile_index(world.level(), from)] = 0.0;
+
+    let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
+
+    let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
+    ordered.push((0, from));
+
+    let mut destinations: BTreeSet<Location> = BTreeSet::new();
+    destinations.insert(from);
+
+    const EDGES: &[(Vec2i, f64)] = &[
+        (Vec2i::new(-1, -1), std::f64::consts::SQRT_2),
+        (Vec2i::new(-1, 0), 1.0),
+        // (Vec2i::new(-1, 1), std::f64::consts::SQRT_2),
+        (Vec2i::new(0, -1), 1.0),
+        (Vec2i::new(0, 1), 1.0),
+        (Vec2i::new(1, -1), std::f64::consts::SQRT_2),
+        (Vec2i::new(1, 0), 1.0),
+        // (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
+    ];
+
+    while let Some((_, node_location)) = ordered.pop() {
+        destinations.remove(&node_location);
+        for &(shift, distance) in EDGES.iter() {
+            let neighbor_location = node_location + shift;
+            if neighbor_location.x() >= size_x || neighbor_location.y() >= size_y
+                || !is_tile_reachable_from(node_location, neighbor_location, world.level(), world.properties()) {
+                continue;
+            }
+            let node_index = get_tile_index(world.level(), node_location);
+            let neighbor_index = get_tile_index(world.level(), neighbor_location);
+            let new_distance = distances[node_index] + distance;
+            if new_distance < distances[neighbor_index] {
+                distances[neighbor_index] = new_distance;
+                has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || world.has_opponent_unit(neighbor_location);
+                if destinations.insert(neighbor_location) {
+                    ordered.push((as_score(distance), neighbor_location));
+                }
+            }
+        }
+    }
+
+    let mut result = Vec::new();
+
+    for x in 0 .. size_x {
+        for y in 0 .. size_y {
+            let location = Location::new(x, y);
+            let index = get_tile_index(world.level(), location);
+            let distance = distances[index];
+            if distance != std::f64::MAX {
+                result.push((location, TilePathInfo {
+                    distance,
+                    has_opponent_unit: has_opponent_unit[index],
+                }));
+            }
+        }
+    }
+
+    result
+}
+
+pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
+    match get_tile(level, destination) {
+        Tile::Wall => false,
+        Tile::Ladder => true,
+        Tile::Platform => true,
+        Tile::JumpPad => true,
+        Tile::Empty => {
+            match get_tile(level, source) {
+                Tile::Wall => false,
+                Tile::Ladder => true,
+                Tile::Platform => true,
+                Tile::JumpPad => true,
+                Tile::Empty => source.y() > destination.y()
+                    || (source.y() > 0
+                        && (
+                            is_walkable(get_tile(level, source + Vec2i::new(0, -1)))
+                            || is_walkable(get_tile(level, destination + Vec2i::new(0, -1)))
+                            || (2 .. source.y() as isize + 1).find(|&dy| {
+                                can_jump_up_from(get_tile(level, source + Vec2i::new(0, -dy)), dy as f64 + 0.5, properties)
+                            }).is_some()
+                            || (1 .. destination.x() as isize).find(|&dx| {
+                                can_fly_from(get_tile(level, destination + Vec2i::new(-dx, 0)), dx as f64 + 0.5, properties)
+                            }).is_some()
+                            || (destination.x() + 1 .. get_level_size_x(level) - 1).find(|&x| {
+                                can_fly_from(get_tile(level, Location::new(x, destination.y())), (x - destination.x()) as f64 + 0.5, properties)
+                            }).is_some()
+                        )
+                    ),
+            }
+        },
+    }
+}
+
+pub fn can_jump_up_from(tile: Tile, height: f64, properties: &Properties) -> bool {
+    match tile {
+        Tile::Wall => properties.max_unit_jump_height() >= height,
+        Tile::Ladder => properties.max_unit_jump_height() >= height,
+        Tile::Platform => properties.max_unit_jump_height() >= height,
+        Tile::JumpPad => properties.max_jump_pad_height() >= height,
+        Tile::Empty => false,
+    }
+}
+
+pub fn can_fly_from(tile: Tile, length: f64, properties: &Properties) -> bool {
+    match tile {
+        Tile::Wall => properties.max_unit_jump_length() >= length,
+        Tile::Ladder => properties.max_unit_jump_length() >= length,
+        Tile::Platform => properties.max_unit_jump_length() >= length,
+        Tile::JumpPad => properties.max_jump_pad_length() >= length,
+        Tile::Empty => false,
+    }
+}
+
+pub fn is_walkable(tile: Tile) -> bool {
+    match tile {
+        Tile::Wall => true,
+        Tile::Ladder => true,
+        Tile::Platform => true,
+        Tile::JumpPad => true,
+        Tile::Empty => false,
+    }
+}
+
+fn get_units_locations(units: &Vec<Unit>) -> Vec<(i32, Location)> {
+    let mut result: Vec<(i32, Location)> = units.iter()
+        .map(|v| (v.id, v.location()))
+        .collect();
+    result.sort();
+    result
 }

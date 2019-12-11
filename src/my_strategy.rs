@@ -35,6 +35,18 @@ pub mod debug;
 #[cfg(feature = "enable_debug")]
 pub use debug::*;
 
+#[path = "location.rs"]
+pub mod location;
+
+#[allow(unused_imports)]
+pub use location::*;
+
+#[path = "vec2i.rs"]
+pub mod vec2i;
+
+#[allow(unused_imports)]
+pub use vec2i::*;
+
 #[path = "vec2.rs"]
 pub mod vec2;
 
@@ -70,6 +82,18 @@ pub mod unit;
 
 #[allow(unused_imports)]
 pub use unit::*;
+
+#[path = "loot_box.rs"]
+pub mod loot_box;
+
+#[allow(unused_imports)]
+pub use loot_box::*;
+
+#[path = "properties.rs"]
+pub mod properties;
+
+#[allow(unused_imports)]
+pub use properties::*;
 
 #[path = "hit.rs"]
 pub mod hit;

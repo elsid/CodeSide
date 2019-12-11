@@ -1,11 +1,17 @@
 use model::{
-    ColorF32,
-    CustomData,
     Properties,
     UnitAction,
     Vec2F64,
 };
+
+#[cfg(feature = "enable_debug")]
+use model::{
+    ColorF32,
+    CustomData,
+};
+
 use crate::Debug;
+
 use crate::my_strategy::{
     Clamp1,
     Config,
