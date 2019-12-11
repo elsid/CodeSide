@@ -233,7 +233,6 @@ pub fn example_bullet(properties: &Properties) -> Bullet {
 
 pub fn example_mine(properties: &Properties) -> Mine {
     use model::MineState::Preparing;
-    use model::WeaponType::RocketLauncher;
 
     Mine {
         player_id: 1,
@@ -245,7 +244,7 @@ pub fn example_mine(properties: &Properties) -> Mine {
         state: Preparing,
         timer: Some(properties.mine_prepare_time),
         trigger_radius: properties.mine_trigger_radius,
-        explosion_params: properties.weapon_params.get(&RocketLauncher).unwrap().explosion.clone().unwrap(),
+        explosion_params: properties.mine_explosion_params.clone(),
     }
 }
 

@@ -5,6 +5,8 @@ use model::{
     Item,
     JumpState,
     LootBox,
+    Mine,
+    MineState,
     Properties,
     Unit,
     Weapon,
@@ -431,6 +433,7 @@ fn test_simulator_unit_pickup_weapon() {
     let mut rng = example_rng(7348172934612063328);
     simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     assert!(simulator.me().weapon().is_none());
+    assert_eq!(simulator.loot_boxes().len(), 2);
     for _ in 0 .. 5 {
         simulator.tick(
             world.tick_time_interval(),
@@ -438,6 +441,7 @@ fn test_simulator_unit_pickup_weapon() {
             &mut rng,
         );
     }
+    assert_eq!(simulator.loot_boxes().len(), 1);
     assert_eq!(
         simulator.me().weapon().as_ref().map(|v| WeaponWrapper(v)),
         Some(WeaponWrapper(&Weapon {
@@ -460,6 +464,7 @@ fn test_simulator_unit_pickup_health_pack() {
     let mut rng = example_rng(7348172934612063328);
     simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     simulator.me_mut().damage(20);
+    assert_eq!(simulator.loot_boxes().len(), 2);
     assert_eq!(simulator.me().health(), 80);
     for _ in 0 .. 5 {
         simulator.tick(
@@ -468,6 +473,7 @@ fn test_simulator_unit_pickup_health_pack() {
             &mut rng,
         );
     }
+    assert_eq!(simulator.loot_boxes().len(), 1);
     assert_eq!(simulator.me().health(), 100);
 }
 
@@ -479,6 +485,7 @@ fn test_simulator_unit_pickup_mine() {
     simulator.me_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     simulator.me_mut().damage(20);
     assert_eq!(simulator.me().mines(), 0);
+    assert_eq!(simulator.loot_boxes().len(), 2);
     for _ in 0 .. 5 {
         simulator.tick(
             world.tick_time_interval(),
@@ -486,6 +493,7 @@ fn test_simulator_unit_pickup_mine() {
             &mut rng,
         );
     }
+    assert_eq!(simulator.loot_boxes().len(), 1);
     assert_eq!(simulator.me().mines(), 1);
 }
 
@@ -569,6 +577,41 @@ fn test_simulator_unit_fall_through_platform_for_one_tick() {
         simulator.me().position(),
         Vec2::new(7.5, 7.333333333333307)
     );
+}
+
+#[test]
+fn test_simulator_mine_change_state() {
+    let world = example_world();
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 70 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.mines().len(), 1, "{:?}", simulator.mines());
+    assert_eq!(simulator.mines()[0].base().state, MineState::Idle,
+        "{:?}", simulator.mines()[0].base());
+}
+
+#[test]
+fn test_simulator_mine_exposion() {
+    let world = with_mine(example_world(), Vec2::new(37.5, 1.0));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.me().health(), 100);
+    assert_eq!(simulator.mines().len(), 2, "{:?}", simulator.mines());
+    for _ in 0 .. 100 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.mines().len(), 1, "{:?}", simulator.mines());
+    assert_eq!(simulator.me().health(), 50);
 }
 
 #[test]
@@ -716,6 +759,20 @@ fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction:
         damage: params.bullet.damage,
         size: params.bullet.size,
         explosion_params: params.explosion.clone(),
+    });
+    World::new(world.config().clone(), world.me().clone(), game)
+}
+
+fn with_mine(world: World, position: Vec2) -> World {
+    let mut game = world.game().clone();
+    game.mines.push(Mine {
+        player_id: 1,
+        position: position.as_model(),
+        size: world.properties().mine_size.clone(),
+        state: MineState::Preparing,
+        timer: Some(world.properties().mine_prepare_time),
+        trigger_radius: world.properties().mine_trigger_radius,
+        explosion_params: world.properties().mine_explosion_params.clone(),
     });
     World::new(world.config().clone(), world.me().clone(), game)
 }

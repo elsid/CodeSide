@@ -5,6 +5,7 @@ use model::{
     Item,
     Level,
     LootBox,
+    Mine,
     Player,
     Properties,
     Tile,
@@ -91,6 +92,10 @@ impl World {
 
     pub fn players(&self) -> &Vec<Player> {
         &self.game.players
+    }
+
+    pub fn mines(&self) -> &Vec<Mine> {
+        &self.game.mines
     }
 
     pub fn loot_boxes(&self) -> &Vec<LootBox> {

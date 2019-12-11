@@ -38,6 +38,11 @@ impl Vec2 {
     }
 
     #[inline(always)]
+    pub const fn only_y(y: f64) -> Self {
+        Self { x: 0.0, y }
+    }
+
+    #[inline(always)]
     pub const fn from_model(value: &Vec2F64) -> Self {
         Self { x: value.x, y: value.y }
     }

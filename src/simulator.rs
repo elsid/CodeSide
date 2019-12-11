@@ -4,6 +4,8 @@ use model::{
     Item,
     Level,
     LootBox,
+    Mine,
+    MineState,
     Player,
     Properties,
     Tile,
@@ -30,6 +32,7 @@ pub struct Simulator {
     players: Vec<Player>,
     units: Vec<UnitExt>,
     bullets: Vec<BulletExt>,
+    mines: Vec<MineExt>,
     loot_boxes: Vec<LootBoxExt>,
     properties: Properties,
     level: Level,
@@ -60,11 +63,15 @@ impl Simulator {
         let loot_boxes: Vec<LootBoxExt> = world.loot_boxes().iter()
             .map(|v| LootBoxExt::new(v.clone()))
             .collect();
+        let mines: Vec<MineExt> = world.mines().iter()
+            .map(|v| MineExt::new(v.clone()))
+            .collect();
         Simulator {
             players: world.players().clone(),
             units,
             bullets,
             loot_boxes,
+            mines,
             properties: world.properties().clone(),
             level: world.level().clone(),
             borders: world.size(),
@@ -100,6 +107,10 @@ impl Simulator {
         &self.bullets
     }
 
+    pub fn mines(&self) -> &Vec<MineExt> {
+        &self.mines
+    }
+
     pub fn loot_boxes(&self) -> &Vec<LootBoxExt> {
         &self.loot_boxes
     }
@@ -116,6 +127,9 @@ impl Simulator {
         self.current_tick += 1;
         self.current_time += time_interval;
         self.me_index = self.units.iter().position(|v| v.is_me()).unwrap();
+        self.bullets = self.bullets.iter().filter(|v| !v.hit).map(|v| v.clone()).collect();
+        self.mines = self.mines.iter().filter(|v| v.base.state != MineState::Exploded).map(|v| v.clone()).collect();
+        self.loot_boxes = self.loot_boxes.iter().filter(|v| !v.used).map(|v| v.clone()).collect();
     }
 
     fn micro_tick(&mut self, time_interval: f64, rng: &mut XorShiftRng) {
@@ -195,7 +209,28 @@ impl Simulator {
             }
         }
 
-        self.bullets = self.bullets.iter().filter(|v| !v.hit).map(|v| v.clone()).collect();
+        for mine in 0 .. self.mines.len() {
+            if self.mines[mine].base.state == MineState::Exploded {
+                continue;
+            }
+            if let Some(explosion) = update_mine(time_interval, &mut self.mines[mine]) {
+                for unit in 0 .. self.units.len() {
+                    if self.units[unit].ignore() {
+                        continue;
+                    }
+                    explode(&explosion, &mut self.units[unit]);
+                }
+            } else {
+                for unit in 0 .. self.units.len() {
+                    if self.units[unit].ignore() {
+                        continue;
+                    }
+                    if activate(&self.properties, &mut self.mines[mine], &mut self.units[unit]) {
+                        break;
+                    }
+                }
+            }
+        }
 
         self.current_micro_tick += 1;
     }
@@ -769,6 +804,34 @@ impl LootBoxExt {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct MineExt {
+    base: Mine,
+}
+
+impl MineExt {
+    pub fn new(base: Mine) -> Self {
+        Self { base }
+    }
+
+    pub fn base(&self) -> &Mine {
+        &self.base
+    }
+
+    pub fn center(&self) -> Vec2 {
+        Vec2::from_model(&self.base.position) + Vec2::only_y(self.base.size.y / 2.0)
+    }
+
+    pub fn rect(&self) -> Rect {
+        let size = if self.base.state == MineState::Idle {
+            Vec2::new(self.base.trigger_radius, self.base.trigger_radius)
+        } else {
+            Vec2::from_model(&self.base.size) / 2.0
+        };
+        Rect::new(self.center(), size)
+    }
+}
+
 pub fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
     unit.holding_center_x() as usize >= x && unit.holding_center_x() <= (x + 1) as f64
     && (
@@ -867,6 +930,42 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
             loot_box.used = true;
             true
         },
+    }
+}
+
+fn activate(properties: &Properties, mine: &mut MineExt, unit: &mut UnitExt) -> bool {
+    if mine.base.state != MineState::Idle {
+        return true;
+    }
+    if !mine.rect().has_collision(&unit.holding_rect()) {
+        return false;
+    }
+    mine.base.state = MineState::Triggered;
+    mine.base.timer = Some(properties.mine_trigger_time);
+    true
+}
+
+fn update_mine(time_interval: f64, mine: &mut MineExt) -> Option<Explosion> {
+    if let Some(timer) = mine.base.timer.as_mut() {
+        *timer -= time_interval;
+        if *timer <= 0.0 {
+            mine.base.timer = None;
+        }
+    }
+    if mine.base.timer.is_none() {
+        match mine.base.state {
+            MineState::Preparing => {
+                mine.base.state = MineState::Idle;
+                None
+            },
+            MineState::Triggered => {
+                mine.base.state = MineState::Exploded;
+                Some(Explosion {params: mine.base.explosion_params.clone(), position: mine.center()})
+            },
+            _ => None,
+        }
+    } else {
+        None
     }
 }
 
