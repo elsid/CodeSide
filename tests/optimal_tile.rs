@@ -20,59 +20,17 @@ fn test_get_optimal_tile() {
     let mut stream = BufWriter::new(handle);
     let world = updated_world(example_world());
 
-    assert_eq!(get_optimal_tile(&world, &mut Debug(&mut stream)), Some(Location::new(10, 1)));
+    assert_eq!(get_optimal_tile(&world, &mut Debug(&mut stream)), Some(Location::new(29, 1)));
 }
 
 #[test]
-fn test_get_tile_score_random_tiles() {
+fn test_get_tile_score_random_tile() {
     let world = updated_world(example_world());
     {
         let location = Location::new(10, 5);
         assert_eq!(
             get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -0.655
-        );
-    }
-    {
-        let location = Location::new(11, 5);
-        assert_eq!(
-            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -0.65
-        );
-    }
-    {
-        let location = Location::new(10, 3);
-        assert_eq!(
-            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -0.5173589016029712
-        );
-    }
-    {
-        let location = Location::new(10, 2);
-        assert_eq!(
-            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -0.5166620496359697
-        );
-    }
-    {
-        let location = Location::new(15, 4);
-        assert_eq!(
-            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -0.4892760153841629
-        );
-    }
-    {
-        let location = Location::new(36, 2);
-        assert_eq!(
-            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -0.33973476573298944
-        );
-    }
-    {
-        let location = Location::new(2, 2);
-        assert_eq!(
-            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            -1.6515
+            -0.03833333333333333
         );
     }
 }
@@ -83,7 +41,7 @@ fn test_get_tile_score_optimal_tile() {
     let location = Location::new(10, 1);
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        2.478685919563607
+        3.0015145946466255
     );
 }
 
@@ -95,7 +53,7 @@ fn test_get_tile_score_for_tile_with_bullet() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        1.424442446900973
+        1.4916666666666667
     );
 }
 
@@ -107,7 +65,7 @@ fn test_get_tile_score_for_tile_with_opponent() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        -1.6685710678118655
+        -1.0742377344785319
     );
 }
 
@@ -119,7 +77,7 @@ fn test_get_tile_score_for_tile_with_weapon() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        2.26
+        2.933333333333333
     );
 }
 
@@ -131,7 +89,7 @@ fn test_get_tile_score_for_tile_with_health_pack() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        1.23
+        1.9166666666666667
     );
 }
 
@@ -143,7 +101,7 @@ fn test_get_tile_score_for_tile_with_loot_box_mine() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        -0.705
+        0.06833333333333336
     );
 }
 
@@ -153,7 +111,7 @@ fn test_get_tile_score_for_tile_with_mine() {
     let location = world.mines()[0].location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        -0.6
+        -0.47
     );
 }
 

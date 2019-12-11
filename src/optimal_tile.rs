@@ -14,20 +14,22 @@ use model::{
 
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
-    as_score,
     color_from_heat,
     get_tile_index,
 };
 
 use crate::my_strategy::{
     Location,
-    TilePathInfo,
     Positionable,
     Rect,
     Rectangular,
+    TilePathInfo,
     Vec2,
+    Vec2i,
     World,
+    as_score,
     get_hit_probability_over_obstacles,
+    get_hit_probability_by_spread,
     get_level_size_x,
     get_level_size_y,
 };
@@ -82,9 +84,14 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
 }
 
 pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInfo) -> f64 {
+    let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
     let max_distance = world.size().norm();
+    let tile_rect = Rect::new(
+        Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
+        Vec2::new(0.5, 0.5)
+    );
     let distance_to_opponent_score = world.units().iter()
         .filter(|unit| unit.player_id != world.me().player_id)
         .map(|unit| {
@@ -96,7 +103,7 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
         Some(&Item::HealthPack { .. }) => 1.0,
         _ => 0.0,
     };
-    let weapon_score = (world.me().weapon.is_none() && match world.tile_item(location) {
+    let first_weapon_score = (world.me().weapon.is_none() && match world.tile_item(location) {
         Some(&Item::Weapon { .. }) => true,
         _ => false,
     }) as i32 as f64;
@@ -106,21 +113,78 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
         },
         _ => false,
     }) as i32 as f64;
-    let hit_score = world.units().iter()
+    let number_of_opponents = world.units().iter()
+        .filter(|unit| unit.player_id != world.me().player_id)
+        .count();
+    let hit_by_opponent_score = world.units().iter()
         .filter(|unit| unit.player_id != world.me().player_id)
         .map(|unit| {
-            max_distance - get_hit_probability_over_obstacles(&unit.rect(), &me, world.level()) * center.distance(unit.position())
+            if let Some(weapon) = unit.weapon.as_ref() {
+                get_hit_probability_over_obstacles(&unit.rect(), &me, world.level())
+                    * get_hit_probability_by_spread(unit.rect().center(), &me, weapon.spread)
+            } else {
+                0.0
+            }
         })
-        .sum::<f64>() / (world.units().len() as f64 * max_distance);
+        .sum::<f64>() / (number_of_opponents as f64);
     let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
+    let loot_box_mine_score = (match world.tile_item(location) {
+        Some(&Item::Mine { }) => true,
+        _ => false,
+    }) as i32 as f64;
+    let hit_nearest_opponent_score = if let Some(weapon) = world.me().weapon.as_ref() {
+        world.units().iter()
+            .filter(|unit| unit.player_id != world.me().player_id)
+            .min_by_key(|unit| as_score(position.distance(unit.position())))
+            .map(|unit| {
+                (
+                    get_hit_probability_over_obstacles(&me, &unit.rect(), world.level()),
+                    get_hit_probability_by_spread(center, &unit.rect(), weapon.spread)
+                )
+            })
+            .filter(|&(obstacles, spread)| {
+                obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
+                && spread >= world.config().min_hit_probability_by_spread_to_shoot
+            })
+            .map(|(obstacles, spread)| obstacles * spread)
+            .unwrap_or(0.0)
+    } else {
+        0.0
+    };
+    let height_score = location.y() as f64 / world.size().y();
+    let over_ground_score = (world.tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
+    let number_of_bullets = world.bullets().iter()
+        .filter(|v| v.unit_id != world.me().id)
+        .count();
+    let bullets_score = if number_of_bullets > 0 {
+        world.bullets().iter()
+            .filter(|v| v.unit_id != world.me().id && v.rect().has_collision(&tile_rect))
+            .count() as f64 / (number_of_bullets as f64)
+    } else {
+        0.0
+    };
+    let mines_score = if world.mines().len() > 0 {
+        world.mines().iter()
+            .filter(|v| v.rect().has_collision(&tile_rect))
+            .count() as f64 / (world.mines().len() as f64)
+    } else {
+        0.0
+    };
 
-    distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight
+    0.0
+    + distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight
     + distance_to_position_score * world.config().optimal_tile_distance_to_position_score_weight
     + health_pack_score * world.config().optimal_tile_health_pack_score_weight
-    + weapon_score * world.config().optimal_tile_first_weapon_score_weight
+    + first_weapon_score * world.config().optimal_tile_first_weapon_score_weight
     + swap_weapon_score * world.config().optimal_tile_swap_weapon_score_weight
-    + hit_score * world.config().optimal_tile_hit_score_weight
+    + hit_by_opponent_score * world.config().optimal_tile_hit_by_opponent_score_weight
     + opponent_obstacle_score * world.config().optimal_tile_opponent_obstacle_score_weight
+    + loot_box_mine_score * world.config().optimal_tile_loot_box_mine_score_weight
+    + mines_score * world.config().optimal_tile_mines_score_weight
+    + hit_nearest_opponent_score * world.config().optimal_tile_hit_nearest_opponent_score_weight
+    + height_score * world.config().optimal_tile_height_score_weight
+    + over_ground_score * world.config().optimal_tile_over_ground_score_weight
+    + bullets_score * world.config().optimal_tile_bullets_score_weight
 }
 
 pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
