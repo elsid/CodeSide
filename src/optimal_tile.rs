@@ -70,10 +70,15 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
                     debug.draw(CustomData::Rect {
                         pos: location.as_model_f32(),
                         size: Vec2F32 { x: 1.0, y: 1.0 },
-                        color: color_from_heat(0.33, ((score - min) / (max - min)) as f32),
+                        color: color_from_heat(0.25, ((score - min) / (max - min)) as f32),
                     });
                 }
             }
+        }
+        if let Some((_, location)) = optimal {
+            debug.draw(CustomData::Log {
+                text: format!("optimal_tile: {:?} {:?}", location, get_tile_score_components(world, location, world.path_info(world.me().location(), location).unwrap())),
+            });
         }
     }
     if let Some((_, location)) = optimal {
@@ -84,6 +89,10 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
 }
 
 pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInfo) -> f64 {
+    get_tile_score_components(world, location, path_info).iter().sum()
+}
+
+pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 13] {
     let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
@@ -171,20 +180,21 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
         0.0
     };
 
-    0.0
-    + distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight
-    + distance_to_position_score * world.config().optimal_tile_distance_to_position_score_weight
-    + health_pack_score * world.config().optimal_tile_health_pack_score_weight
-    + first_weapon_score * world.config().optimal_tile_first_weapon_score_weight
-    + swap_weapon_score * world.config().optimal_tile_swap_weapon_score_weight
-    + hit_by_opponent_score * world.config().optimal_tile_hit_by_opponent_score_weight
-    + opponent_obstacle_score * world.config().optimal_tile_opponent_obstacle_score_weight
-    + loot_box_mine_score * world.config().optimal_tile_loot_box_mine_score_weight
-    + mines_score * world.config().optimal_tile_mines_score_weight
-    + hit_nearest_opponent_score * world.config().optimal_tile_hit_nearest_opponent_score_weight
-    + height_score * world.config().optimal_tile_height_score_weight
-    + over_ground_score * world.config().optimal_tile_over_ground_score_weight
-    + bullets_score * world.config().optimal_tile_bullets_score_weight
+    [
+        distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight,
+        distance_to_position_score * world.config().optimal_tile_distance_to_position_score_weight,
+        health_pack_score * world.config().optimal_tile_health_pack_score_weight,
+        first_weapon_score * world.config().optimal_tile_first_weapon_score_weight,
+        swap_weapon_score * world.config().optimal_tile_swap_weapon_score_weight,
+        hit_by_opponent_score * world.config().optimal_tile_hit_by_opponent_score_weight,
+        opponent_obstacle_score * world.config().optimal_tile_opponent_obstacle_score_weight,
+        loot_box_mine_score * world.config().optimal_tile_loot_box_mine_score_weight,
+        mines_score * world.config().optimal_tile_mines_score_weight,
+        hit_nearest_opponent_score * world.config().optimal_tile_hit_nearest_opponent_score_weight,
+        height_score * world.config().optimal_tile_height_score_weight,
+        over_ground_score * world.config().optimal_tile_over_ground_score_weight,
+        bullets_score * world.config().optimal_tile_bullets_score_weight,
+    ]
 }
 
 pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {

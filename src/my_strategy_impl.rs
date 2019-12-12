@@ -163,10 +163,6 @@ impl MyStrategyImpl {
         let mut target = me.position.clone();
         if let Some(location) = get_optimal_tile(&self.world, debug) {
             #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log {
-                text: format!("optimal_tile: {:?}", location),
-            });
-            #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Rect {
                 pos: location.as_model_f32(),
                 size: Vec2F32 { x: 1.0, y: 1.0 },
@@ -195,9 +191,7 @@ impl MyStrategyImpl {
             let hit_probability_by_spread = get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread);
             let hit_probability_over_obstacles = get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level());
             #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log { text: format!("hit_probability_by_spread: {:?}", hit_probability_by_spread) });
-            #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log { text: format!("hit_probability_over_obstacles: {:?}", hit_probability_over_obstacles) });
+            debug.draw(CustomData::Log { text: format!("hit_probability: by_spread={}, over_obstacles={}", hit_probability_by_spread, hit_probability_over_obstacles) });
             (
                 hit_probability_by_spread >= self.world.config().min_hit_probability_by_spread_to_shoot
                 && hit_probability_over_obstacles >= self.world.config().min_hit_probability_over_obstacles_to_shoot,
