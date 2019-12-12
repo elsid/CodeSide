@@ -15,7 +15,6 @@ cp target/release/aicup2019 ${BIN}
     number=0
     while true; do
         date
-        echo "${PORT} ${number}"
         ${BIN} 127.0.0.1 ${PORT} 2>&1
         sleep 0.15
         number=$(( number + 1 ))

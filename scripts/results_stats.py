@@ -20,9 +20,15 @@ def main():
             p['scores'].append(r[k]['score'])
         players['first']['score_diffs'].append(r['first']['score'] - r['second']['score'])
         players['second']['score_diffs'].append(r['second']['score'] - r['first']['score'])
+    _1 = [sum(w == 1 for w in v['places']) for v in players.values()]
+    _2 = [sum(w == 2 for w in v['places']) for v in players.values()]
     stats = dict(
-        _1=[sum(w == 1 for w in v['places']) for v in players.values()],
-        _2=[sum(w == 2 for w in v['places']) for v in players.values()],
+        _1=_1,
+        _2=_2,
+        wins=[
+            sum(w[0] > w[1] for w in zip(*[v['scores'] for v in players.values()])),
+            sum(w[1] > w[0] for w in zip(*[v['scores'] for v in players.values()]))
+        ],
         total_score=[sum(v['scores']) for v in players.values()],
         min_score=[min(v['scores']) for v in players.values()],
         max_score=[max(v['scores']) for v in players.values()],
@@ -36,7 +42,11 @@ def main():
         median_score_diff=[statistics.median(v['score_diffs']) for v in players.values()],
         stdev_score_diff=[statistics.stdev(v['score_diffs']) for v in players.values()],
     )
+    draws = sum(w[0] == w[1] for w in zip(*[v['scores'] for v in players.values()]))
     row('games', len(games))
+    row('second wins', stats['wins'][1], stats['wins'][1] / len(games))
+    row('draws', draws, draws / len(games))
+    row('first wins', stats['wins'][0], stats['wins'][0] / len(games))
     print()
     row('', *(list(players.keys()) + ['ratio (second/first)']))
     for k, v in stats.items():
