@@ -3,7 +3,10 @@ use std::ops::Add;
 #[cfg(feature = "enable_debug")]
 use model::Vec2F32;
 
-use crate::my_strategy::Vec2i;
+use crate::my_strategy::{
+    Vec2,
+    Vec2i,
+};
 
 #[derive(Default, Clone, Copy, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Location {
@@ -25,6 +28,16 @@ impl Location {
     #[inline(always)]
     pub const fn y(&self) -> usize {
         self.y
+    }
+
+    #[inline(always)]
+    pub fn center(&self) -> Vec2 {
+        Vec2::new(self.x as f64 + 0.5, self.y as f64 + 0.5)
+    }
+
+    #[inline(always)]
+    pub fn bottom(&self) -> Vec2 {
+        Vec2::new(self.x as f64 + 0.5, self.y as f64)
     }
 
     #[cfg(feature = "enable_debug")]

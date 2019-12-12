@@ -24,6 +24,8 @@ use crate::my_strategy::{
     get_tile,
     get_tile_by_vec2,
     get_tile_index,
+    get_tile_location,
+    will_hit_by_line,
 };
 
 #[derive(Debug, Clone)]
@@ -34,6 +36,7 @@ pub struct World {
     size: Vec2,
     items_by_tile: BTreeMap<Location, Item>,
     paths: BTreeMap<(Location, Location), TilePathInfo>,
+    backtrack: Vec<usize>,
 }
 
 impl World {
@@ -43,10 +46,11 @@ impl World {
             items_by_tile: game.loot_boxes.iter()
                 .map(|v| (v.location(), v.item.clone()))
                 .collect(),
-            paths: BTreeMap::new(),
             config,
             me,
             game,
+            paths: BTreeMap::new(),
+            backtrack: Vec::new(),
         }
     }
 
@@ -60,9 +64,11 @@ impl World {
         let new_units_locations = get_units_locations(&self.game.units);
         if self.paths.is_empty() || old_units_locations != new_units_locations {
             let source = me.location();
-            for (destination, info) in get_tile_path_infos(source, self).into_iter() {
+            let (infos, backtrack) = get_tile_path_infos(source, self);
+            for (destination, info) in infos.into_iter() {
                 self.paths.insert((source, destination), info);
             }
+            self.backtrack = backtrack;
         }
     }
 
@@ -149,6 +155,56 @@ impl World {
     pub fn paths(&self) -> &BTreeMap<(Location, Location), TilePathInfo> {
         &self.paths
     }
+
+    pub fn backtrack(&self) -> &Vec<usize> {
+        &self.backtrack
+    }
+
+    pub fn find_shortcut_tiles_path(&self, source: Location, destination: Location) -> Vec<Location> {
+        let tiles_path = self.find_reversed_tiles_path(source, destination);
+
+        let mut result = Vec::new();
+        let mut end = tiles_path.len();
+        let mut current = source;
+
+        while end > 0 {
+            let mut tile = 0;
+            while tile < end && !will_hit_by_line(current.center(), tiles_path[tile].center(), &self.game.level) {
+                tile += 1;
+            }
+            if tile == tiles_path.len() {
+                break;
+            }
+            if tile == end {
+                result.push(destination);
+                break;
+            }
+            current = tiles_path[tile];
+            end = tile;
+            result.push(tiles_path[end]);
+        }
+
+        result
+    }
+
+    pub fn find_reversed_tiles_path(&self, source: Location, destination: Location) -> Vec<Location> {
+        let mut result = Vec::new();
+        let mut index = get_tile_index(&self.game.level, destination);
+
+        loop {
+            let prev = self.backtrack[index];
+            if prev == index {
+                return Vec::new()
+            }
+            result.push(get_tile_location(&self.game.level, index));
+            if prev == get_tile_index(&self.game.level, source) {
+                break;
+            }
+            index = prev;
+        }
+
+        result
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -169,7 +225,7 @@ impl TilePathInfo {
     }
 }
 
-pub fn get_tile_path_infos(from: Location, world: &World) -> Vec<(Location, TilePathInfo)> {
+pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, TilePathInfo)>, Vec<usize>) {
     use std::collections::{BTreeSet, BinaryHeap};
 
     let size_x = get_level_size_x(world.level());
@@ -179,6 +235,8 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> Vec<(Location, Tile
     distances[get_tile_index(world.level(), from)] = 0.0;
 
     let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
+
+    let mut backtrack: Vec<usize> = (0 .. size_x * size_y).collect();
 
     let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
     ordered.push((0, from));
@@ -211,6 +269,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> Vec<(Location, Tile
             if new_distance < distances[neighbor_index] {
                 distances[neighbor_index] = new_distance;
                 has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || world.has_opponent_unit(neighbor_location);
+                backtrack[neighbor_index] = node_index;
                 if destinations.insert(neighbor_location) {
                     ordered.push((as_score(distance), neighbor_location));
                 }
@@ -234,7 +293,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> Vec<(Location, Tile
         }
     }
 
-    result
+    (result, backtrack)
 }
 
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {

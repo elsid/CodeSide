@@ -160,28 +160,28 @@ impl MyStrategyImpl {
                 )
                 .unwrap()
             });
-        let mut target = me.position.clone();
+        let mut target = Vec2::from_model(&me.position);
         if let Some(location) = get_optimal_tile(&self.world, debug) {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Rect {
-                pos: location.as_model_f32(),
-                size: Vec2F32 { x: 1.0, y: 1.0 },
-                color: ColorF32 { a: 0.5, r: 0.0, g: 0.0, b: 0.0 },
+                pos: location.center().as_model_f32(),
+                size: Vec2F32 { x: 0.5, y: 0.5 },
+                color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
             });
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Line {
-                p1: self.world.me().position().as_model_f32(),
+                p1: self.world.me().rect().center().as_model_f32(),
                 p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
                 width: 0.1,
                 color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
             });
-            target = Vec2::new(location.x() as f64 + 0.5, location.y() as f64).as_model();
+            target = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
         } else if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
-            target = weapon.position.clone();
+            target = weapon.position();
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
-            target = health_pack.position.clone();
+            target = health_pack.position();
         } else if let Some(opponent) = nearest_opponent {
-            target = opponent.position.clone();
+            target = opponent.position();
         }
         #[cfg(feature = "enable_debug")]
         debug.draw(CustomData::Log {
@@ -203,8 +203,29 @@ impl MyStrategyImpl {
         } else {
             (false, model::Vec2F64 { x: 0.0, y: 0.0 })
         };
+        let tiles_path = self.world.find_shortcut_tiles_path(self.world.me().location(), target.as_location());
+        if !tiles_path.is_empty() {
+            target = tiles_path[0].bottom();
+            #[cfg(feature = "enable_debug")]
+            {
+                debug.draw(CustomData::Line {
+                    p1: self.world.me().rect().center().as_model_f32(),
+                    p2: tiles_path[0].center().as_model_f32(),
+                    width: 0.1,
+                    color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.0 },
+                });
+                for tile in 0 .. tiles_path.len() - 1 {
+                    debug.draw(CustomData::Line {
+                        p1: tiles_path[tile].center().as_model_f32(),
+                        p2: tiles_path[tile + 1].center().as_model_f32(),
+                        width: 0.1,
+                        color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.0 },
+                    });
+                }
+            }
+        }
         let simulator = Simulator::new(&self.world, me.id);
-        let plan = Planner::new(Vec2::from_model(&target), &self.config, self.world.paths(), simulator)
+        let plan = Planner::new(target, &self.config, self.world.paths(), simulator)
             .make(&mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
@@ -217,23 +238,23 @@ impl MyStrategyImpl {
             action.swap_weapon = !shoot && self.should_swap_weapon();
             return action;
         }
-        let mut jump = target.y > me.position.y;
-        if target.x > me.position.x
+        let mut jump = target.y() > me.position.y;
+        if target.x() > me.position.x
             && self.world.game().level.tiles[(me.position.x + 1.0) as usize][(me.position.y) as usize]
                 == Tile::Wall
         {
             jump = true
         }
-        if target.x < me.position.x
+        if target.x() < me.position.x
             && self.world.game().level.tiles[(me.position.x - 1.0) as usize][(me.position.y) as usize]
                 == Tile::Wall
         {
             jump = true
         }
         UnitAction {
-            velocity: target.x - me.position.x,
+            velocity: target.x() - me.position.x,
             jump,
-            jump_down: target.y < me.position.y,
+            jump_down: target.y() < me.position.y,
             shoot,
             aim,
             reload: false,

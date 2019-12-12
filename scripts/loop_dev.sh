@@ -16,7 +16,7 @@ cp target/release/aicup2019 ${BIN}
     while true; do
         date
         ${BIN} 127.0.0.1 ${PORT} 2>&1
-        sleep 0.15
+        sleep 0.2
         number=$(( number + 1 ))
     done
 } | tee run.${PORT}.log

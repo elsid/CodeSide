@@ -23,6 +23,11 @@ pub fn get_tile_index(level: &Level, location: Location) -> usize {
 }
 
 #[inline(always)]
+pub fn get_tile_location(level: &Level, index: usize) -> Location {
+    Location::new(index / get_level_size_y(level), index % get_level_size_y(level))
+}
+
+#[inline(always)]
 pub fn get_level_size_x(level: &Level) -> usize {
     level.tiles.len()
 }

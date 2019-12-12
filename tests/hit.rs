@@ -4,6 +4,7 @@ use model::{
     Tile,
 };
 use aicup2019::examples::{
+    example_level,
     example_properties,
 };
 use aicup2019::my_strategy::{
