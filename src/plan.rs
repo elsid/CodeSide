@@ -76,8 +76,8 @@ impl<'c, 'p> Planner<'c, 'p> {
         let distance = self.simulator.me().position().distance(self.target) / max_distance;
 
         let tiles_distance = self.paths.get(&(self.simulator.me().location(), self.target.as_location()))
-            .map(|v| v.distance())
-            .unwrap_or(0.0) / max_distance;
+            .map(|v| v.distance() / max_distance)
+            .unwrap_or(0.0);
 
         let teammates_health = self.simulator.units().iter()
             .filter(|v| v.is_teammate())
@@ -117,6 +117,7 @@ pub struct VisitorImpl<'r, 'd> {
     rng: &'r mut XorShiftRng,
     debug: &'r mut Debug<'d>,
     state_id_generator: IdGenerator,
+    transition_id_generator: IdGenerator,
 }
 
 impl<'r, 'd> VisitorImpl<'r, 'd> {
@@ -125,6 +126,7 @@ impl<'r, 'd> VisitorImpl<'r, 'd> {
             rng,
             debug,
             state_id_generator: IdGenerator::new(),
+            transition_id_generator: IdGenerator::new(),
         }
     }
 
@@ -143,46 +145,46 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
 
         match state.allowed_transitions.current() {
             TransitionKind::None => {
-                result.push(Transition::left(state.properties()));
-                result.push(Transition::right(state.properties()));
-                result.push(Transition::jump_left(state.properties()));
-                result.push(Transition::jump_right(state.properties()));
-                result.push(Transition::jump());
-                result.push(Transition::jump_down());
+                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump(self.transition_id_generator.next()));
+                result.push(Transition::jump_down(self.transition_id_generator.next()));
             },
             TransitionKind::Left => {
-                result.push(Transition::left(state.properties()));
-                result.push(Transition::jump_left(state.properties()));
-                result.push(Transition::jump());
-                result.push(Transition::jump_down());
+                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump(self.transition_id_generator.next()));
+                result.push(Transition::jump_down(self.transition_id_generator.next()));
             },
             TransitionKind::Right => {
-                result.push(Transition::right(state.properties()));
-                result.push(Transition::jump_right(state.properties()));
-                result.push(Transition::jump());
-                result.push(Transition::jump_down());
+                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump(self.transition_id_generator.next()));
+                result.push(Transition::jump_down(self.transition_id_generator.next()));
             },
             TransitionKind::Jump => {
-                result.push(Transition::left(state.properties()));
-                result.push(Transition::right(state.properties()));
-                result.push(Transition::jump_left(state.properties()));
-                result.push(Transition::jump_right(state.properties()));
-                result.push(Transition::jump());
+                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump(self.transition_id_generator.next()));
             },
             TransitionKind::JumpRight => {
-                result.push(Transition::right(state.properties()));
-                result.push(Transition::jump_right(state.properties()));
-                result.push(Transition::jump());
+                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump(self.transition_id_generator.next()));
             },
             TransitionKind::JumpLeft => {
-                result.push(Transition::left(state.properties()));
-                result.push(Transition::jump_left(state.properties()));
-                result.push(Transition::jump());
+                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump(self.transition_id_generator.next()));
             },
             TransitionKind::JumpDown => {
-                result.push(Transition::left(state.properties()));
-                result.push(Transition::right(state.properties()));
-                result.push(Transition::jump_down());
+                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+                result.push(Transition::jump_down(self.transition_id_generator.next()));
             },
         }
 
@@ -281,13 +283,15 @@ impl<'c, 'p> Identifiable for State<'c, 'p> {
 
 #[derive(Clone, Debug)]
 pub struct Transition {
+    pub id: i32,
     pub kind: TransitionKind,
     pub action: UnitAction,
 }
 
 impl Transition {
-    pub fn left(properties: &Properties) -> Self {
+    pub fn left(id: i32, properties: &Properties) -> Self {
         Self {
+            id,
             kind: TransitionKind::Left,
             action: UnitAction {
                 velocity: -properties.unit_max_horizontal_speed,
@@ -305,8 +309,9 @@ impl Transition {
         }
     }
 
-    pub fn right(properties: &Properties) -> Self {
+    pub fn right(id: i32, properties: &Properties) -> Self {
         Self {
+            id,
             kind: TransitionKind::Right,
             action: UnitAction {
                 velocity: properties.unit_max_horizontal_speed,
@@ -324,8 +329,9 @@ impl Transition {
         }
     }
 
-    pub fn jump_left(properties: &Properties) -> Self {
+    pub fn jump_left(id: i32, properties: &Properties) -> Self {
         Self {
+            id,
             kind: TransitionKind::JumpLeft,
             action: UnitAction {
                 velocity: -properties.unit_max_horizontal_speed,
@@ -343,8 +349,9 @@ impl Transition {
         }
     }
 
-    pub fn jump_right(properties: &Properties) -> Self {
+    pub fn jump_right(id: i32, properties: &Properties) -> Self {
         Self {
+            id,
             kind: TransitionKind::JumpRight,
             action: UnitAction {
                 velocity: properties.unit_max_horizontal_speed,
@@ -362,8 +369,9 @@ impl Transition {
         }
     }
 
-    pub fn jump() -> Self {
+    pub fn jump(id: i32) -> Self {
         Self {
+            id,
             kind: TransitionKind::Jump,
             action: UnitAction {
                 velocity: 0.0,
@@ -381,8 +389,9 @@ impl Transition {
         }
     }
 
-    pub fn jump_down() -> Self {
+    pub fn jump_down(id: i32) -> Self {
         Self {
+            id,
             kind: TransitionKind::JumpDown,
             action: UnitAction {
                 velocity: 0.0,

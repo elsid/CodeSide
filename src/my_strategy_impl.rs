@@ -215,7 +215,7 @@ impl MyStrategyImpl {
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log {
-                text: format!("plan: score={}", plan.score),
+                text: format!("plan_score={}, transitions: {:?}", plan.score, plan.transitions.iter().map(|v| (v.kind, v.id)).collect::<Vec<_>>())
             });
             let mut action = plan.transitions[0].action.clone();
             action.shoot = shoot;
