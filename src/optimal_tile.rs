@@ -109,7 +109,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         .sum::<f64>() / (world.units().len() as f64 * max_distance);
     let distance_to_position_score = path_info.distance() / max_distance;
     let health_pack_score = match world.tile_item(location) {
-        Some(&Item::HealthPack { .. }) => 1.0,
+        Some(&Item::HealthPack { .. }) => 2.0 - world.me().health as f64 / world.properties().unit_max_health as f64,
         _ => 0.0,
     };
     let first_weapon_score = (world.me().weapon.is_none() && match world.tile_item(location) {

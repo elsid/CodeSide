@@ -325,7 +325,7 @@ pub fn example_bullet(properties: &Properties) -> Bullet {
         unit_id: 2,
         player_id: 1,
         position: Vec2F64 {
-            x: 16.832623548153254,
+            x: 15.832623548153254,
             y: 5.93438708445076,
         },
         velocity: Vec2F64 {
