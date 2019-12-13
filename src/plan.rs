@@ -20,7 +20,6 @@ use crate::my_strategy::{
     IdGenerator,
     Identifiable,
     Location,
-    Rng,
     Search,
     Simulator,
     TilePathInfo,
@@ -28,7 +27,6 @@ use crate::my_strategy::{
     UnitExt,
     Vec2,
     Visitor,
-    WeightedIndex,
     XorShiftRng,
     as_score,
 };
@@ -143,52 +141,12 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
     fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
         let mut result = Vec::new();
 
-        match state.allowed_transitions.current() {
-            TransitionKind::None => {
-                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump(self.transition_id_generator.next()));
-                result.push(Transition::jump_down(self.transition_id_generator.next()));
-            },
-            TransitionKind::Left => {
-                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump(self.transition_id_generator.next()));
-                result.push(Transition::jump_down(self.transition_id_generator.next()));
-            },
-            TransitionKind::Right => {
-                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump(self.transition_id_generator.next()));
-                result.push(Transition::jump_down(self.transition_id_generator.next()));
-            },
-            TransitionKind::Jump => {
-                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump(self.transition_id_generator.next()));
-            },
-            TransitionKind::JumpRight => {
-                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump(self.transition_id_generator.next()));
-            },
-            TransitionKind::JumpLeft => {
-                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump(self.transition_id_generator.next()));
-            },
-            TransitionKind::JumpDown => {
-                result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
-                result.push(Transition::jump_down(self.transition_id_generator.next()));
-            },
-        }
-
-        self.rng.shuffle(&mut result[..]);
+        result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+        result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+        result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
+        result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
+        result.push(Transition::jump(self.transition_id_generator.next()));
+        result.push(Transition::jump_down(self.transition_id_generator.next()));
 
         result
     }
@@ -204,7 +162,6 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
         for _ in 0..next.depth.clamp1(min, max) {
             next.planner.simulator.tick(time_interval, state.planner.config.microticks_per_tick, self.rng);
         }
-        next.allowed_transitions.next(transition.kind, &mut self.rng);
 
         #[cfg(feature = "enable_debug")]
         self.debug.draw(CustomData::Line {
@@ -231,9 +188,7 @@ pub struct State<'c, 'p> {
     id: i32,
     score: i32,
     planner: Planner<'c, 'p>,
-    transition: TransitionKind,
     depth: usize,
-    allowed_transitions: TransitionsAutotomaton,
 }
 
 impl<'c, 'p> State<'c, 'p> {
@@ -242,9 +197,7 @@ impl<'c, 'p> State<'c, 'p> {
             id,
             score: 0,
             planner,
-            transition: TransitionKind::None,
             depth: 0,
-            allowed_transitions: TransitionsAutotomaton::new(),
         }
     }
 
@@ -428,52 +381,4 @@ pub enum TransitionKind {
     JumpLeft = 4,
     JumpRight = 5,
     JumpDown = 6,
-}
-
-impl std::convert::TryFrom<usize> for TransitionKind {
-    type Error = &'static str;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        Ok(match value {
-            1 => TransitionKind::Left,
-            2 => TransitionKind::Right,
-            3 => TransitionKind::Jump,
-            4 => TransitionKind::JumpLeft,
-            5 => TransitionKind::JumpRight,
-            6 => TransitionKind::JumpDown,
-            _ => TransitionKind::None,
-        })
-    }
-}
-
-#[derive(Clone, Debug)]
-struct TransitionsAutotomaton {
-    state: TransitionKind,
-    arcs: Vec<WeightedIndex>,
-}
-
-impl TransitionsAutotomaton {
-    pub fn new() -> Self {
-        Self {
-            state: TransitionKind::None,
-            arcs: vec![
-                WeightedIndex::new(vec![1, 0, 0, 0, 0, 0, 0]), // None
-                WeightedIndex::new(vec![0, 3, 0, 1, 1, 0, 1]), // Left
-                WeightedIndex::new(vec![0, 0, 3, 1, 0, 1, 1]), // Right
-                WeightedIndex::new(vec![0, 1, 1, 3, 1, 1, 0]), // Jump
-                WeightedIndex::new(vec![0, 1, 0, 1, 3, 0, 0]), // JumpLeft
-                WeightedIndex::new(vec![0, 0, 1, 1, 0, 3, 0]), // JumpRight
-                WeightedIndex::new(vec![0, 1, 1, 0, 0, 0, 3]), // JumpDown
-            ],
-        }
-    }
-
-    pub fn next(&mut self, transition: TransitionKind, rng: &mut XorShiftRng) {
-        use std::convert::TryFrom;
-        self.state = TransitionKind::try_from(self.arcs[transition as usize].sample(rng)).unwrap();
-    }
-
-    pub fn current(&self) -> TransitionKind {
-        self.state
-    }
 }
