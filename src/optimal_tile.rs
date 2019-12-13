@@ -92,7 +92,7 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
     get_tile_score_components(world, location, path_info).iter().sum()
 }
 
-pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 13] {
+pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 14] {
     let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
@@ -137,6 +137,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         })
         .sum::<f64>() / (number_of_opponents as f64);
     let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
+    let mine_obstacle_score = path_info.has_mine() as i32 as f64;
     let loot_box_mine_score = (match world.tile_item(location) {
         Some(&Item::Mine { }) => true,
         _ => false,
@@ -194,6 +195,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         height_score * world.config().optimal_tile_height_score_weight,
         over_ground_score * world.config().optimal_tile_over_ground_score_weight,
         bullets_score * world.config().optimal_tile_bullets_score_weight,
+        mine_obstacle_score * world.config().optimal_tile_mine_obstacle_score_weight,
     ]
 }
 

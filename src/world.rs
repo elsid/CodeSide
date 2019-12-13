@@ -152,6 +152,13 @@ impl World {
             .is_some()
     }
 
+    pub fn has_mine(&self, location: Location) -> bool {
+        self.game.mines.iter()
+            .filter(|v| v.player_id != self.me.player_id)
+            .find(|v| v.location() == location)
+            .is_some()
+    }
+
     pub fn paths(&self) -> &BTreeMap<(Location, Location), TilePathInfo> {
         &self.paths
     }
@@ -210,6 +217,7 @@ impl World {
 #[derive(Clone, Debug)]
 pub struct TilePathInfo {
     has_opponent_unit: bool,
+    has_mine: bool,
     distance: f64,
 }
 
@@ -217,6 +225,11 @@ impl TilePathInfo {
     #[inline(always)]
     pub fn has_opponent_unit(&self) -> bool {
         self.has_opponent_unit
+    }
+
+    #[inline(always)]
+    pub fn has_mine(&self) -> bool {
+        self.has_mine
     }
 
     #[inline(always)]
@@ -235,6 +248,8 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
     distances[get_tile_index(world.level(), from)] = 0.0;
 
     let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
+
+    let mut has_mine: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
 
     let mut backtrack: Vec<usize> = (0 .. size_x * size_y).collect();
 
@@ -269,6 +284,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
             if new_distance < distances[neighbor_index] {
                 distances[neighbor_index] = new_distance;
                 has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || world.has_opponent_unit(neighbor_location);
+                has_mine[neighbor_index] = has_mine[node_index] || world.has_mine(neighbor_location);
                 backtrack[neighbor_index] = node_index;
                 if destinations.insert(neighbor_location) {
                     ordered.push((as_score(distance), neighbor_location));
@@ -288,6 +304,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
                 result.push((location, TilePathInfo {
                     distance,
                     has_opponent_unit: has_opponent_unit[index],
+                    has_mine: has_mine[index],
                 }));
             }
         }
