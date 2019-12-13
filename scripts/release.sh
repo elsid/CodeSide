@@ -8,12 +8,14 @@ mkdir -p release
 mkdir ${DIR}
 mkdir ${DIR}/src
 
+cp src/bullet.rs ${DIR}/src
 cp src/common.rs ${DIR}/src
 cp src/config.rs ${DIR}/src
 cp src/hit.rs ${DIR}/src
 cp src/level.rs ${DIR}/src
 cp src/location.rs ${DIR}/src
 cp src/loot_box.rs ${DIR}/src
+cp src/mine.rs ${DIR}/src
 cp src/my_strategy.rs ${DIR}/src
 cp src/my_strategy_impl.rs ${DIR}/src
 cp src/optimal_tile.rs ${DIR}/src
