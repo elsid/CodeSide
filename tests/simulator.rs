@@ -1,14 +1,8 @@
-mod weapon;
+mod helpers;
 
 use model::{
-    Bullet,
     Item,
-    JumpState,
-    LootBox,
-    Mine,
     MineState,
-    Properties,
-    Unit,
     Weapon,
     WeaponType,
 };
@@ -17,12 +11,17 @@ use aicup2019::examples::{
     example_rng,
     example_world,
 };
-use weapon::WeaponWrapper;
+use helpers::{
+    WeaponWrapper,
+    make_unit_ext,
+    with_bullet,
+    with_loot_box,
+    with_mine,
+    with_my_position,
+};
 use aicup2019::my_strategy::{
     Simulator,
-    UnitExt,
     Vec2,
-    World,
 };
 
 #[test]
@@ -738,74 +737,4 @@ fn test_collide_with_unit_by_y_without_penetration_by_x() {
     a.collide_with_unit_by_y(&b);
     a.finish_move_by_y();
     assert_eq!(a.position(), Vec2::new(9.5, 9.5));
-}
-
-fn with_my_position(world: World, position: Vec2) -> World {
-    let mut game = world.game().clone();
-    let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
-    game.units[me_index].position = position.as_model();
-    World::new(world.config().clone(), game.units[me_index].clone(), game)
-}
-
-fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2, unit_id: i32) -> World {
-    let mut game = world.game().clone();
-    let params = &world.properties().weapon_params.get(&weapon_type).unwrap();
-    game.bullets.push(Bullet {
-        weapon_type: weapon_type,
-        unit_id: unit_id,
-        player_id: 0,
-        position: position.as_model(),
-        velocity: (direction.normalized() * params.bullet.speed).as_model(),
-        damage: params.bullet.damage,
-        size: params.bullet.size,
-        explosion_params: params.explosion.clone(),
-    });
-    World::new(world.config().clone(), world.me().clone(), game)
-}
-
-fn with_mine(world: World, position: Vec2) -> World {
-    let mut game = world.game().clone();
-    game.mines.push(Mine {
-        player_id: 1,
-        position: position.as_model(),
-        size: world.properties().mine_size.clone(),
-        state: MineState::Preparing,
-        timer: Some(world.properties().mine_prepare_time),
-        trigger_radius: world.properties().mine_trigger_radius,
-        explosion_params: world.properties().mine_explosion_params.clone(),
-    });
-    World::new(world.config().clone(), world.me().clone(), game)
-}
-
-fn with_loot_box(world: World, item: Item, position: Vec2) -> World {
-    let mut game = world.game().clone();
-    game.loot_boxes.push(LootBox {
-        position: position.as_model(),
-        size: world.properties().loot_box_size.clone(),
-        item: item,
-    });
-    World::new(world.config().clone(), world.me().clone(), game)
-}
-
-fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {
-    let base = Unit {
-        player_id: 1,
-        id: 1,
-        health: 100,
-        position: position.as_model(),
-        size: properties.unit_size.clone(),
-        jump_state: JumpState {
-            can_jump: false,
-            speed: 0.0,
-            max_time: 0.0,
-            can_cancel: false,
-        },
-        walked_right: false,
-        stand: true,
-        on_ground: false,
-        on_ladder: false,
-        mines: 0,
-        weapon: None,
-    };
-    UnitExt::new(base, false, false)
 }

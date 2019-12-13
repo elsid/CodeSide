@@ -973,7 +973,7 @@ fn make_tile_rect(x: usize, y: usize) -> Rect {
     Rect::new(Vec2::new(x as f64 + 0.5, y as f64 + 0.5), Vec2::new(0.5, 0.5))
 }
 
-fn make_weapon(weapon_type: WeaponType, properties: &Properties) -> Weapon {
+pub fn make_weapon(weapon_type: WeaponType, properties: &Properties) -> Weapon {
     let params = &properties.weapon_params[&weapon_type];
     Weapon {
         params: params.clone(),

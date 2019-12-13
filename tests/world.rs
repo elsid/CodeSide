@@ -1,8 +1,11 @@
+mod helpers;
+
+use helpers::updated_world;
+
 use aicup2019::{
     examples::example_world,
     my_strategy::{
         Location,
-        World,
     }
 };
 
@@ -38,11 +41,4 @@ fn test_find_shortcut_tiles_path() {
         world.find_shortcut_tiles_path(Location::new(37, 1), Location::new(37, 1)),
         vec![]
     );
-}
-
-fn updated_world(mut world: World) -> World {
-    let game = world.game().clone();
-    let me = world.me().clone();
-    world.update(&me, &game);
-    world
 }

@@ -13,10 +13,15 @@ cp target/release/aicup2019 ${BIN}
 
 {
     number=0
-    while true; do
+    try=0
+    while [[ ${try} -lt 10 ]]; do
         date
-        ${BIN} 127.0.0.1 ${PORT} 2>&1
-        sleep 0.2
+        ${BIN} 127.0.0.1 ${PORT} && {
+            try=0
+        } || {
+            try=$(( try + 1 ))
+        }
+        sleep 0.1
         number=$(( number + 1 ))
     done
-} | tee run.${PORT}.log
+} 2>&1 | tee run.${PORT}.log

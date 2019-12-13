@@ -42,7 +42,6 @@ pub struct WalkGrid {
 impl WalkGrid {
     #[inline(always)]
     pub fn new(start: Vec2, end: Vec2) -> Self {
-        // Delta values between the points
         let (dx, dy) = (end.x() - start.x(), end.y() - start.y());
 
         Self {

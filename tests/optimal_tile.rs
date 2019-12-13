@@ -1,11 +1,20 @@
-use model::Item;
+mod helpers;
+
+use model::{
+    Item,
+    WeaponType,
+};
+use helpers::{
+    me_with_weapon,
+    opponent_with_weapon,
+    updated_world,
+};
 use aicup2019::{
     Debug,
     examples::example_world,
     my_strategy::{
         Location,
         Positionable,
-        World,
         get_optimal_tile,
         get_tile_score,
     },
@@ -82,6 +91,18 @@ fn test_get_tile_score_for_tile_with_weapon() {
 }
 
 #[test]
+fn test_get_tile_score_me_with_weapon_for_tile_with_weapon() {
+    let world = updated_world(me_with_weapon(example_world(), WeaponType::AssaultRifle));
+    let location = world.loot_boxes().iter()
+        .find(|v| if let Item::Weapon { .. } = v.item { true } else { false })
+        .unwrap().location();
+    assert_eq!(
+        get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
+        -0.06666666666666665
+    );
+}
+
+#[test]
 fn test_get_tile_score_for_tile_with_health_pack() {
     let world = updated_world(example_world());
     let location = world.loot_boxes().iter()
@@ -115,9 +136,50 @@ fn test_get_tile_score_for_tile_with_mine() {
     );
 }
 
-fn updated_world(mut world: World) -> World {
-    let game = world.game().clone();
-    let me = world.me().clone();
-    world.update(&me, &game);
-    world
+#[test]
+fn test_get_tile_score_me_without_weapon_nearby_opponent_without_weapon() {
+    let world = updated_world(example_world());
+    {
+        let location = Location::new(5, 1);
+        assert_eq!(
+            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
+            -0.04807727471516629
+        );
+    }
+}
+
+#[test]
+fn test_get_tile_score_me_with_weapon_nearby_opponent_without_weapon() {
+    let world = updated_world(me_with_weapon(example_world(), WeaponType::AssaultRifle));
+    {
+        let location = Location::new(5, 1);
+        assert_eq!(
+            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
+            0.9519227252848337
+        );
+    }
+}
+
+#[test]
+fn test_get_tile_score_me_without_weapon_nearby_opponent_with_weapon() {
+    let world = updated_world(opponent_with_weapon(example_world(), WeaponType::AssaultRifle));
+    {
+        let location = Location::new(5, 1);
+        assert_eq!(
+            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
+            0.08833333333333335
+        );
+    }
+}
+
+#[test]
+fn test_get_tile_score_me_with_weapon_nearby_opponent_with_weapon() {
+    let world = updated_world(opponent_with_weapon(me_with_weapon(example_world(), WeaponType::AssaultRifle), WeaponType::AssaultRifle));
+    {
+        let location = Location::new(5, 1);
+        assert_eq!(
+            get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
+            0.08833333333333335
+        );
+    }
 }
