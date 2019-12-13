@@ -147,6 +147,7 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
         result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
         result.push(Transition::jump(self.transition_id_generator.next()));
         result.push(Transition::jump_down(self.transition_id_generator.next()));
+        result.push(Transition::idle(self.transition_id_generator.next()));
 
         result
     }
@@ -361,6 +362,26 @@ impl Transition {
             }
         }
     }
+
+    pub fn idle(id: i32) -> Self {
+        Self {
+            id,
+            kind: TransitionKind::Idle,
+            action: UnitAction {
+                velocity: 0.0,
+                jump: false,
+                jump_down: false,
+                aim: Vec2F64 {
+                    x: 0.0,
+                    y: 0.0
+                },
+                shoot: false,
+                reload: false,
+                swap_weapon: false,
+                plant_mine: false,
+            }
+        }
+    }
 }
 
 impl PartialEq for Transition {
@@ -381,4 +402,5 @@ pub enum TransitionKind {
     JumpLeft = 4,
     JumpRight = 5,
     JumpDown = 6,
+    Idle = 7,
 }
