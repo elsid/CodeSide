@@ -75,9 +75,9 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
                 }
             }
         }
-        if let Some((_, location)) = optimal {
+        if let Some((score, location)) = optimal {
             debug.draw(CustomData::Log {
-                text: format!("optimal_tile: {:?} {:?}", location, get_tile_score_components(world, location, world.path_info(world.me().location(), location).unwrap())),
+                text: format!("optimal_tile: {:?} {:?} {:?}", location, score, get_tile_score_components(world, location, world.path_info(world.me().location(), location).unwrap())),
             });
         }
     }

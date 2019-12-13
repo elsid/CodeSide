@@ -112,7 +112,7 @@ fn test_get_tile_score_for_tile_with_health_pack() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        0.9166666666666666
+        1.4166666666666667
     );
 }
 

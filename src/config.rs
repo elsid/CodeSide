@@ -37,7 +37,7 @@ impl Config {
             plan_tiles_distance_score_weight: -0.5,
             optimal_tile_distance_to_position_score_weight: -0.25,
             optimal_tile_distance_to_opponent_score_weight: 0.5,
-            optimal_tile_health_pack_score_weight: 1.0,
+            optimal_tile_health_pack_score_weight: 1.5,
             optimal_tile_first_weapon_score_weight: 3.0,
             optimal_tile_swap_weapon_score_weight: 1.0,
             optimal_tile_hit_by_opponent_score_weight: -1.0,
