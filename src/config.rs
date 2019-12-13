@@ -41,7 +41,7 @@ impl Config {
             optimal_tile_swap_weapon_score_weight: 1.0,
             optimal_tile_hit_by_opponent_score_weight: -1.0,
             optimal_tile_opponent_obstacle_score_weight: -1.0,
-            optimal_tile_hit_nearest_opponent_score_weight: 1.0,
+            optimal_tile_hit_nearest_opponent_score_weight: 2.0,
             optimal_tile_loot_box_mine_score_weight: 0.1,
             optimal_tile_height_score_weight: 0.1,
             optimal_tile_over_ground_score_weight: 0.1,

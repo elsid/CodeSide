@@ -155,7 +155,7 @@ fn test_get_tile_score_me_with_weapon_nearby_opponent_without_weapon() {
         let location = Location::new(5, 1);
         assert_eq!(
             get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-            0.9519227252848337
+            1.951922725284834
         );
     }
 }

@@ -164,7 +164,7 @@ impl MyStrategyImpl {
         if let Some(location) = get_optimal_tile(&self.world, debug) {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Rect {
-                pos: location.center().as_model_f32(),
+                pos: (location.center() - Vec2::new(0.25, 0.25)).as_model_f32(),
                 size: Vec2F32 { x: 0.5, y: 0.5 },
                 color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
             });

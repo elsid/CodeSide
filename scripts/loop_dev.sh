@@ -21,7 +21,7 @@ cp target/release/aicup2019 ${BIN}
         } || {
             try=$(( try + 1 ))
         }
-        sleep 0.1
+        sleep 0.2
         number=$(( number + 1 ))
     done
 } 2>&1 | tee run.${PORT}.log
