@@ -71,9 +71,9 @@ impl<'c, 'p> Planner<'c, 'p> {
     pub fn get_score(&self) -> i32 {
         let max_distance = self.simulator.world_size().norm();
 
-        let distance = self.simulator.me().position().distance(self.target) / max_distance;
+        let distance = max_distance - self.simulator.me().position().distance(self.target) / max_distance;
 
-        let tiles_distance = self.paths.get(&(self.simulator.me().location(), self.target.as_location()))
+        let tiles_distance = max_distance - self.paths.get(&(self.simulator.me().location(), self.target.as_location()))
             .map(|v| v.distance() / max_distance)
             .unwrap_or(0.0);
 
