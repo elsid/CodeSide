@@ -614,6 +614,91 @@ fn test_simulator_mine_exposion() {
 }
 
 #[test]
+fn test_simulator_unit_land_on_platform() {
+    let world = with_my_position(example_world(), Vec2::new(15.5, 5.3));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 3 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(15.5, 5.000000001)
+    );
+}
+
+#[test]
+fn test_simulator_unit_land_on_platform_and_jump() {
+    let world = with_my_position(example_world(), Vec2::new(15.5, 5.3));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.me_mut().action_mut().jump = true;
+    for _ in 0 .. 2 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(15.5, 5.033333334333339)
+    );
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(15.5, 5.200000001000031)
+    );
+}
+
+#[test]
+fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
+    let world = with_my_position(example_world(), Vec2::new(15.5, 5.3));
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 3 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(15.5, 5.000000001)
+    );
+    simulator.me_mut().action_mut().jump_down = true;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(15.5, 4.833333334333307)
+    );
+    simulator.me_mut().action_mut().velocity = world.properties().unit_max_horizontal_speed;
+    simulator.me_mut().action_mut().jump_down = false;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert_eq!(
+        simulator.me().position(),
+        Vec2::new(15.666666666666693, 4.666666667666615)
+    );
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

@@ -236,6 +236,8 @@ impl MyStrategyImpl {
             action.shoot = shoot;
             action.aim = aim;
             action.swap_weapon = !shoot && self.should_swap_weapon();
+            #[cfg(feature = "enable_debug")]
+            debug.draw(CustomData::Log { text: format!("action: {:?}", action) });
             return action;
         }
         let mut jump = target.y() > me.position.y;
