@@ -202,7 +202,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
 pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
     match weapon_type {
         WeaponType::RocketLauncher => 1,
-        WeaponType::AssaultRifle => 3,
-        WeaponType::Pistol => 2,
+        WeaponType::AssaultRifle => 2,
+        WeaponType::Pistol => 3,
     }
 }

@@ -17,8 +17,6 @@ use aicup2019::{
         Positionable,
         get_optimal_tile,
         get_tile_score,
-        get_tile_index,
-        get_tile_location,
     },
 };
 
@@ -100,7 +98,7 @@ fn test_get_tile_score_me_with_weapon_for_tile_with_weapon() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        -0.06666666666666665
+        0.9333333333333333
     );
 }
 
