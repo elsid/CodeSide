@@ -50,16 +50,22 @@ impl<'c, 'p> Planner<'c, 'p> {
         Self { target, config, paths, simulator }
     }
 
-    pub fn make(&self, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
-        let mut visitor = VisitorImpl::new(rng, debug);
+    pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
+        let mut visitor = VisitorImpl::new(current_tick, rng, debug);
 
         let initial_state = visitor.make_initial_state(self.clone());
 
+        log!(current_tick, "state={:?}", initial_state);
+
         let (transitions, final_state, _iterations) = Search {
             max_iterations: self.config.max_plan_iterations,
-        }.perform(initial_state, &mut visitor);
+        }.perform(current_tick, initial_state, &mut visitor);
 
         let planner = final_state.map(|v| v.planner).unwrap_or(self.clone());
+
+        for transition in transitions.iter() {
+            log!(current_tick, "transition_id={} kind={:?}", transition.id, transition.kind);
+        }
 
         Plan {
             transitions,
@@ -69,13 +75,13 @@ impl<'c, 'p> Planner<'c, 'p> {
     }
 
     pub fn get_score(&self) -> i32 {
+        as_score(self.get_score_components().iter().sum())
+    }
+
+    pub fn get_score_components(&self) -> [f64; 2] {
         let max_distance = self.simulator.world_size().norm();
 
-        let distance = max_distance - self.simulator.me().position().distance(self.target) / max_distance;
-
-        let tiles_distance = max_distance - self.paths.get(&(self.simulator.me().location(), self.target.as_location()))
-            .map(|v| v.distance() / max_distance)
-            .unwrap_or(0.0);
+        let distance_score = max_distance - self.simulator.me().position().distance(self.target) / max_distance;
 
         let teammates_health = self.simulator.units().iter()
             .filter(|v| v.is_teammate())
@@ -87,15 +93,13 @@ impl<'c, 'p> Planner<'c, 'p> {
             .map(|v| v.health())
             .sum::<i32>();
 
-        let health_diff = (teammates_health - opponnents_health) as f64
+        let health_diff_score = (teammates_health - opponnents_health) as f64
             / (self.simulator.units().len() as i32 * self.simulator.properties().unit_max_health) as f64;
 
-        as_score(
-            0.0
-            + distance * self.config.plan_distance_score_weight
-            + health_diff * self.config.plan_health_diff_score_weight
-            + tiles_distance * self.config.plan_tiles_distance_score_weight
-        )
+        [
+            distance_score * self.config.plan_distance_score_weight,
+            health_diff_score * self.config.plan_health_diff_score_weight,
+        ]
     }
 
     pub fn properties(&self) -> &Properties {
@@ -112,6 +116,7 @@ impl<'c, 'p> Planner<'c, 'p> {
 }
 
 pub struct VisitorImpl<'r, 'd> {
+    current_tick: i32,
     rng: &'r mut XorShiftRng,
     debug: &'r mut Debug<'d>,
     state_id_generator: IdGenerator,
@@ -119,8 +124,9 @@ pub struct VisitorImpl<'r, 'd> {
 }
 
 impl<'r, 'd> VisitorImpl<'r, 'd> {
-    pub fn new(rng: &'r mut XorShiftRng, debug: &'r mut Debug<'d>) -> Self {
+    pub fn new(current_tick: i32, rng: &'r mut XorShiftRng, debug: &'r mut Debug<'d>) -> Self {
         VisitorImpl {
+            current_tick,
             rng,
             debug,
             state_id_generator: IdGenerator::new(),
@@ -171,6 +177,9 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
             width: 0.1,
             color: ColorF32 { r: 0.25, g: 0.25, b: 0.75, a: 0.25 },
         });
+
+        log!(self.current_tick, "transition_id={} kind={:?}", transition.id, transition.kind);
+        log!(self.current_tick, "state={:?}", next);
 
         next
     }
@@ -225,7 +234,7 @@ impl<'c, 'p> State<'c, 'p> {
 
 impl<'c, 'p> std::fmt::Debug for State<'c, 'p> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.id)
+        write!(f, "id={} position={:?} score={:?}", self.id, self.planner.simulator.me().position(), self.planner.get_score_components())
     }
 }
 
@@ -395,7 +404,6 @@ impl Eq for Transition {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(usize)]
 pub enum TransitionKind {
-    None = 0,
     Left = 1,
     Right = 2,
     Jump = 3,

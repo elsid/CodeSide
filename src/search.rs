@@ -25,7 +25,7 @@ pub struct Search {
 }
 
 impl Search {
-    pub fn perform<S, T, V>(&self, initial: S, visitor: &mut V) -> (Vec<T>, Option<S>, usize)
+    pub fn perform<S, T, V>(&self, current_tick: i32, initial: S, visitor: &mut V) -> (Vec<T>, Option<S>, usize)
         where S: Clone + std::fmt::Debug + Identifiable,
               T: Clone + std::fmt::Debug,
               V: Visitor<S, T> {
@@ -50,6 +50,7 @@ impl Search {
             if (optimal_final_state.is_none() || optimal_final_state.as_ref().unwrap().score < state.score)
                 && visitor.is_final(&state.state) {
                 optimal_final_state = Some(state.clone());
+                log!(current_tick, "optimal_final_state={:?}", state.state);
             }
             if iterations >= self.max_iterations {
                 break;

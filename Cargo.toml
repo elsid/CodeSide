@@ -19,6 +19,7 @@ enable_debug = []
 disable_output = []
 dump_level = []
 verify_collisions = []
+enable_log = []
 
 [[bench]]
 name = "simulator"

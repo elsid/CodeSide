@@ -1,5 +1,26 @@
 use std::ops::Mul;
 
+macro_rules! log {
+    ($tick_index:expr, $message:tt) => {
+        if cfg!(feature = "enable_log") {
+            let f = || {
+                use std::io::{stdout, Write};
+                write!(&mut stdout(), "[{}] {}\n", $tick_index, $message).unwrap();
+            };
+            f();
+        }
+    };
+    ($tick_index:expr, $format:tt, $($value:expr),*) => {
+        if cfg!(feature = "enable_log") {
+            let f = || {
+                use std::io::{stdout, Write};
+                write!(&mut stdout(), "[{}] {}\n", $tick_index, format!($format, $($value),*)).unwrap();
+            };
+            f();
+        }
+    };
+}
+
 pub trait Square: Mul + Copy {
     fn square(self) -> Self::Output {
         self * self

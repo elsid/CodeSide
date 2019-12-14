@@ -23,6 +23,7 @@ pub mod level;
 pub use level::*;
 
 #[path = "common.rs"]
+#[macro_use]
 pub mod common;
 
 #[allow(unused_imports)]

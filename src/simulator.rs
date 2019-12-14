@@ -524,6 +524,10 @@ impl UnitExt {
         self.position().as_location()
     }
 
+    pub fn action(&self) -> &UnitAction {
+        &self.action
+    }
+
     pub fn action_mut(&mut self) -> &mut UnitAction {
         &mut self.action
     }

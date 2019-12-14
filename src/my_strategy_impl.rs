@@ -226,7 +226,7 @@ impl MyStrategyImpl {
         }
         let simulator = Simulator::new(&self.world, me.id);
         let plan = Planner::new(target, &self.config, self.world.paths(), simulator)
-            .make(&mut self.rng, debug);
+            .make(game.current_tick, &mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log {
