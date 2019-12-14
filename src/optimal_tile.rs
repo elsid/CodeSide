@@ -99,51 +99,85 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
     let max_distance = world.size().norm();
+    let has_weapon = world.me().weapon.is_some();
     let tile_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
     );
-    let distance_to_opponent_score = world.units().iter()
-        .filter(|unit| unit.player_id != world.me().player_id)
-        .map(|unit| {
-            will_hit_by_line(center, unit.rect().center(), world.level()) as i32 as f64 * center.distance(unit.position())
-        })
-        .sum::<f64>() / (world.units().len() as f64 * max_distance);
     let distance_to_position_score = path_info.distance() / max_distance;
-    let health_pack_score = match world.tile_item(location) {
-        Some(&Item::HealthPack { .. }) => 2.0 - world.me().health as f64 / world.properties().unit_max_health as f64,
-        _ => 0.0,
+
+    let first_weapon_score = if has_weapon {
+        0.0
+    } else {
+        match world.tile_item(location) {
+            Some(&Item::Weapon { .. }) => 1.0,
+            _ => 0.0,
+        }
     };
-    let first_weapon_score = (world.me().weapon.is_none() && match world.tile_item(location) {
-        Some(&Item::Weapon { .. }) => true,
-        _ => false,
-    }) as i32 as f64;
-    let swap_weapon_score = (world.me().weapon.is_some() && match world.tile_item(location) {
-        Some(&Item::Weapon { ref weapon_type }) => {
-            get_weapon_score(&world.me().weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)
-        },
-        _ => false,
-    }) as i32 as f64;
+
+    let health_pack_score = if first_weapon_score > 0.0 {
+        0.0
+    } else {
+        match world.tile_item(location) {
+            Some(&Item::HealthPack { .. }) => 2.0 - world.me().health as f64 / world.properties().unit_max_health as f64,
+            _ => 0.0,
+        }
+    };
+
+    let swap_weapon_score = if first_weapon_score > 0.0 {
+        0.0
+    } else {
+        match world.tile_item(location) {
+            Some(&Item::Weapon { ref weapon_type }) => {
+                (get_weapon_score(&world.me().weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)) as i32 as f64
+            },
+            _ => 0.0,
+        }
+    };
+
     let number_of_opponents = world.units().iter()
         .filter(|unit| unit.player_id != world.me().player_id)
         .count();
-    let hit_by_opponent_score = world.units().iter()
-        .filter(|unit| unit.player_id != world.me().player_id)
-        .map(|unit| {
-            if let Some(weapon) = unit.weapon.as_ref() {
-                get_hit_probability_over_obstacles(&unit.rect(), center, weapon.spread, world.level())
-                    * get_hit_probability_by_spread(unit.rect().center(), &me, weapon.spread)
-            } else {
-                0.0
-            }
-        })
-        .sum::<f64>() / (number_of_opponents as f64);
+
+    let distance_to_opponent_score = if !path_info.has_opponent_unit() && number_of_opponents > 0 {
+        world.units().iter()
+            .filter(|unit| unit.player_id != world.me().player_id)
+            .map(|unit| unit.rect().center().distance(center))
+            .sum::<f64>() / (number_of_opponents as f64 * max_distance)
+    } else {
+        0.0
+    };
+
+    let hit_by_opponent_score = if number_of_opponents > 0 {
+        world.units().iter()
+            .filter(|unit| unit.player_id != world.me().player_id)
+            .map(|unit| {
+                if let Some(weapon) = unit.weapon.as_ref() {
+                    get_hit_probability_over_obstacles(&unit.rect(), center, weapon.spread, world.level())
+                        * get_hit_probability_by_spread(unit.rect().center(), &me, weapon.spread)
+                        * center.distance(unit.rect().center())
+                } else {
+                    0.0
+                }
+            })
+            .sum::<f64>() / (number_of_opponents as f64)
+    } else {
+        0.0
+    };
+
     let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
+
     let mine_obstacle_score = path_info.has_mine() as i32 as f64;
-    let loot_box_mine_score = (match world.tile_item(location) {
-        Some(&Item::Mine { }) => true,
-        _ => false,
-    }) as i32 as f64;
+
+    let loot_box_mine_score = if first_weapon_score > 0.0 {
+        0.0
+    } else {
+        match world.tile_item(location) {
+            Some(&Item::Mine { }) => 1.0,
+            _ => 0.0,
+        }
+    };
+
     let hit_nearest_opponent_score = if let Some(weapon) = world.me().weapon.as_ref() {
         world.units().iter()
             .filter(|unit| {
@@ -151,16 +185,24 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
                 && should_shoot(&me, &unit.rect(), weapon, world.level(), world.config())
             })
             .min_by_key(|unit| as_score(position.distance(unit.position())))
-            .map(|unit| get_hit_probability_by_spread(center, &unit.rect(), weapon.spread))
+            .map(|unit| {
+                get_hit_probability_over_obstacles(&me, unit.rect().center(), weapon.spread, world.level())
+                    * get_hit_probability_by_spread(center, &unit.rect(), weapon.spread)
+                    * center.distance(unit.rect().center())
+            })
             .unwrap_or(0.0)
     } else {
         0.0
     };
+
     let height_score = location.y() as f64 / world.size().y();
+
     let over_ground_score = (world.tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
+
     let number_of_bullets = world.bullets().iter()
         .filter(|v| v.unit_id != world.me().id)
         .count();
+
     let bullets_score = if number_of_bullets > 0 {
         world.bullets().iter()
             .filter(|v| v.unit_id != world.me().id && v.rect().has_collision(&tile_rect))
@@ -168,6 +210,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
+
     let mines_score = if world.mines().len() > 0 {
         world.mines().iter()
             .filter(|v| v.rect().has_collision(&tile_rect))
