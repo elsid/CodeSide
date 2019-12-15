@@ -31,10 +31,12 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
+    get_distance_to_nearest_hit_obstacle,
     get_hit_probability_by_spread,
     get_hit_probability_over_obstacles,
     get_optimal_tile,
     get_weapon_score,
+    should_shoot,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -188,13 +190,18 @@ impl MyStrategyImpl {
             text: format!("target: {:?}", target),
         });
         let (shoot, aim) = if let (Some(opponent), Some(weapon)) = (nearest_opponent, self.world.me().weapon.as_ref()) {
-            let hit_probability_by_spread = get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread);
-            let hit_probability_over_obstacles = get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level());
             #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log { text: format!("hit_probability: by_spread={}, over_obstacles={}", hit_probability_by_spread, hit_probability_over_obstacles) });
+            debug.draw(CustomData::Log {
+                text: format!(
+                    "hit_probability: by_spread={} over_obstacles={} distance={:?} explosion={:?}",
+                    get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread),
+                    get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level()),
+                    get_distance_to_nearest_hit_obstacle(&me.rect(), opponent.rect().center(), weapon.spread, self.world.level()),
+                    weapon.params.explosion
+                )
+            });
             (
-                hit_probability_by_spread >= self.world.config().min_hit_probability_by_spread_to_shoot
-                && hit_probability_over_obstacles >= self.world.config().min_hit_probability_over_obstacles_to_shoot,
+                should_shoot(&me.rect(), &opponent.rect(), weapon, self.world.level(), self.world.config()),
                 Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
