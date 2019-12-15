@@ -28,10 +28,11 @@ use crate::my_strategy::{
     Vec2i,
     World,
     as_score,
-    get_hit_probability_over_obstacles,
     get_hit_probability_by_spread,
+    get_hit_probability_over_obstacles,
     get_level_size_x,
     get_level_size_y,
+    may_shoot,
 };
 
 pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
@@ -144,19 +145,15 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     }) as i32 as f64;
     let hit_nearest_opponent_score = if let Some(weapon) = world.me().weapon.as_ref() {
         world.units().iter()
-            .filter(|unit| unit.player_id != world.me().player_id)
+            .filter(|unit| {
+                unit.player_id != world.me().player_id
+                && may_shoot(&me, &unit.rect(), weapon, world.level(), world.config())
+            })
             .min_by_key(|unit| as_score(position.distance(unit.position())))
             .map(|unit| {
-                (
-                    get_hit_probability_over_obstacles(&me, &unit.rect(), world.level()),
-                    get_hit_probability_by_spread(center, &unit.rect(), weapon.spread)
-                )
+                get_hit_probability_over_obstacles(&me, &unit.rect(), world.level())
+                * get_hit_probability_by_spread(center, &unit.rect(), weapon.spread)
             })
-            .filter(|&(obstacles, spread)| {
-                obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
-                && spread >= world.config().min_hit_probability_by_spread_to_shoot
-            })
-            .map(|(obstacles, spread)| obstacles * spread)
             .unwrap_or(0.0)
     } else {
         0.0

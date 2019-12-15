@@ -26,6 +26,18 @@ pub fn should_shoot(shooter: &Rect, target: &Rect, weapon: &Weapon, level: &Leve
     && get_hit_probability_over_obstacles(shooter, target, level) >= config.min_hit_probability_over_obstacles_to_shoot
 }
 
+pub fn may_shoot(shooter: &Rect, target: &Rect, weapon: &Weapon, level: &Level, config: &Config) -> bool {
+    if let Some(explosion) = weapon.params.explosion.as_ref() {
+        if let Some(distance_to_nearest_obstacle) = get_distance_to_nearest_hit_obstacle(shooter, target.center(), weapon.params.max_spread, level) {
+            if distance_to_nearest_obstacle < explosion.radius + 1.0 {
+                return false;
+            }
+        }
+    }
+    get_hit_probability_by_spread(shooter.center(), target, weapon.params.max_spread) >= config.min_hit_probability_by_spread_to_shoot
+    && get_hit_probability_over_obstacles(shooter, target, level) >= config.min_hit_probability_over_obstacles_to_shoot
+}
+
 pub fn get_hit_probability_by_spread(shooter: Vec2, target: &Rect, spread: f64) -> f64 {
     target.get_max_cross_section_from(shooter, spread)
 }
