@@ -1,3 +1,6 @@
+#[cfg(feature = "dump_properties_json")]
+extern crate rustc_serialize;
+
 mod my_strategy;
 
 use crate::my_strategy::MyStrategy;

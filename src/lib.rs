@@ -1,3 +1,6 @@
+#[cfg(feature = "dump_properties_json")]
+extern crate rustc_serialize;
+
 pub mod my_strategy;
 pub mod examples;
 

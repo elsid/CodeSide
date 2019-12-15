@@ -7,6 +7,7 @@ edition = "2018"
 model = { path = "raic/clients/rust/model", package = "aicup2019-model" }
 trans = { path = "raic/clients/rust/model/trans" }
 criterion = "0.3"
+rustc-serialize = "0.3"
 
 [profile.release]
 debug = true
@@ -20,6 +21,7 @@ disable_output = []
 dump_level = []
 verify_collisions = []
 enable_log = []
+dump_properties_json = []
 
 [[bench]]
 name = "simulator"

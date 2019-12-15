@@ -158,8 +158,13 @@ pub mod my_strategy_dump_examples;
 #[path = "my_strategy_dump_opponent.rs"]
 pub mod my_strategy_dump_opponent;
 
+#[cfg(feature = "dump_properties_json")]
+#[path = "my_strategy_dump_properties_json.rs"]
+pub mod my_strategy_dump_properties_json;
+
 #[cfg(all(not(feature = "dump_examples"),
-          not(feature = "dump_opponent")))]
+          not(feature = "dump_opponent"),
+          not(feature = "dump_properties_json")))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
 
@@ -169,8 +174,12 @@ pub use self::my_strategy_dump_examples::MyStrategyImpl;
 #[cfg(feature = "dump_opponent")]
 pub use self::my_strategy_dump_opponent::MyStrategyImpl;
 
+#[cfg(feature = "dump_properties_json")]
+pub use self::my_strategy_dump_properties_json::MyStrategyImpl;
+
 #[cfg(all(not(feature = "dump_examples"),
-          not(feature = "dump_opponent")))]
+          not(feature = "dump_opponent"),
+          not(feature = "dump_properties_json")))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
@@ -189,16 +198,30 @@ impl MyStrategy {
         debug: &mut crate::Debug,
     ) -> model::UnitAction {
         if self.strategy_impl.is_none() {
-            let config = Config::new();
-            #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"))))]
+            let config = get_config();
+            #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"))))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
             }
-            #[cfg(any(feature = "dump_examples", feature = "dump_opponent"))]
+            #[cfg(any(feature = "dump_examples", feature = "dump_opponent", feature = "dump_properties_json"))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new());
             }
         }
         self.strategy_impl.as_mut().unwrap().get_action(me, game, debug)
     }
+}
+
+#[cfg(not(feature = "read_config"))]
+fn get_config() -> Config {
+    Config::new()
+}
+
+#[cfg(feature = "read_config")]
+fn get_config() -> Config {
+    serde_json::from_str(
+        std::fs::read_to_string(
+            std::env::var("CONFIG").expect("CONFIG env is not found")
+        ).expect("Can't read config file").as_str()
+    ).expect("Can't parse config file")
 }
