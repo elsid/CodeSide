@@ -34,6 +34,7 @@ use crate::my_strategy::{
     XorShiftRng,
     get_hit_probability_by_spread,
     get_hit_probability_over_obstacles,
+    get_hit_teammates_probability,
     get_optimal_tile,
     get_weapon_score,
 };
@@ -134,8 +135,10 @@ impl MyStrategyImpl {
                 if let Some(weapon) = self.world.me().weapon.as_ref() {
                     let hit_probability_by_spread = get_hit_probability_by_spread(self.world.me().rect().center(), &other.rect(), weapon.spread);
                     let hit_probability_over_obstacles = get_hit_probability_over_obstacles(&me.rect(), &other.rect(), self.world.level());
+                    let hit_teammates_probability = get_hit_teammates_probability(&me.rect(), other.rect().center(), weapon.spread, &self.world);
                     hit_probability_by_spread >= self.world.config().min_hit_probability_by_spread_to_shoot
                     && hit_probability_over_obstacles >= self.world.config().min_hit_probability_over_obstacles_to_shoot
+                    && hit_teammates_probability <= self.world.config().max_hit_teammates_probability_to_shoot
                 } else {
                     false
                 }

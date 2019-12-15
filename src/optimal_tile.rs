@@ -188,11 +188,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         0.0
     };
     let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        let target = opponent.rect().center();
-        world.units().iter()
-            .filter(|unit| unit.player_id == world.me().player_id && unit.id != world.me().id)
-            .map(|unit| get_hit_probability_by_spread_with_target(center, target, &unit.rect(), weapon.spread, max_distance))
-            .sum::<f64>() / world.number_of_teammates() as f64
+        get_hit_teammates_probability(&me, opponent.rect().center(), weapon.spread, world)
     } else {
         0.0
     };
@@ -222,4 +218,14 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
         WeaponType::AssaultRifle => 2,
         WeaponType::Pistol => 3,
     }
+}
+
+pub fn get_hit_teammates_probability(me: &Rect, target: Vec2, spread: f64, world: &World) -> f64 {
+    world.units().iter()
+        .filter(|unit| unit.player_id == world.me().player_id && unit.id != world.me().id)
+        .map(|unit| {
+            get_hit_probability_over_obstacles(me, &unit.rect(), world.level())
+                * get_hit_probability_by_spread_with_target(me.center(), target, &unit.rect(), spread, world.max_distance())
+        })
+        .sum::<f64>() / world.number_of_teammates() as f64
 }

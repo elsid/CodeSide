@@ -40,6 +40,7 @@ pub struct World {
     teammates: Vec<i32>,
     me_index: usize,
     changed_locations: bool,
+    max_distance: f64,
 }
 
 impl World {
@@ -48,8 +49,9 @@ impl World {
             .filter(|v| v.player_id == me.player_id)
             .map(|v| v.id)
             .collect();
+        let size = Vec2::new(get_level_size_x(&game.level) as f64, get_level_size_y(&game.level) as f64);
         Self {
-            size: Vec2::new(get_level_size_x(&game.level) as f64, get_level_size_y(&game.level) as f64),
+            size,
             items_by_tile: game.loot_boxes.iter()
                 .map(|v| (v.location(), v.item.clone()))
                 .collect(),
@@ -61,6 +63,7 @@ impl World {
             game,
             me_index: 0,
             changed_locations: true,
+            max_distance: size.norm(),
         }
     }
 
@@ -129,6 +132,10 @@ impl World {
 
     pub fn size(&self) -> Vec2 {
         self.size
+    }
+
+    pub fn max_distance(&self) -> f64 {
+        self.max_distance
     }
 
     pub fn number_of_teammates(&self) -> usize {
