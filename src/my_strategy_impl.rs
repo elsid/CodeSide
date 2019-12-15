@@ -131,7 +131,7 @@ impl MyStrategyImpl {
             .filter(|other| other.player_id != me.player_id)
             .filter(|other| {
                 if let Some(weapon) = self.world.me().weapon.as_ref() {
-                    should_shoot(&self.world.me().rect(), &other.rect(), weapon.spread, &self.world)
+                    should_shoot(&self.world.me().rect(), &other.rect(), weapon, &self.world)
                 } else {
                     false
                 }

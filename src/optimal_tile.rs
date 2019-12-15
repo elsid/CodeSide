@@ -9,6 +9,7 @@ use model::{
 use model::{
     Item,
     Tile,
+    Weapon,
     WeaponType,
 };
 
@@ -28,6 +29,7 @@ use crate::my_strategy::{
     Vec2i,
     World,
     as_score,
+    get_distance_to_nearest_hit_obstacle,
     get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_target,
     get_hit_probability_over_obstacles,
@@ -155,7 +157,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     }) as i32 as f64;
     let nearest_opponent = if let Some(weapon) = world.me().weapon.as_ref() {
         world.units().iter()
-            .filter(|unit| world.is_opponent(unit) && should_shoot(&me, &unit.rect(), weapon.spread, world))
+            .filter(|unit| world.is_opponent(unit) && should_shoot(&me, &unit.rect(), weapon, world))
             .min_by_key(|unit| as_score(position.distance(unit.position())))
     } else {
         None
@@ -240,10 +242,18 @@ pub fn get_hit_teammates_probability(me: &Rect, target: Vec2, spread: f64, world
         .sum::<f64>() / world.number_of_teammates() as f64
 }
 
-pub fn should_shoot(me: &Rect, opponent: &Rect, spread: f64, world: &World) -> bool {
-    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), opponent, spread);
+pub fn should_shoot(me: &Rect, opponent: &Rect, weapon: &Weapon, world: &World) -> bool {
+    if let Some(explosion) = weapon.params.explosion.as_ref() {
+        if let Some(distance_to_nearest_obstacle) = get_distance_to_nearest_hit_obstacle(me, opponent.center(), weapon.spread, world.level()) {
+            if distance_to_nearest_obstacle < explosion.radius + 1.0 {
+                return false;
+            }
+        }
+    }
+
+    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), opponent, weapon.spread);
     let hit_probability_over_obstacles = get_hit_probability_over_obstacles(me, opponent, world.level());
-    let hit_teammates_probability = get_hit_teammates_probability(me, opponent.center(), spread, &world);
+    let hit_teammates_probability = get_hit_teammates_probability(me, opponent.center(), weapon.spread, &world);
     hit_probability_by_spread >= world.config().min_hit_probability_by_spread_to_shoot
     && hit_probability_over_obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
     && hit_teammates_probability <= world.config().max_hit_teammates_probability_to_shoot

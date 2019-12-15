@@ -7,6 +7,7 @@ use crate::my_strategy::{
     Rect,
     Vec2,
     WalkGrid,
+    as_score,
     get_tile,
     get_tile_by_vec2,
 };
@@ -83,4 +84,26 @@ pub fn get_hit_probability_by_spread_with_target(source: Vec2, target: Vec2, rec
             rect.has_intersection_with_line(source, end) as i32
         })
         .sum::<i32>() as f64 / N as f64
+}
+
+pub fn get_distance_to_nearest_hit_obstacle(shooter: &Rect, target: Vec2, spread: f64, level: &Level) -> Option<f64> {
+    const N: usize = 10;
+    let begin = shooter.center();
+    let to_target = target - begin;
+    (0 .. N)
+        .filter_map(|i| {
+            let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
+            let end = to_target.rotated(angle);
+            get_distance_to_nearest_hit_obstacle_by_line(begin, end, level)
+        })
+        .min_by_key(|&v| as_score(v))
+}
+
+pub fn get_distance_to_nearest_hit_obstacle_by_line(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
+    for position in WalkGrid::new(begin, end) {
+        if get_tile_by_vec2(level, position) == Tile::Wall {
+            return Some(begin.distance(position));
+        }
+    }
+    None
 }
