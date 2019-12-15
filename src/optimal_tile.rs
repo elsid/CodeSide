@@ -185,8 +185,11 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
-    let hit_teammates_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        get_hit_teammates_probability(&me, unit.rect().center(), weapon.spread, world)
+    let hit_teammates_score = if let (true, Some(weapon)) = (number_of_opponents > 0, world.me().weapon.as_ref()) {
+        world.units().iter()
+            .filter(|v| world.is_opponent(v))
+            .map(|v| get_hit_teammates_probability(&me, v.rect().center(), weapon.spread, world))
+            .sum::<f64>() / number_of_opponents as f64
     } else {
         0.0
     };
