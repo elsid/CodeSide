@@ -130,6 +130,16 @@ impl MyStrategyImpl {
         }
         let nearest_opponent = self.world.units().iter()
             .filter(|other| other.player_id != me.player_id)
+            .filter(|other| {
+                if let Some(weapon) = self.world.me().weapon.as_ref() {
+                    let hit_probability_by_spread = get_hit_probability_by_spread(self.world.me().rect().center(), &other.rect(), weapon.spread);
+                    let hit_probability_over_obstacles = get_hit_probability_over_obstacles(&me.rect(), &other.rect(), self.world.level());
+                    hit_probability_by_spread >= self.world.config().min_hit_probability_by_spread_to_shoot
+                    && hit_probability_over_obstacles >= self.world.config().min_hit_probability_over_obstacles_to_shoot
+                } else {
+                    false
+                }
+            })
             .min_by(|a, b| {
                 std::cmp::PartialOrd::partial_cmp(
                     &distance_sqr(&a.position, &me.position),
@@ -195,14 +205,9 @@ impl MyStrategyImpl {
         debug.draw(CustomData::Log {
             text: format!("target: {:?}", target),
         });
-        let (shoot, aim) = if let (Some(opponent), Some(weapon)) = (nearest_opponent, self.world.me().weapon.as_ref()) {
-            let hit_probability_by_spread = get_hit_probability_by_spread(self.world.me().rect().center(), &opponent.rect(), weapon.spread);
-            let hit_probability_over_obstacles = get_hit_probability_over_obstacles(&me.rect(), &opponent.rect(), self.world.level());
-            #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log { text: format!("hit_probability: by_spread={}, over_obstacles={}", hit_probability_by_spread, hit_probability_over_obstacles) });
+        let (shoot, aim) = if let Some(opponent) = nearest_opponent {
             (
-                hit_probability_by_spread >= self.world.config().min_hit_probability_by_spread_to_shoot
-                && hit_probability_over_obstacles >= self.world.config().min_hit_probability_over_obstacles_to_shoot,
+                true,
                 Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
