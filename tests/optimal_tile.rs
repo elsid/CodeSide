@@ -29,7 +29,7 @@ fn test_get_optimal_tile() {
     let mut stream = BufWriter::new(handle);
     let world = updated_world(example_world());
 
-    assert_eq!(get_optimal_tile(&world, &mut Debug(&mut stream)), Some(Location::new(29, 1)));
+    assert_eq!(get_optimal_tile(&world, &Vec::new(), &mut Debug(&mut stream)), Some((3.0633333333333335, Location::new(29, 1))));
 }
 
 #[test]

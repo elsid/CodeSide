@@ -35,7 +35,7 @@ use crate::my_strategy::{
     get_level_size_y,
 };
 
-pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
+pub fn get_optimal_tile(world: &World, optimal_tiles: &Vec<Option<(f64, Location)>>, debug: &mut Debug) -> Option<(f64, Location)> {
     let mut optimal: Option<(f64, Location)> = None;
     #[cfg(feature = "enable_debug")]
     let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
@@ -45,7 +45,7 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
         for y in 1 .. get_level_size_y(world.level()) - 2 {
             let location = Location::new(x, y);
             let tile = world.tile(location);
-            if tile == Tile::Wall {
+            if tile == Tile::Wall || is_busy_by_other(location, world.me_index(), optimal_tiles) {
                 continue;
             }
             if let Some(path_info) = world.path_info(world.me().location(), location) {
@@ -82,11 +82,21 @@ pub fn get_optimal_tile(world: &World, debug: &mut Debug) -> Option<Location> {
             });
         }
     }
-    if let Some((_, location)) = optimal {
-        Some(location)
-    } else {
-        None
+    optimal
+}
+
+pub fn is_busy_by_other(location: Location, me_index: usize, optimal_tiles: &Vec<Option<(f64, Location)>>) -> bool {
+    for i in 0 .. optimal_tiles.len() {
+        if i == me_index {
+            continue;
+        }
+        if let Some((_, v)) = optimal_tiles[i].as_ref() {
+            if *v == location {
+                return true;
+            }
+        }
     }
+    false
 }
 
 pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInfo) -> f64 {

@@ -23,6 +23,7 @@ use crate::Debug;
 
 use crate::my_strategy::{
     Config,
+    Location,
     Planner,
     Positionable,
     Rectangular,
@@ -56,15 +57,16 @@ pub struct MyStrategyImpl {
     max_cpu_time_spent: Duration,
     max_time_budget_spent: f64,
     max_cpu_time_budget_spent: f64,
+    optimal_tiles: Vec<Option<(f64, Location)>>,
 }
 
 impl MyStrategyImpl {
     pub fn new(config: Config, me: Unit, game: Game) -> Self {
         #[cfg(feature = "dump_level")]
         println!("{}", dump_level(&game.level));
+        let world = World::new(config.clone(), me, game);
         Self {
-            config: config.clone(),
-            world: World::new(config, me, game),
+            config,
             rng: XorShiftRng::from_seed([
                 3918248293,
                 2127433321,
@@ -78,6 +80,8 @@ impl MyStrategyImpl {
             max_cpu_time_spent: Duration::default(),
             max_time_budget_spent: 0.0,
             max_cpu_time_budget_spent: 0.0,
+            optimal_tiles: std::iter::repeat(None).take(world.number_of_teammates()).collect(),
+            world,
         }
     }
 
@@ -164,7 +168,7 @@ impl MyStrategyImpl {
                 .unwrap()
             });
         let mut target = Vec2::from_model(&me.position);
-        if let Some(location) = get_optimal_tile(&self.world, debug) {
+        if let Some((score, location)) = get_optimal_tile(&self.world, &self.optimal_tiles, debug) {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Rect {
                 pos: (location.center() - Vec2::new(0.25, 0.25)).as_model_f32(),
@@ -179,6 +183,7 @@ impl MyStrategyImpl {
                 color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
             });
             target = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
+            self.optimal_tiles[self.world.me_index()] = Some((score, location));
         } else if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
             target = weapon.position();
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
