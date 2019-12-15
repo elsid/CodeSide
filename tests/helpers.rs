@@ -92,7 +92,8 @@ pub fn make_unit_rect(position: Vec2, properties: &Properties) -> Rect {
 pub fn updated_world(mut world: World) -> World {
     let game = world.game().clone();
     let me = world.me().clone();
-    world.update(&me, &game);
+    world.update(&game);
+    world.update_me(&me);
     world
 }
 

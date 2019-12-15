@@ -92,7 +92,10 @@ impl MyStrategyImpl {
         fn distance_sqr(a: &Vec2F64, b: &Vec2F64) -> f64 {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
-        self.world.update(me, game);
+        if game.current_tick != self.world.game().current_tick {
+            self.world.update(game);
+        }
+        self.world.update_me(me);
         #[cfg(feature = "enable_debug")]
         for unit in self.world.units().iter() {
             if let Some(weapon) = unit.weapon.as_ref() {

@@ -35,40 +35,55 @@ pub struct World {
     game: Game,
     size: Vec2,
     items_by_tile: BTreeMap<Location, Item>,
-    paths: BTreeMap<(Location, Location), TilePathInfo>,
-    backtrack: Vec<usize>,
+    paths: Vec<BTreeMap<(Location, Location), TilePathInfo>>,
+    backtracks: Vec<Vec<usize>>,
+    teammates: Vec<i32>,
+    me_index: usize,
+    changed_locations: bool,
 }
 
 impl World {
     pub fn new(config: Config, me: Unit, game: Game) -> Self {
+        let teammates: Vec<i32> = game.units.iter()
+            .filter(|v| v.player_id == me.player_id)
+            .map(|v| v.id)
+            .collect();
         Self {
             size: Vec2::new(get_level_size_x(&game.level) as f64, get_level_size_y(&game.level) as f64),
             items_by_tile: game.loot_boxes.iter()
                 .map(|v| (v.location(), v.item.clone()))
                 .collect(),
+            paths: (0 .. teammates.len()).map(|_| BTreeMap::new()).collect(),
+            backtracks: (0 .. teammates.len()).map(|_| Vec::new()).collect(),
+            teammates,
             config,
             me,
             game,
-            paths: BTreeMap::new(),
-            backtrack: Vec::new(),
+            me_index: 0,
+            changed_locations: true,
         }
     }
 
-    pub fn update(&mut self, me: &Unit, game: &Game) {
+    pub fn update(&mut self, game: &Game) {
         let old_units_locations = get_units_locations(&self.game.units);
-        self.me = me.clone();
         self.game = game.clone();
         self.items_by_tile = game.loot_boxes.iter()
             .map(|v| (v.location(), v.item.clone()))
             .collect();
         let new_units_locations = get_units_locations(&self.game.units);
-        if self.paths.is_empty() || old_units_locations != new_units_locations {
+        self.changed_locations = self.paths.iter().find(|v| v.is_empty()).is_some() || old_units_locations != new_units_locations;
+    }
+
+    pub fn update_me(&mut self, me: &Unit) {
+        self.me = me.clone();
+        self.me_index = self.teammates.iter().position(|&v| v == self.me.id).unwrap();
+        if self.changed_locations {
             let source = me.location();
             let (infos, backtrack) = get_tile_path_infos(source, self);
             for (destination, info) in infos.into_iter() {
-                self.paths.insert((source, destination), info);
+                self.paths[self.me_index].insert((source, destination), info);
             }
-            self.backtrack = backtrack;
+            self.backtracks[self.me_index] = backtrack;
         }
     }
 
@@ -139,7 +154,7 @@ impl World {
     }
 
     pub fn path_info(&self, source: Location, destination: Location) -> Option<&TilePathInfo> {
-        self.paths.get(&(source, destination))
+        self.paths[self.me_index].get(&(source, destination))
     }
 
     pub fn has_opponent_unit(&self, location: Location) -> bool {
@@ -160,11 +175,11 @@ impl World {
     }
 
     pub fn paths(&self) -> &BTreeMap<(Location, Location), TilePathInfo> {
-        &self.paths
+        &self.paths[self.me_index]
     }
 
     pub fn backtrack(&self) -> &Vec<usize> {
-        &self.backtrack
+        &self.backtracks[self.me_index]
     }
 
     pub fn find_shortcut_tiles_path(&self, source: Location, destination: Location) -> Vec<Location> {
@@ -199,7 +214,7 @@ impl World {
         let mut index = get_tile_index(&self.game.level, destination);
 
         loop {
-            let prev = self.backtrack[index];
+            let prev = self.backtracks[self.me_index][index];
             if prev == index {
                 return Vec::new()
             }
