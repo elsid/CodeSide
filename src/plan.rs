@@ -78,7 +78,7 @@ impl<'c, 'p> Planner<'c, 'p> {
         as_score(self.get_score_components().iter().sum())
     }
 
-    pub fn get_score_components(&self) -> [f64; 2] {
+    pub fn get_score_components(&self) -> [f64; 3] {
         let max_distance = self.simulator.world_size().norm();
 
         let distance_score = max_distance - self.simulator.me().position().distance(self.target) / max_distance;
@@ -96,9 +96,19 @@ impl<'c, 'p> Planner<'c, 'p> {
         let health_diff_score = (teammates_health - opponnents_health) as f64
             / (self.simulator.units().len() as i32 * self.simulator.properties().unit_max_health) as f64;
 
+        let my_score = self.simulator.my_player().score;
+
+        let opponents_score = self.simulator.players().iter()
+            .filter(|v| v.id != self.simulator.my_player().id)
+            .map(|v| v.score)
+            .sum::<i32>();
+
+        let game_score_diff_score = (my_score - opponents_score) as f64 / ((self.simulator.players().len() as i32 * self.simulator.properties().kill_score * self.simulator.properties().team_size) as f64 * 1.5);
+
         [
             distance_score * self.config.plan_distance_score_weight,
             health_diff_score * self.config.plan_health_diff_score_weight,
+            game_score_diff_score * self.config.plan_game_score_diff_score_weight,
         ]
     }
 

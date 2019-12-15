@@ -42,6 +42,7 @@ pub struct Simulator {
     current_micro_tick: i32,
     me_index: usize,
     world_size: Vec2,
+    my_player_index: usize,
 }
 
 const EPSILON: f64 = 1e-9;
@@ -87,7 +88,12 @@ impl Simulator {
             current_micro_tick: 0,
             me_index,
             world_size: world.size(),
+            my_player_index: world.players().iter().position(|v| v.id == player_id).unwrap(),
         }
+    }
+
+    pub fn my_player(&self) -> &Player {
+        &self.players[self.my_player_index]
     }
 
     pub fn players(&self) -> &Vec<Player> {
