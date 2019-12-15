@@ -242,6 +242,14 @@ impl World {
 
         result
     }
+
+    pub fn is_teammate(&self, unit: &Unit) -> bool {
+        self.me.id != unit.id && self.me.player_id == unit.player_id
+    }
+
+    pub fn is_opponent(&self, unit: &Unit) -> bool {
+        self.me.player_id != unit.player_id
+    }
 }
 
 #[derive(Clone, Debug)]

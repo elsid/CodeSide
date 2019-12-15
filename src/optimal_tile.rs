@@ -153,18 +153,16 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         Some(&Item::Mine { }) => true,
         _ => false,
     }) as i32 as f64;
-    let nearest_opponent = world.units().iter()
-        .filter(|unit| unit.player_id != world.me().player_id)
-        .min_by_key(|unit| as_score(position.distance(unit.position())));
+    let nearest_opponent = if let Some(weapon) = world.me().weapon.as_ref() {
+        world.units().iter()
+            .filter(|unit| world.is_opponent(unit) && should_shoot(&me, &unit.rect(), weapon.spread, world))
+            .min_by_key(|unit| as_score(position.distance(unit.position())))
+    } else {
+        None
+    };
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        let obstacles = get_hit_probability_over_obstacles(&me, &unit.rect(), world.level());
-        let spread = get_hit_probability_by_spread(center, &unit.rect(), weapon.spread);
-        if  obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
-                && spread >= world.config().min_hit_probability_by_spread_to_shoot {
-            obstacles * spread
-        } else {
-            0.0
-        }
+        get_hit_probability_by_spread(center, &unit.rect(), weapon.spread)
+            * get_hit_probability_over_obstacles(&me, &unit.rect(), world.level())
     } else {
         0.0
     };
@@ -187,8 +185,8 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
-    let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        get_hit_teammates_probability(&me, opponent.rect().center(), weapon.spread, world)
+    let hit_teammates_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
+        get_hit_teammates_probability(&me, unit.rect().center(), weapon.spread, world)
     } else {
         0.0
     };
@@ -222,10 +220,19 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
 
 pub fn get_hit_teammates_probability(me: &Rect, target: Vec2, spread: f64, world: &World) -> f64 {
     world.units().iter()
-        .filter(|unit| unit.player_id == world.me().player_id && unit.id != world.me().id)
+        .filter(|unit| world.is_teammate(unit))
         .map(|unit| {
             get_hit_probability_over_obstacles(me, &unit.rect(), world.level())
                 * get_hit_probability_by_spread_with_target(me.center(), target, &unit.rect(), spread, world.max_distance())
         })
         .sum::<f64>() / world.number_of_teammates() as f64
+}
+
+pub fn should_shoot(me: &Rect, opponent: &Rect, spread: f64, world: &World) -> bool {
+    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), opponent, spread);
+    let hit_probability_over_obstacles = get_hit_probability_over_obstacles(me, opponent, world.level());
+    let hit_teammates_probability = get_hit_teammates_probability(me, opponent.center(), spread, &world);
+    hit_probability_by_spread >= world.config().min_hit_probability_by_spread_to_shoot
+    && hit_probability_over_obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
+    && hit_teammates_probability <= world.config().max_hit_teammates_probability_to_shoot
 }
