@@ -124,7 +124,23 @@ pub fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direct
     game.bullets.push(Bullet {
         weapon_type: weapon_type,
         unit_id: unit_id,
-        player_id: 0,
+        player_id: 1,
+        position: position.as_model(),
+        velocity: (direction.normalized() * params.bullet.speed).as_model(),
+        damage: params.bullet.damage,
+        size: params.bullet.size,
+        explosion_params: params.explosion.clone(),
+    });
+    World::new(world.config().clone(), world.me().clone(), game)
+}
+
+pub fn with_my_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2, unit_id: i32) -> World {
+    let mut game = world.game().clone();
+    let params = &world.properties().weapon_params.get(&weapon_type).unwrap();
+    game.bullets.push(Bullet {
+        weapon_type: weapon_type,
+        unit_id: unit_id,
+        player_id: 3,
         position: position.as_model(),
         velocity: (direction.normalized() * params.bullet.speed).as_model(),
         damage: params.bullet.damage,
@@ -178,5 +194,5 @@ pub fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {
         mines: 0,
         weapon: None,
     };
-    UnitExt::new(base, false, false)
+    UnitExt::new(base, false, false, 0)
 }
