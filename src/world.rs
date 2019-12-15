@@ -131,6 +131,10 @@ impl World {
         self.size
     }
 
+    pub fn number_of_teammates(&self) -> usize {
+        self.teammates.len()
+    }
+
     pub fn tick_time_interval(&self) -> f64 {
         1.0 / self.game.properties.ticks_per_second as f64
     }

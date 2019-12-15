@@ -128,6 +128,11 @@ impl Vec2 {
     pub fn as_location(&self) -> Location {
         Location::new(self.x as usize, self.y as usize)
     }
+
+    #[inline(always)]
+    pub fn angle(&self) -> f64 {
+        self.y.atan2(self.x)
+    }
 }
 
 impl Add for Vec2 {

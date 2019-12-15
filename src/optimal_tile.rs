@@ -28,8 +28,9 @@ use crate::my_strategy::{
     Vec2i,
     World,
     as_score,
-    get_hit_probability_over_obstacles,
     get_hit_probability_by_spread,
+    get_hit_probability_by_spread_with_target,
+    get_hit_probability_over_obstacles,
     get_level_size_x,
     get_level_size_y,
 };
@@ -92,7 +93,7 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
     get_tile_score_components(world, location, path_info).iter().sum()
 }
 
-pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 14] {
+pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 15] {
     let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
@@ -142,22 +143,18 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         Some(&Item::Mine { }) => true,
         _ => false,
     }) as i32 as f64;
-    let hit_nearest_opponent_score = if let Some(weapon) = world.me().weapon.as_ref() {
-        world.units().iter()
-            .filter(|unit| unit.player_id != world.me().player_id)
-            .min_by_key(|unit| as_score(position.distance(unit.position())))
-            .map(|unit| {
-                (
-                    get_hit_probability_over_obstacles(&me, &unit.rect(), world.level()),
-                    get_hit_probability_by_spread(center, &unit.rect(), weapon.spread)
-                )
-            })
-            .filter(|&(obstacles, spread)| {
-                obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
-                && spread >= world.config().min_hit_probability_by_spread_to_shoot
-            })
-            .map(|(obstacles, spread)| obstacles * spread)
-            .unwrap_or(0.0)
+    let nearest_opponent = world.units().iter()
+        .filter(|unit| unit.player_id != world.me().player_id)
+        .min_by_key(|unit| as_score(position.distance(unit.position())));
+    let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
+        let obstacles = get_hit_probability_over_obstacles(&me, &unit.rect(), world.level());
+        let spread = get_hit_probability_by_spread(center, &unit.rect(), weapon.spread);
+        if  obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
+                && spread >= world.config().min_hit_probability_by_spread_to_shoot {
+            obstacles * spread
+        } else {
+            0.0
+        }
     } else {
         0.0
     };
@@ -180,6 +177,15 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
+    let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
+        let target = opponent.rect().center();
+        world.units().iter()
+            .filter(|unit| unit.player_id == world.me().player_id && unit.id != world.me().id)
+            .map(|unit| get_hit_probability_by_spread_with_target(center, target, &unit.rect(), weapon.spread, max_distance))
+            .sum::<f64>() / world.number_of_teammates() as f64
+    } else {
+        0.0
+    };
 
     [
         distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight,
@@ -196,6 +202,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         over_ground_score * world.config().optimal_tile_over_ground_score_weight,
         bullets_score * world.config().optimal_tile_bullets_score_weight,
         mine_obstacle_score * world.config().optimal_tile_mine_obstacle_score_weight,
+        hit_teammates_score * world.config().optimal_tile_hit_teammates_score_weight,
     ]
 }
 

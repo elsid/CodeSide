@@ -72,3 +72,15 @@ pub fn will_hit_by_line(begin: Vec2, end: Vec2, level: &Level) -> bool {
     }
     true
 }
+
+pub fn get_hit_probability_by_spread_with_target(source: Vec2, target: Vec2, rect: &Rect, spread: f64, max_distance: f64) -> f64 {
+    const N: usize = 10;
+    let to_target = (target - source).normalized() * max_distance;
+    (0 .. N)
+        .map(|i| {
+            let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
+            let end = to_target.rotated(angle);
+            rect.has_intersection_with_line(source, end) as i32
+        })
+        .sum::<i32>() as f64 / N as f64
+}

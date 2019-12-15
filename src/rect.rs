@@ -83,4 +83,33 @@ impl Rect {
             .unwrap();
         (((a - origin).atan() - (b - origin).atan()).abs() / (2.0 * spread)).min(1.0)
     }
+
+    pub fn has_intersection_with_line(&self, a: Vec2, b: Vec2) -> bool {
+        let d = b - a;
+        let min = self.min();
+        let max = self.max();
+        let p = [-d.x(), d.x(), -d.y(), d.y()];
+        let q = [a.x() - min.x(), max.x() - a.x(), a.y() - min.y(), max.y() - a.y()];
+        let mut u1 = 0.0;
+        let mut u2 = 1.0;
+        for i in 0 .. 4 {
+            if p[i] == 0.0 {
+                if q[i] >= 0.0 {
+                    continue;
+                }
+                return false;
+            }
+            let candidate = q[i] / p[i];
+            if p[i] < 0.0 {
+                if u1 < candidate {
+                    u1 = candidate;
+                }
+            } else {
+                if u2 > candidate {
+                    u2 = candidate;
+                }
+            }
+        }
+        u1 <= u2
+    }
 }
