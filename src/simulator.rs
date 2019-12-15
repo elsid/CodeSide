@@ -145,7 +145,6 @@ impl Simulator {
 
     fn micro_tick(&mut self, time_interval: f64, rng: &mut XorShiftRng) {
         rng.shuffle(&mut self.units[..]);
-        rng.shuffle(&mut self.bullets[..]);
 
         for unit in 0 .. self.units.len() {
             if self.units[unit].ignore() {
