@@ -238,7 +238,7 @@ impl MyStrategyImpl {
             let mut action = plan.transitions[0].action.clone();
             action.shoot = shoot;
             action.aim = aim;
-            action.swap_weapon = !shoot && self.should_swap_weapon();
+            action.swap_weapon = self.should_swap_weapon();
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log { text: format!("action: {:?}", action) });
             return action;
@@ -263,7 +263,7 @@ impl MyStrategyImpl {
             shoot,
             aim,
             reload: false,
-            swap_weapon: !shoot && self.should_swap_weapon(),
+            swap_weapon: self.should_swap_weapon(),
             plant_mine: false,
         }
     }
@@ -298,6 +298,9 @@ impl MyStrategyImpl {
 
     fn should_swap_weapon(&self) -> bool {
         if let Some(weapon) = self.world.me().weapon.as_ref() {
+            if weapon.magazine > 0 {
+                return false;
+            }
             match self.world.tile_item(self.world.me().location()) {
                 Some(&Item::Weapon { ref weapon_type }) => {
                     get_weapon_score(&weapon.typ) < get_weapon_score(weapon_type)
