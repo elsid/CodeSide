@@ -39,6 +39,8 @@ cp ${SRC}/raic/clients/rust/Cargo.toml ${DIR}/
 cp -r ${SRC}/raic/clients/rust/src/main.rs ${DIR}/src/
 cp -r ${SRC}/raic/clients/rust/model ${DIR}/
 
+rm -rf ${DIR}/model/target
+
 cd ${DIR}/
 
 zip ${SRC}/release/${VERSION}.zip -r Cargo.toml src model
