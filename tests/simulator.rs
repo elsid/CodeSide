@@ -15,6 +15,7 @@ use helpers::{
     WeaponWrapper,
     make_unit_ext,
     with_bullet,
+    with_my_bullet,
     with_loot_box,
     with_mine,
     with_my_position,
@@ -346,6 +347,8 @@ fn test_simulator_bullet_hit_unit() {
     let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), 0);
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.players()[0].score, 0);
+    assert_eq!(simulator.players()[1].score, 0);
     for _ in 0 .. 10 {
         simulator.tick(
             world.tick_time_interval(),
@@ -355,6 +358,8 @@ fn test_simulator_bullet_hit_unit() {
     }
     assert_eq!(simulator.me().health(), 95);
     assert_eq!(simulator.bullets().len(), 1);
+    assert_eq!(simulator.players()[0].score, 5);
+    assert_eq!(simulator.players()[1].score, 0);
 }
 
 #[test]
@@ -382,6 +387,8 @@ fn test_simulator_bullet_explode_unit() {
     let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), 0);
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.players()[0].score, 0);
+    assert_eq!(simulator.players()[1].score, 0);
     for _ in 0 .. 25 {
         simulator.tick(
             world.tick_time_interval(),
@@ -391,6 +398,8 @@ fn test_simulator_bullet_explode_unit() {
     }
     assert_eq!(simulator.me().health(), 20);
     assert_eq!(simulator.bullets().len(), 1);
+    assert_eq!(simulator.players()[0].score, 80);
+    assert_eq!(simulator.players()[1].score, 0);
 }
 
 #[test]
@@ -411,9 +420,11 @@ fn test_simulator_bullet_hit_wall() {
 
 #[test]
 fn test_simulator_bullet_explode_on_hit_wall() {
-    let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), 0);
+    let world = with_my_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), 0);
     let mut simulator = Simulator::new(&world, world.me().id);
     let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.players()[0].score, 0);
+    assert_eq!(simulator.players()[1].score, 0);
     for _ in 0 .. 15 {
         simulator.tick(
             world.tick_time_interval(),
@@ -423,6 +434,8 @@ fn test_simulator_bullet_explode_on_hit_wall() {
     }
     assert_eq!(simulator.me().health(), 50);
     assert_eq!(simulator.bullets().len(), 1);
+    assert_eq!(simulator.players()[0].score, 0);
+    assert_eq!(simulator.players()[1].score, 0);
 }
 
 #[test]
@@ -696,6 +709,47 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
         simulator.me().position(),
         Vec2::new(15.666666666666693, 4.666666667666615)
     );
+}
+
+#[test]
+fn test_simulator_bullet_explode_and_kill_unit() {
+    let world = with_bullet(with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), 0), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), 0);
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.players()[0].score, 0);
+    assert_eq!(simulator.players()[1].score, 0);
+    for _ in 0 .. 25 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 0);
+    assert_eq!(simulator.bullets().len(), 1);
+    assert_eq!(simulator.players()[0].score, 1100);
+    assert_eq!(simulator.players()[1].score, 0);
+}
+
+#[test]
+fn test_simulator_my_bullet_explode_and_kill_unit() {
+    let world = with_my_bullet(with_my_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), 0), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), 0);
+    let mut simulator = Simulator::new(&world, world.me().id);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.players()[0].score, 0);
+    assert_eq!(simulator.players()[1].score, 0);
+    for _ in 0 .. 15 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert_eq!(simulator.me().health(), 0);
+    assert_eq!(simulator.bullets().len(), 1);
+    assert_eq!(simulator.me().base().player_id, simulator.players()[1].id);
+    assert_eq!(simulator.players()[0].score, 1000);
+    assert_eq!(simulator.players()[1].score, 0);
 }
 
 #[test]

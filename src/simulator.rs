@@ -53,18 +53,25 @@ impl Simulator {
             .map(|unit| {
                 let is_me = unit.id == me_id;
                 let is_teammate = unit.player_id == player_id;
-                UnitExt::new(unit.clone(), is_me, is_teammate)
+                let player_index = world.players().iter().position(|v| unit.player_id == v.id).unwrap();
+                UnitExt::new(unit.clone(), is_me, is_teammate, player_index)
             })
             .collect();
         let me_index = units.iter().position(|v| v.is_me()).unwrap();
         let bullets: Vec<BulletExt> = world.bullets().iter()
-            .map(|bullet| BulletExt::new(bullet.clone()))
+            .map(|bullet| {
+                let player_index = world.players().iter().position(|v| bullet.player_id == v.id).unwrap();
+                BulletExt::new(bullet.clone(), player_index)
+            })
             .collect();
         let loot_boxes: Vec<LootBoxExt> = world.loot_boxes().iter()
             .map(|v| LootBoxExt::new(v.clone()))
             .collect();
         let mines: Vec<MineExt> = world.mines().iter()
-            .map(|v| MineExt::new(v.clone()))
+            .map(|mine| {
+                let player_index = world.players().iter().position(|v| mine.player_id == v.id).unwrap();
+                MineExt::new(mine.clone(), player_index)
+            })
             .collect();
         Simulator {
             players: world.players().clone(),
@@ -81,6 +88,10 @@ impl Simulator {
             me_index,
             world_size: world.size(),
         }
+    }
+
+    pub fn players(&self) -> &Vec<Player> {
+        &self.players
     }
 
     pub fn me(&self) -> &UnitExt {
@@ -218,7 +229,7 @@ impl Simulator {
                     if self.units[unit].ignore() {
                         continue;
                     }
-                    explode(&explosion, &mut self.units[unit]);
+                    explode(&explosion, self.properties.kill_score, &mut self.units[unit], &mut self.players);
                 }
             } else {
                 for unit in 0 .. self.units.len() {
@@ -402,12 +413,12 @@ impl Simulator {
             if self.units[unit].ignore() {
                 continue;
             }
-            if let Some(explosion) = collide_unit_and_bullet(&mut self.bullets[bullet], &mut self.units[unit]) {
+            if let Some(explosion) = collide_unit_and_bullet(self.properties.kill_score, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
                 for i in 0 .. self.units.len() {
                     if self.units[i].ignore() {
                         continue;
                     }
-                    explode(&explosion, &mut self.units[i]);
+                    explode(&explosion, self.properties.kill_score, &mut self.units[i], &mut self.players);
                 }
             }
             if self.bullets[bullet].hit {
@@ -432,7 +443,7 @@ impl Simulator {
                                 if self.units[unit].ignore() {
                                     continue;
                                 }
-                                explode(&explosion, &mut self.units[unit]);
+                                explode(&explosion, self.properties.kill_score, &mut self.units[unit], &mut self.players);
                             }
                         }
                         if self.bullets[bullet].hit {
@@ -485,10 +496,11 @@ pub struct UnitExt {
     ignore: bool,
     velocity_x: f64,
     velocity_y: f64,
+    player_index: usize,
 }
 
 impl UnitExt {
-    pub fn new(base: Unit, is_me: bool, is_teammate: bool) -> Self {
+    pub fn new(base: Unit, is_me: bool, is_teammate: bool, player_index: usize) -> Self {
         Self {
             base,
             action: UnitAction {
@@ -509,7 +521,12 @@ impl UnitExt {
             ignore: false,
             velocity_x: 0.0,
             velocity_y: 0.0,
+            player_index,
         }
+    }
+
+    pub fn base(&self) -> &Unit {
+        &self.base
     }
 
     pub fn is_me(&self) -> bool {
@@ -714,8 +731,10 @@ impl UnitExt {
         &self.base.weapon
     }
 
-    pub fn damage(&mut self, value: i32) {
-        self.base.health -= value;
+    pub fn damage(&mut self, value: i32) -> i32 {
+        let health = self.base.health;
+        self.base.health = (self.base.health - value).max(0);
+        health - self.base.health
     }
 
     pub fn heal(&mut self, value: i32, properties: &Properties) {
@@ -731,11 +750,12 @@ impl UnitExt {
 pub struct BulletExt {
     base: Bullet,
     hit: bool,
+    player_index: usize,
 }
 
 impl BulletExt {
-    pub fn new(base: Bullet) -> Self {
-        Self { base, hit: false }
+    pub fn new(base: Bullet, player_index: usize) -> Self {
+        Self { base, hit: false, player_index }
     }
 
     pub fn half_size(&self) -> f64 {
@@ -781,6 +801,7 @@ impl BulletExt {
 pub struct Explosion {
     params: ExplosionParams,
     position: Vec2,
+    player_index: usize,
 }
 
 impl Explosion {
@@ -811,11 +832,12 @@ impl LootBoxExt {
 #[derive(Clone, Debug)]
 pub struct MineExt {
     base: Mine,
+    player_index: usize,
 }
 
 impl MineExt {
-    pub fn new(base: Mine) -> Self {
-        Self { base }
+    pub fn new(base: Mine, player_index: usize) -> Self {
+        Self { base, player_index }
     }
 
     pub fn base(&self) -> &Mine {
@@ -880,21 +902,33 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
     }
 }
 
-fn collide_unit_and_bullet(bullet: &mut BulletExt, unit: &mut UnitExt) -> Option<Explosion> {
+fn collide_unit_and_bullet(kill_score: i32, bullet: &mut BulletExt, unit: &mut UnitExt, players: &mut Vec<Player>) -> Option<Explosion> {
     if bullet.base.unit_id == unit.base.id || !bullet.rect().has_collision(&unit.holding_rect()) {
         return None;
     }
     bullet.hit = true;
-    unit.damage(bullet.base.damage);
+    let score = unit.damage(bullet.base.damage);
+    if score > 0 && bullet.player_index != unit.player_index {
+        players[bullet.player_index].score += score;
+    }
+    if unit.base.health == 0 {
+        players[(unit.player_index + 1) % 2].score += kill_score;
+    }
     bullet.explosion_params().as_ref()
-        .map(|v| Explosion {params: v.clone(), position: bullet.center()})
+        .map(|v| Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index})
 }
 
-fn explode(explosion: &Explosion, unit: &mut UnitExt) {
+fn explode(explosion: &Explosion, kill_score: i32, unit: &mut UnitExt, players: &mut Vec<Player>) {
     if !explosion.rect().has_collision(&unit.holding_rect()) {
         return;
     }
-    unit.damage(explosion.params.damage);
+    let score = unit.damage(explosion.params.damage);
+    if score > 0 && explosion.player_index != unit.player_index {
+        players[explosion.player_index].score += score;
+    }
+    if unit.base.health == 0 {
+        players[(unit.player_index + 1) % 2].score += kill_score;
+    }
 }
 
 fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<Explosion> {
@@ -903,7 +937,7 @@ fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<E
     }
     bullet.hit = true;
     bullet.explosion_params().as_ref()
-        .map(|v| Explosion {params: v.clone(), position: bullet.center()})
+        .map(|v| Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index})
 }
 
 fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt) -> bool {
@@ -964,7 +998,7 @@ fn update_mine(time_interval: f64, mine: &mut MineExt) -> Option<Explosion> {
             },
             MineState::Triggered => {
                 mine.base.state = MineState::Exploded;
-                Some(Explosion {params: mine.base.explosion_params.clone(), position: mine.center()})
+                Some(Explosion {params: mine.base.explosion_params.clone(), position: mine.center(), player_index: mine.player_index})
             },
             _ => None,
         }
