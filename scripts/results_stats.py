@@ -91,6 +91,9 @@ def main():
         ax.set_xticks(bins)
         ax.grid(True)
         ax.legend()
+    fig, ax = matplotlib.pyplot.subplots()
+    seeds = numpy.array([v['seed'] for v in games])
+    ax.hist(seeds)
     matplotlib.pyplot.show()
 
 
@@ -121,7 +124,7 @@ def read_result(path):
 
 def parse_result(content):
     data = json.loads(content)
-    return dict(first=get_record(data, 0), second=get_record(data, 1))
+    return dict(first=get_record(data, 0), second=get_record(data, 1), seed=data['seed'])
 
 
 def get_record(data, index):
