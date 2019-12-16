@@ -22,6 +22,11 @@ def main():
         players['second']['score_diffs'].append(r['second']['score'] - r['first']['score'])
     _1 = [sum(w == 1 for w in v['places']) for v in players.values()]
     _2 = [sum(w == 2 for w in v['places']) for v in players.values()]
+    for v in players.values():
+        v['places'] = numpy.array(v['places'])
+        v['scores'] = numpy.array(v['scores'])
+    scores_partial_sums = [numpy.cumsum(v['scores']) for v in players.values()]
+    place_1_partial_sums = [numpy.cumsum([w == 1 for w in v['places']]) for v in players.values()]
     stats = dict(
         _1=_1,
         _2=_2,
@@ -94,6 +99,16 @@ def main():
     fig, ax = matplotlib.pyplot.subplots()
     seeds = numpy.array([v['seed'] for v in games])
     ax.hist(seeds)
+    fig, ax = matplotlib.pyplot.subplots()
+    ax.set_title('scores ratio dynamic first / second')
+    scores_partial_sums_ratio = numpy.array([v[0] / v[1] for v in zip(*scores_partial_sums)])
+    ax.plot(numpy.arange(0, len(games), 1), scores_partial_sums_ratio)
+    ax.grid(True)
+    fig, ax = matplotlib.pyplot.subplots()
+    ax.set_title('place 1 ratio dynamic second / first')
+    place_1_partial_sums_ratio = numpy.array([v[1] / (v[0] or 1) for v in zip(*place_1_partial_sums)])
+    ax.plot(numpy.arange(0, len(games), 1), place_1_partial_sums_ratio)
+    ax.grid(True)
     matplotlib.pyplot.show()
 
 
