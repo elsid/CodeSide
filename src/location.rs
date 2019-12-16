@@ -40,6 +40,16 @@ impl Location {
         Vec2::new(self.x as f64 + 0.5, self.y as f64)
     }
 
+    #[inline(always)]
+    pub fn add_x(&mut self, x: isize) {
+        self.x = sum_usize_and_isize(self.x, x);
+    }
+
+    #[inline(always)]
+    pub fn add_y(&mut self, y: isize) {
+        self.y = sum_usize_and_isize(self.y, y);
+    }
+
     #[cfg(feature = "enable_debug")]
     #[inline(always)]
     pub const fn as_model_f32(&self) -> Vec2F32 {

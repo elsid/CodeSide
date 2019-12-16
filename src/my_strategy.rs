@@ -60,6 +60,12 @@ pub mod walk_grid;
 #[allow(unused_imports)]
 pub use walk_grid::*;
 
+#[path = "supercover.rs"]
+pub mod supercover;
+
+#[allow(unused_imports)]
+pub use supercover::*;
+
 #[path = "positionable.rs"]
 pub mod positionable;
 

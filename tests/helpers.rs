@@ -174,6 +174,13 @@ pub fn with_loot_box(world: World, item: Item, position: Vec2) -> World {
     World::new(world.config().clone(), world.me().clone(), game)
 }
 
+pub fn with_my_jump_state(world: World, jump_state: JumpState) -> World {
+    let mut game = world.game().clone();
+    let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
+    game.units[me_index].jump_state = jump_state;
+    World::new(world.config().clone(), game.units[me_index].clone(), game)
+}
+
 pub fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {
     let base = Unit {
         player_id: 1,
