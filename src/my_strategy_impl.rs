@@ -57,6 +57,7 @@ pub struct MyStrategyImpl {
     max_time_budget_spent: f64,
     max_cpu_time_budget_spent: f64,
     optimal_tiles: Vec<Option<(f64, Location)>>,
+    calls_per_tick: usize,
 }
 
 impl MyStrategyImpl {
@@ -81,6 +82,7 @@ impl MyStrategyImpl {
             max_cpu_time_budget_spent: 0.0,
             optimal_tiles: std::iter::repeat(None).take(world.number_of_teammates()).collect(),
             world,
+            calls_per_tick: 0,
         }
     }
 
@@ -275,10 +277,17 @@ impl MyStrategyImpl {
     }
 
     fn on_start(&mut self) {
-        self.tick_start_time = Instant::now();
+        if self.calls_per_tick == 0 {
+            self.tick_start_time = Instant::now();
+        }
+        self.calls_per_tick += 1;
     }
 
     fn on_finish(&mut self) {
+        if self.calls_per_tick < self.world.number_of_teammates() {
+            return;
+        }
+
         let finish = Instant::now();
         let cpu_time_spent = finish - self.tick_start_time;
         self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
@@ -286,6 +295,7 @@ impl MyStrategyImpl {
         self.time_spent = finish - self.start_time;
         self.max_cpu_time_budget_spent = self.max_cpu_time_budget_spent.max(time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent));
         self.max_time_budget_spent = self.max_time_budget_spent.max(time_bugdet_spent(self.world.game().current_tick, &self.time_spent));
+        self.calls_per_tick = 0;
 
         #[cfg(not(feature = "disable_output"))]
         {
