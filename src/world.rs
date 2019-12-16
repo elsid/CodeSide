@@ -18,6 +18,7 @@ use crate::my_strategy::{
     Positionable,
     Vec2,
     Vec2i,
+    WalkGrid,
     as_score,
     get_level_size_x,
     get_level_size_y,
@@ -25,7 +26,6 @@ use crate::my_strategy::{
     get_tile_by_vec2,
     get_tile_index,
     get_tile_location,
-    will_hit_by_line,
 };
 
 #[derive(Debug, Clone)]
@@ -209,7 +209,7 @@ impl World {
 
         while end > 0 {
             let mut tile = 0;
-            while tile < end && !will_hit_by_line(current.center(), tiles_path[tile].center(), &self.game.level) {
+            while tile < end && !is_valid_shortcut(current, tiles_path[tile], &self.game.level, &self.game.properties) {
                 tile += 1;
             }
             if tile == tiles_path.len() {
@@ -354,6 +354,20 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
     (result, backtrack)
 }
 
+pub fn is_valid_shortcut(begin: Location, end: Location, level: &Level, properties: &Properties) -> bool {
+    let mut prev = begin;
+    for position in WalkGrid::new(begin.center(), end.center()) {
+        if prev != position.as_location() && !is_tile_reachable_from(prev, position.as_location(), level, properties) {
+            return false;
+        }
+        if get_tile_by_vec2(level, position) == Tile::Wall {
+            return false;
+        }
+        prev = position.as_location();
+    }
+    true
+}
+
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
     match get_tile(level, destination) {
         Tile::Wall => false,
@@ -372,13 +386,13 @@ pub fn is_tile_reachable_from(source: Location, destination: Location, level: &L
                             is_walkable(get_tile(level, source + Vec2i::new(0, -1)))
                             || is_walkable(get_tile(level, destination + Vec2i::new(0, -1)))
                             || (2 .. source.y() as isize + 1).find(|&dy| {
-                                can_jump_up_from(get_tile(level, source + Vec2i::new(0, -dy)), dy as f64 + 0.5, properties)
+                                can_jump_up_from(get_tile(level, source + Vec2i::new(0, -dy)), dy as f64, properties)
                             }).is_some()
                             || (1 .. destination.x() as isize).find(|&dx| {
-                                can_fly_from(get_tile(level, destination + Vec2i::new(-dx, 0)), dx as f64 + 0.5, properties)
+                                can_fly_from(get_tile(level, destination + Vec2i::new(-dx, 0)), dx as f64, properties)
                             }).is_some()
                             || (destination.x() + 1 .. get_level_size_x(level) - 1).find(|&x| {
-                                can_fly_from(get_tile(level, Location::new(x, destination.y())), (x - destination.x()) as f64 + 0.5, properties)
+                                can_fly_from(get_tile(level, Location::new(x, destination.y())), (x - destination.x()) as f64, properties)
                             }).is_some()
                         )
                     ),
