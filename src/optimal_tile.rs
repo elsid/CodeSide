@@ -195,11 +195,11 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
-    let distance_to_teammates_score = if world.number_of_teammates() > 1 && world.me().weapon.is_some() {
+    let distance_to_teammates_score = if world.number_of_teammates() > 0 && world.me().weapon.is_some() {
         world.units().iter()
             .filter(|v| world.is_teammate(v) && v.weapon.is_none())
             .map(|v| v.rect().center().distance(center))
-            .sum::<f64>() / (max_distance * (world.number_of_teammates() - 1) as f64)
+            .sum::<f64>() / (max_distance * world.number_of_teammates() as f64)
     } else {
         0.0
     };
@@ -233,13 +233,17 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
 }
 
 pub fn get_hit_teammates_probability(me: &Rect, target: Vec2, spread: f64, world: &World) -> f64 {
-    world.units().iter()
-        .filter(|unit| world.is_teammate(unit))
-        .map(|unit| {
-            get_hit_probability_over_obstacles(me, &unit.rect(), world.level())
-                * get_hit_probability_by_spread_with_target(me.center(), target, &unit.rect(), spread, world.max_distance())
-        })
-        .sum::<f64>() / world.number_of_teammates() as f64
+    if world.number_of_teammates() > 0 {
+        world.units().iter()
+            .filter(|unit| world.is_teammate(unit))
+            .map(|unit| {
+                get_hit_probability_over_obstacles(me, &unit.rect(), world.level())
+                    * get_hit_probability_by_spread_with_target(me.center(), target, &unit.rect(), spread, world.max_distance())
+            })
+            .sum::<f64>() / world.number_of_teammates() as f64
+    } else {
+        0.0
+    }
 }
 
 pub fn should_shoot(me: &Rect, opponent: &Rect, weapon: &Weapon, world: &World) -> bool {

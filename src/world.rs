@@ -41,6 +41,7 @@ pub struct World {
     me_index: usize,
     changed_locations: bool,
     max_distance: f64,
+    number_of_teammates: usize,
 }
 
 impl World {
@@ -57,6 +58,7 @@ impl World {
                 .collect(),
             paths: (0 .. teammates.len()).map(|_| BTreeMap::new()).collect(),
             backtracks: (0 .. teammates.len()).map(|_| Vec::new()).collect(),
+            number_of_teammates: teammates.len() - 1,
             teammates,
             config,
             me,
@@ -75,6 +77,7 @@ impl World {
             .collect();
         let new_units_locations = get_units_locations(&self.game.units);
         self.changed_locations = self.paths.iter().find(|v| v.is_empty()).is_some() || old_units_locations != new_units_locations;
+        self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate(v)).count();
     }
 
     pub fn update_me(&mut self, me: &Unit) {
@@ -139,7 +142,7 @@ impl World {
     }
 
     pub fn number_of_teammates(&self) -> usize {
-        self.teammates.len()
+        self.number_of_teammates
     }
 
     pub fn me_index(&self) -> usize {

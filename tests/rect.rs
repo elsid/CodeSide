@@ -113,6 +113,14 @@ fn test_has_intersection_with_line_horizontal() {
         Rect::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)).has_intersection_with_line(Vec2::new(2.0, 2.0), Vec2::new(-2.0, 2.0)),
         false
     );
+    assert_eq!(
+        Rect::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)).has_intersection_with_line(Vec2::new(-3.0, 0.0), Vec2::new(-2.0, 0.0)),
+        false
+    );
+    assert_eq!(
+        Rect::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)).has_intersection_with_line(Vec2::new(2.0, 0.0), Vec2::new(3.0, 0.0)),
+        false
+    );
 }
 
 #[test]
