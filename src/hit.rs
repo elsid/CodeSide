@@ -107,3 +107,19 @@ pub fn get_distance_to_nearest_hit_obstacle_by_line(begin: Vec2, end: Vec2, leve
     }
     None
 }
+
+pub fn get_distance_to_nearest_hit_rect(source: Vec2, target: Vec2, rect: &Rect, spread: f64, max_distance: f64) -> Option<f64> {
+    const N: usize = 10;
+    let to_target = (target - source).normalized() * max_distance;
+    (0 .. N + 1)
+        .filter_map(|i| {
+            let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
+            let end = source + to_target.rotated(angle);
+            if rect.has_intersection_with_line(source, end) {
+                Some(source.distance(rect.center()))
+            } else {
+                None
+            }
+        })
+        .min_by_key(|&v| as_score(v))
+}

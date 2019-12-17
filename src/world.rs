@@ -253,6 +253,14 @@ impl World {
     pub fn is_opponent(&self, unit: &Unit) -> bool {
         self.me.player_id != unit.player_id
     }
+
+    pub fn is_me(&self, unit: &Unit) -> bool {
+        self.me.id == unit.id
+    }
+
+    pub fn current_tick(&self) -> i32 {
+        self.game.current_tick
+    }
 }
 
 #[derive(Clone, Debug)]

@@ -30,6 +30,7 @@ use crate::my_strategy::{
     World,
     as_score,
     get_distance_to_nearest_hit_obstacle,
+    get_distance_to_nearest_hit_rect,
     get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_target,
     get_hit_probability_over_obstacles,
@@ -255,7 +256,16 @@ pub fn should_shoot(me: &Rect, opponent: &Rect, weapon: &Weapon, world: &World, 
 
     if let Some(explosion) = weapon.params.explosion.as_ref() {
         if let Some(distance_to_nearest_obstacle) = get_distance_to_nearest_hit_obstacle(me, opponent.center(), spread, world.level()) {
-            if distance_to_nearest_obstacle < explosion.radius + 1.0 {
+            if distance_to_nearest_obstacle < explosion.radius + 2.0 {
+                return false;
+            }
+        }
+        let distance_to_nearest_unit = world.units().iter()
+            .filter(|v| !world.is_me(v))
+            .filter_map(|v| get_distance_to_nearest_hit_rect(me.center(), opponent.center(), &v.rect(), spread, world.max_distance()))
+            .min_by_key(|&v| as_score(v));
+        if let Some(v) = distance_to_nearest_unit {
+            if v < explosion.radius + 3.0 {
                 return false;
             }
         }
