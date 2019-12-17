@@ -111,21 +111,21 @@ impl MyStrategyImpl {
                     let upper_spread = Vec2::i().rotated(normalize_angle(last_angle + weapon.spread));
                     debug.draw(CustomData::Line {
                         p1: unit.rect().center().as_model_f32(),
-                        p2: (unit.rect().center() + direction * 100.0).as_model_f32(),
-                        width: 0.1,
-                        color: ColorF32 { a: 0.66, r: 0.66, g: 0.0, b: 0.0 },
-                    });
-                    debug.draw(CustomData::Line {
-                        p1: unit.rect().center().as_model_f32(),
-                        p2: (unit.rect().center() + lower_spread * 100.0).as_model_f32(),
+                        p2: (unit.rect().center() + direction * self.world.max_distance()).as_model_f32(),
                         width: 0.1,
                         color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
                     });
                     debug.draw(CustomData::Line {
                         p1: unit.rect().center().as_model_f32(),
-                        p2: (unit.rect().center() + upper_spread * 100.0).as_model_f32(),
+                        p2: (unit.rect().center() + lower_spread * self.world.max_distance()).as_model_f32(),
                         width: 0.1,
-                        color: ColorF32 { a: 0.66, r: 0.66, g: 0.0, b: 0.0 },
+                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
+                    });
+                    debug.draw(CustomData::Line {
+                        p1: unit.rect().center().as_model_f32(),
+                        p2: (unit.rect().center() + upper_spread * self.world.max_distance()).as_model_f32(),
+                        width: 0.1,
+                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
                     });
                 }
             }
@@ -215,6 +215,26 @@ impl MyStrategyImpl {
                         size: Vec2F32 { x: 1.0, y: 1.0 },
                         color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.66 },
                     });
+                }
+                if let Some(weapon) = me.weapon.as_ref() {
+                    const N: usize = 10;
+                    let to_target = (opponent.rect().center() - me.rect().center()).normalized() * self.world.max_distance();
+                    for i in 0 .. N + 1 {
+                        let angle = ((2 * i) as f64 / N as f64 - 1.0) * weapon.spread;
+                        let end = me.rect().center() + to_target.rotated(normalize_angle(angle));
+                        let color = game.units.iter()
+                            .filter(|v| self.world.is_teammate(v))
+                            .find(|v| v.rect().has_intersection_with_line(me.rect().center(), end))
+                            .map(|_| ColorF32 { a: 0.33, r: 0.66, g: 0.33, b: 0.0 })
+                            .unwrap_or(ColorF32 { a: 0.33, r: 0.0, g: 0.66, b: 0.33 });
+                        #[cfg(feature = "enable_debug")]
+                        debug.draw(CustomData::Line {
+                            p1: me.rect().center().as_model_f32(),
+                            p2: end.as_model_f32(),
+                            width: 0.075,
+                            color,
+                        });
+                    }
                 }
             }
             (

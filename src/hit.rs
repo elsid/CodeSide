@@ -77,10 +77,10 @@ pub fn will_hit_by_line(begin: Vec2, end: Vec2, level: &Level) -> bool {
 pub fn get_hit_probability_by_spread_with_target(source: Vec2, target: Vec2, rect: &Rect, spread: f64, max_distance: f64) -> f64 {
     const N: usize = 10;
     let to_target = (target - source).normalized() * max_distance;
-    (0 .. N)
+    (0 .. N + 1)
         .map(|i| {
             let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
-            let end = to_target.rotated(angle);
+            let end = source + to_target.rotated(angle);
             rect.has_intersection_with_line(source, end) as i32
         })
         .sum::<i32>() as f64 / N as f64
@@ -90,10 +90,10 @@ pub fn get_distance_to_nearest_hit_obstacle(shooter: &Rect, target: Vec2, spread
     const N: usize = 10;
     let begin = shooter.center();
     let to_target = target - begin;
-    (0 .. N)
+    (0 .. N + 1)
         .filter_map(|i| {
             let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
-            let end = to_target.rotated(angle);
+            let end = begin + to_target.rotated(angle);
             get_distance_to_nearest_hit_obstacle_by_line(begin, end, level)
         })
         .min_by_key(|&v| as_score(v))
