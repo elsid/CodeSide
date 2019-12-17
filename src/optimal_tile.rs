@@ -73,7 +73,7 @@ pub fn get_optimal_tile(world: &World, optimal_tiles: &Vec<Option<(f64, Location
                     debug.draw(CustomData::Rect {
                         pos: location.as_model_f32(),
                         size: Vec2F32 { x: 1.0, y: 1.0 },
-                        color: color_from_heat(0.25, ((score - min) / (max - min)) as f32),
+                        color: color_from_heat(0.1, ((score - min) / (max - min)) as f32),
                     });
                 }
             }

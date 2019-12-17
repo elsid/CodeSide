@@ -39,6 +39,7 @@ use crate::my_strategy::{
 
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
+    WalkGrid,
     normalize_angle,
 };
 
@@ -188,7 +189,7 @@ impl MyStrategyImpl {
                 p1: self.world.me().rect().center().as_model_f32(),
                 p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
                 width: 0.1,
-                color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
+                color: ColorF32 { a: 0.66, r: 0.0, g: 0.66, b: 0.0 },
             });
             target = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
             self.optimal_tiles[self.world.me_index()] = Some((score, location));
@@ -204,6 +205,18 @@ impl MyStrategyImpl {
             text: format!("target: {:?}", target),
         });
         let (shoot, aim) = if let Some(opponent) = nearest_opponent {
+            #[cfg(feature = "enable_debug")]
+            {
+                let mut s = Vec::new();
+                for position in WalkGrid::new(me.rect().center(), opponent.rect().center()) {
+                    s.push(position);
+                    debug.draw(CustomData::Rect {
+                        pos: position.as_location().as_model_f32(),
+                        size: Vec2F32 { x: 1.0, y: 1.0 },
+                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.66 },
+                    });
+                }
+            }
             (
                 true,
                 Vec2F64 {

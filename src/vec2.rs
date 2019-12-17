@@ -133,6 +133,16 @@ impl Vec2 {
     pub fn angle(&self) -> f64 {
         self.y.atan2(self.x)
     }
+
+    #[inline(always)]
+    pub fn signum(&self) -> Self {
+        Self { x: self.x.signum(), y: self.y.signum() }
+    }
+
+    #[inline(always)]
+    pub fn abs(&self) -> Self {
+        Self { x: self.x.abs(), y: self.y.abs() }
+    }
 }
 
 impl Add for Vec2 {
