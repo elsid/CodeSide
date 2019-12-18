@@ -16,6 +16,7 @@ use model::{
 use model::{
     ColorF32,
     CustomData,
+    TextAlignment,
     Vec2F32,
 };
 
@@ -102,6 +103,16 @@ impl MyStrategyImpl {
             self.world.update(game);
         }
         self.world.update_me(me);
+        #[cfg(feature = "enable_debug")]
+        {
+            debug.draw(CustomData::PlacedText {
+                text: format!("{}", me.id),
+                pos: (me.position() + Vec2::only_y(me.size.y)).as_model_f32(),
+                alignment: TextAlignment::Center,
+                size: 40.0,
+                color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+            });
+        }
         #[cfg(feature = "enable_debug")]
         for unit in self.world.units().iter() {
             if let Some(weapon) = unit.weapon.as_ref() {
