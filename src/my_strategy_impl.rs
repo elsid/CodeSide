@@ -326,20 +326,19 @@ impl MyStrategyImpl {
         self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
         self.cpu_time_spent += cpu_time_spent;
         self.time_spent = finish - self.start_time;
-        self.max_cpu_time_budget_spent = self.max_cpu_time_budget_spent.max(time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent));
-        self.max_time_budget_spent = self.max_time_budget_spent.max(time_bugdet_spent(self.world.game().current_tick, &self.time_spent));
+        let cpu_time_budget_spent = time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent);
+        let time_budget_spent = time_bugdet_spent(self.world.game().current_tick, &self.time_spent);
+        self.max_cpu_time_budget_spent = self.max_cpu_time_budget_spent.max(cpu_time_budget_spent);
+        self.max_time_budget_spent = self.max_time_budget_spent.max(time_budget_spent);
         self.calls_per_tick = 0;
 
         #[cfg(not(feature = "disable_output"))]
         {
-            if self.max_cpu_time_budget_spent > 90.0 || self.max_time_budget_spent > 90.0 {
+            if cpu_time_budget_spent > 90.0 {
                 eprintln!(
                     "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                     self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
-                    time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent),
-                    time_bugdet_spent(self.world.game().current_tick, &self.time_spent),
-                    self.max_time_budget_spent,
-                    self.max_cpu_time_budget_spent
+                    cpu_time_budget_spent, time_budget_spent, self.max_cpu_time_budget_spent, self.max_time_budget_spent
                 );
             }
         }
