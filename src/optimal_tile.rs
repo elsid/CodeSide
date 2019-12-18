@@ -138,10 +138,14 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         Some(&Item::HealthPack { .. }) => 2.0 - world.me().health as f64 / world.properties().unit_max_health as f64,
         _ => 0.0,
     };
-    let first_weapon_score = (world.me().weapon.is_none() && match world.tile_item(location) {
-        Some(&Item::Weapon { .. }) => true,
-        _ => false,
-    }) as i32 as f64;
+    let first_weapon_score = if world.me().weapon.is_none() {
+        match world.tile_item(location) {
+            Some(&Item::Weapon { .. }) => 1.0 - distance_to_position_score,
+            _ => 0.0,
+        }
+    } else {
+        0.0
+    };
     let swap_weapon_score = (world.me().weapon.is_some() && match world.tile_item(location) {
         Some(&Item::Weapon { ref weapon_type }) => {
             get_weapon_score(&world.me().weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)

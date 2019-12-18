@@ -29,7 +29,10 @@ fn test_get_optimal_tile() {
     let mut stream = BufWriter::new(handle);
     let world = updated_world(example_world());
 
-    assert_eq!(get_optimal_tile(&world, &Vec::new(), &mut Debug(&mut stream)), Some((3.0633333333333335, Location::new(29, 1))));
+    assert_eq!(
+        get_optimal_tile(&world, &Vec::new(), &mut Debug(&mut stream)),
+        Some((2.5833333333333335, Location::new(29, 1)))
+    );
 }
 
 #[test]
@@ -42,16 +45,6 @@ fn test_get_tile_score_random_tile() {
             -0.03833333333333333
         );
     }
-}
-
-#[test]
-fn test_get_tile_score_optimal_tile() {
-    let world = updated_world(example_world());
-    let location = Location::new(10, 1);
-    assert_eq!(
-        get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        3.0015145946466255
-    );
 }
 
 #[test]
@@ -86,7 +79,7 @@ fn test_get_tile_score_for_tile_with_weapon() {
         .unwrap().location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        2.933333333333333
+        0.053333333333333455
     );
 }
 
