@@ -33,6 +33,7 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
+    as_score,
     get_optimal_tile,
     get_weapon_score,
     should_shoot,
@@ -159,22 +160,14 @@ impl MyStrategyImpl {
                 });
             }
         }
-        let nearest_opponent = self.world.units().iter()
-            .filter(|other| other.player_id != me.player_id)
-            .filter(|other| {
-                if let Some(weapon) = self.world.me().weapon.as_ref() {
-                    should_shoot(&self.world.me().rect(), &other.rect(), weapon, &self.world, true)
-                } else {
-                    false
-                }
-            })
-            .min_by(|a, b| {
-                std::cmp::PartialOrd::partial_cmp(
-                    &distance_sqr(&a.position, &me.position),
-                    &distance_sqr(&b.position, &me.position),
-                )
-                .unwrap()
-            });
+        let nearest_opponent = if let Some(weapon) = me.weapon.as_ref() {
+            self.world.units().iter()
+                .filter(|v| v.player_id != me.player_id)
+                .map(|v| (v, should_shoot(&me.rect(), &v.rect(), weapon, &self.world, true)))
+                .min_by_key(|(v, shoot)| (!shoot, as_score(v.position().distance(me.position()))))
+        } else {
+            None
+        };
         let nearest_weapon = self.world.loot_boxes().iter()
             .filter(|loot| {
                 if let Item::Weapon { .. } = loot.item {
@@ -215,7 +208,7 @@ impl MyStrategyImpl {
             });
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Line {
-                p1: self.world.me().rect().center().as_model_f32(),
+                p1: me.rect().center().as_model_f32(),
                 p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
                 width: 0.1,
                 color: ColorF32 { a: 0.66, r: 0.0, g: 0.66, b: 0.0 },
@@ -226,14 +219,14 @@ impl MyStrategyImpl {
             target = weapon.position();
         } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
             target = health_pack.position();
-        } else if let Some(opponent) = nearest_opponent {
+        } else if let Some((opponent, _)) = nearest_opponent {
             target = opponent.position();
         }
         #[cfg(feature = "enable_debug")]
         debug.draw(CustomData::Log {
             text: format!("target: {:?}", target),
         });
-        let (shoot, aim) = if let Some(opponent) = nearest_opponent {
+        let (shoot, aim) = if let Some((opponent, shoot)) = nearest_opponent {
             #[cfg(feature = "enable_debug")]
             {
                 let mut s = Vec::new();
@@ -267,7 +260,7 @@ impl MyStrategyImpl {
                 }
             }
             (
-                true,
+                shoot,
                 Vec2F64 {
                     x: opponent.position.x - me.position.x,
                     y: opponent.position.y - me.position.y,
@@ -276,13 +269,13 @@ impl MyStrategyImpl {
         } else {
             (false, model::Vec2F64 { x: 0.0, y: 0.0 })
         };
-        let tiles_path = self.world.find_shortcut_tiles_path(self.world.me().location(), target.as_location());
+        let tiles_path = self.world.find_shortcut_tiles_path(me.location(), target.as_location());
         if !tiles_path.is_empty() {
             target = tiles_path[0].bottom();
             #[cfg(feature = "enable_debug")]
             {
                 debug.draw(CustomData::Line {
-                    p1: self.world.me().rect().center().as_model_f32(),
+                    p1: me.rect().center().as_model_f32(),
                     p2: tiles_path[0].center().as_model_f32(),
                     width: 0.1,
                     color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.0 },
