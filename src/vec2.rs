@@ -143,6 +143,16 @@ impl Vec2 {
     pub fn abs(&self) -> Self {
         Self { x: self.x.abs(), y: self.y.abs() }
     }
+
+    #[inline(always)]
+    pub fn left(&self) -> Self {
+        Self { x: -self.y, y: self.x }
+    }
+
+    #[inline(always)]
+    pub fn right(&self) -> Self {
+        Self { x: self.y, y: -self.x }
+    }
 }
 
 impl Add for Vec2 {

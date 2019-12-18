@@ -12,8 +12,8 @@ use crate::my_strategy::{
     get_tile_by_vec2,
 };
 
-pub fn get_hit_probability_by_spread(shooter: Vec2, target: &Rect, spread: f64) -> f64 {
-    target.get_max_cross_section_from(shooter, spread)
+pub fn get_hit_probability_by_spread(shooter: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
+    target.get_max_cross_section_from(shooter, spread + bullet_size / shooter.distance(target.center()))
 }
 
 pub fn get_hit_probability_over_obstacles(shooter: &Rect, target: &Rect, level: &Level) -> f64 {
@@ -74,27 +74,39 @@ pub fn will_hit_by_line(begin: Vec2, end: Vec2, level: &Level) -> bool {
     true
 }
 
-pub fn get_hit_probability_by_spread_with_target(source: Vec2, target: Vec2, rect: &Rect, spread: f64, max_distance: f64) -> f64 {
+pub fn get_hit_probability_by_spread_with_target(source: Vec2, target: Vec2, rect: &Rect, spread: f64, bullet_size: f64, max_distance: f64) -> f64 {
     const N: usize = 10;
-    let to_target = (target - source).normalized() * max_distance;
+    let direction = (target - source).normalized();
+    let to_target = direction * max_distance;
+    let left = direction.left() * bullet_size;
+    let right = direction.right() * bullet_size;
     (0 .. N + 1)
         .map(|i| {
             let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
             let end = source + to_target.rotated(angle);
-            rect.has_intersection_with_line(source, end) as i32
+            rect.has_intersection_with_line(source + left, end + left) as i32
+            + rect.has_intersection_with_line(source, end) as i32
+            + rect.has_intersection_with_line(source + right, end + right) as i32
         })
         .sum::<i32>() as f64 / N as f64
 }
 
-pub fn get_distance_to_nearest_hit_obstacle(shooter: &Rect, target: Vec2, spread: f64, level: &Level) -> Option<f64> {
+pub fn get_distance_to_nearest_hit_obstacle(shooter: &Rect, target: Vec2, spread: f64, bullet_size: f64, level: &Level) -> Option<f64> {
     const N: usize = 10;
     let begin = shooter.center();
     let to_target = target - begin;
+    let direction = (target - begin).normalized();
+    let left = direction.left() * bullet_size;
+    let right = direction.right() * bullet_size;
     (0 .. N + 1)
         .filter_map(|i| {
             let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
             let end = begin + to_target.rotated(angle);
-            get_distance_to_nearest_hit_obstacle_by_line(begin, end, level)
+            [
+                get_distance_to_nearest_hit_obstacle_by_line(begin + left, end + left, level),
+                get_distance_to_nearest_hit_obstacle_by_line(begin, end , level),
+                get_distance_to_nearest_hit_obstacle_by_line(begin + right, end + right, level),
+            ].iter().filter_map(|&v| v).min_by_key(|&v| as_score(v))
         })
         .min_by_key(|&v| as_score(v))
 }
@@ -108,14 +120,19 @@ pub fn get_distance_to_nearest_hit_obstacle_by_line(begin: Vec2, end: Vec2, leve
     None
 }
 
-pub fn get_distance_to_nearest_hit_rect(source: Vec2, target: Vec2, rect: &Rect, spread: f64, max_distance: f64) -> Option<f64> {
+pub fn get_distance_to_nearest_hit_rect(source: Vec2, target: Vec2, rect: &Rect, spread: f64, bullet_size: f64, max_distance: f64) -> Option<f64> {
     const N: usize = 10;
-    let to_target = (target - source).normalized() * max_distance;
+    let direction = (target - source).normalized();
+    let to_target = direction * max_distance;
+    let left = direction.left() * bullet_size;
+    let right = direction.right() * bullet_size;
     (0 .. N + 1)
         .filter_map(|i| {
             let angle = ((2 * i) as f64 / N as f64 - 1.0) * spread;
             let end = source + to_target.rotated(angle);
-            if rect.has_intersection_with_line(source, end) {
+            if rect.has_intersection_with_line(source + left, end + left)
+                    || rect.has_intersection_with_line(source, end)
+                    || rect.has_intersection_with_line(source + right, end + right) {
                 Some(source.distance(rect.center()))
             } else {
                 None
