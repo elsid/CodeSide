@@ -48,7 +48,7 @@ pub fn get_optimal_tile(world: &World, optimal_tiles: &Vec<Option<(f64, Location
         for y in 1 .. get_level_size_y(world.level()) - 2 {
             let location = Location::new(x, y);
             let tile = world.tile(location);
-            if tile == Tile::Wall || is_busy_by_other(location, world.me_index(), optimal_tiles) {
+            if tile == Tile::Wall || is_busy_by_other(location, optimal_tiles, world) {
                 continue;
             }
             if let Some(path_info) = world.path_info(world.me().location(), location) {
@@ -88,9 +88,9 @@ pub fn get_optimal_tile(world: &World, optimal_tiles: &Vec<Option<(f64, Location
     optimal
 }
 
-pub fn is_busy_by_other(location: Location, me_index: usize, optimal_tiles: &Vec<Option<(f64, Location)>>) -> bool {
+pub fn is_busy_by_other(location: Location, optimal_tiles: &Vec<Option<(f64, Location)>>, world: &World) -> bool {
     for i in 0 .. optimal_tiles.len() {
-        if i == me_index {
+        if i == world.me_index() {
             continue;
         }
         if let Some((_, v)) = optimal_tiles[i].as_ref() {
@@ -99,7 +99,19 @@ pub fn is_busy_by_other(location: Location, me_index: usize, optimal_tiles: &Vec
             }
         }
     }
-    false
+    world.units().iter()
+        .filter(|v| !world.is_me(v))
+        .find(|v| {
+            for x in -1 .. 2 {
+                for y in -1 .. 3 {
+                    if v.location() == location + Vec2i::new(x, y) {
+                        return true;
+                    }
+                }
+            }
+            false
+        })
+        .is_some()
 }
 
 pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInfo) -> f64 {
