@@ -58,7 +58,7 @@ impl<'c, 'p> Planner<'c, 'p> {
         log!(current_tick, "state={:?}", initial_state);
 
         let (transitions, final_state, _iterations) = Search {
-            max_iterations: self.config.max_plan_iterations,
+            max_iterations: self.config.plan_max_iterations,
         }.perform(current_tick, initial_state, &mut visitor);
 
         let planner = final_state.map(|v| v.planner).unwrap_or(self.clone());
@@ -174,10 +174,10 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
         next.id = self.state_id_generator.next();
         next.depth += 1;
         *next.planner.simulator.me_mut().action_mut() = transition.action.clone();
-        let min = state.planner.config.min_ticks_per_transition;
-        let max = state.planner.config.max_ticks_per_transition;
+        let min = state.planner.config.plan_min_ticks_per_transition;
+        let max = state.planner.config.plan_max_ticks_per_transition;
         for _ in 0..next.depth.clamp1(min, max) {
-            next.planner.simulator.tick(time_interval, state.planner.config.microticks_per_tick, self.rng);
+            next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng);
         }
 
         #[cfg(feature = "enable_debug")]

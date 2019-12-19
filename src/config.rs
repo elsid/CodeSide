@@ -1,9 +1,9 @@
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub max_plan_iterations: usize,
-    pub min_ticks_per_transition: usize,
-    pub max_ticks_per_transition: usize,
-    pub microticks_per_tick: usize,
+    pub plan_max_iterations: usize,
+    pub plan_min_ticks_per_transition: usize,
+    pub plan_max_ticks_per_transition: usize,
+    pub plan_microticks_per_tick: usize,
     pub plan_distance_score_weight: f64,
     pub plan_health_diff_score_weight: f64,
     pub plan_game_score_diff_score_weight: f64,
@@ -31,10 +31,10 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         Self {
-            max_plan_iterations: 60,
-            min_ticks_per_transition: 3,
-            max_ticks_per_transition: 7,
-            microticks_per_tick: 3,
+            plan_max_iterations: 60,
+            plan_min_ticks_per_transition: 3,
+            plan_max_ticks_per_transition: 7,
+            plan_microticks_per_tick: 3,
             plan_distance_score_weight: 0.25,
             plan_health_diff_score_weight: 1.0,
             plan_game_score_diff_score_weight: 1.0,
