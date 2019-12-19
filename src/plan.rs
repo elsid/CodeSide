@@ -155,6 +155,10 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
     }
 
     fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
+        if state.depth >= state.planner.config.plan_max_state_depth {
+            return Vec::new();
+        }
+
         let mut result = Vec::new();
 
         result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
