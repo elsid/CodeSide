@@ -40,7 +40,11 @@ use crate::my_strategy::{
 
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
+    Object,
+    Target,
     WalkGrid,
+    as_score,
+    get_nearest_hit,
     get_tile_location,
     normalize_angle,
 };
@@ -160,10 +164,10 @@ impl MyStrategyImpl {
             }
         }
         let nearest_opponent = self.world.units().iter()
-            .filter(|other| other.player_id != me.player_id)
-            .filter(|other| {
+            .filter(|unit| self.world.is_opponent(unit))
+            .filter(|unit| {
                 if let Some(weapon) = self.world.me().weapon.as_ref() {
-                    should_shoot(&self.world.me().rect(), &other.rect(), weapon, &self.world, true)
+                    should_shoot(&self.world.me().rect(), &unit, weapon, &self.world, true)
                 } else {
                     false
                 }
@@ -246,23 +250,38 @@ impl MyStrategyImpl {
                     });
                 }
                 if let Some(weapon) = me.weapon.as_ref() {
-                    const N: usize = 10;
-                    let to_target = (opponent.rect().center() - me.rect().center()).normalized() * self.world.max_distance();
-                    for i in 0 .. N + 1 {
-                        let angle = ((2 * i) as f64 / N as f64 - 1.0) * weapon.spread;
-                        let end = me.rect().center() + to_target.rotated(normalize_angle(angle));
-                        let color = game.units.iter()
-                            .filter(|v| self.world.is_teammate(v))
-                            .find(|v| v.rect().has_intersection_with_line(me.rect().center(), end))
-                            .map(|_| ColorF32 { a: 0.33, r: 0.66, g: 0.33, b: 0.0 })
-                            .unwrap_or(ColorF32 { a: 0.33, r: 0.0, g: 0.66, b: 0.33 });
-                        #[cfg(feature = "enable_debug")]
-                        debug.draw(CustomData::Line {
-                            p1: me.rect().center().as_model_f32(),
-                            p2: end.as_model_f32(),
-                            width: 0.075,
-                            color,
-                        });
+                    let source = me.rect().center();
+                    let direction = (opponent.rect().center() - source).normalized();
+                    let to_target = direction * self.world.max_distance();
+                    let left = direction.left() * weapon.params.bullet.size;
+                    let right = direction.right() * weapon.params.bullet.size;
+                    let number_of_directions = self.world.config().hit_number_of_directions;
+                    let target = Target::from_unit(opponent);
+
+                    for i in 0 .. number_of_directions {
+                        let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * weapon.spread;
+                        let destination = source + to_target.rotated(angle);
+                        let rays = [
+                            (source, destination),
+                            (source + left, destination + left),
+                            (source + right, destination + right),
+                        ];
+                        for (src, dst, hit) in rays.into_iter().filter_map(|&(src, dst)| get_nearest_hit(me.id, src, dst, &target, &self.world).map(|v| (src, dst, v))).min_by_key(|(_, _, v)| as_score(v.distance)) {
+                            let color = match hit.object {
+                                Object::Wall => ColorF32 { a: 0.33, r: 0.66, g: 0.66, b: 0.66 },
+                                Object::OpponentUnit => ColorF32 { a: 0.33, r: 0.0, g: 0.66, b: 0.33 },
+                                Object::TeammateUnit => ColorF32 { a: 0.33, r: 0.66, g: 0.33, b: 0.0 },
+                                Object::OpponentMine => ColorF32 { a: 0.33, r: 0.5, g: 0.33, b: 0.0 },
+                                Object::TeammateMine => ColorF32 { a: 0.33, r: 0.33, g: 0.5, b: 0.0 },
+                            };
+                            #[cfg(feature = "enable_debug")]
+                            debug.draw(CustomData::Line {
+                                p1: source.as_model_f32(),
+                                p2: (source + (destination - source).normalized() * hit.distance).as_model_f32(),
+                                width: 0.075,
+                                color,
+                            });
+                        }
                     }
                 }
             }

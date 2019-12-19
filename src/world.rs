@@ -261,6 +261,10 @@ impl World {
     pub fn current_tick(&self) -> i32 {
         self.game.current_tick
     }
+
+    pub fn is_teammate_mine(&self, mine: &Mine) -> bool {
+        mine.player_id == self.me.player_id
+    }
 }
 
 #[derive(Clone, Debug)]

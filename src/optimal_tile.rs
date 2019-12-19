@@ -9,6 +9,7 @@ use model::{
 use model::{
     Item,
     Tile,
+    Unit,
     Weapon,
     WeaponType,
 };
@@ -24,15 +25,14 @@ use crate::my_strategy::{
     Positionable,
     Rect,
     Rectangular,
+    Target,
     TilePathInfo,
     Vec2,
     Vec2i,
     World,
     as_score,
-    get_distance_to_nearest_hit_obstacle,
-    get_distance_to_nearest_hit_rect,
+    get_hit_probabilities,
     get_hit_probability_by_spread,
-    get_hit_probability_by_spread_with_target,
     get_hit_probability_over_obstacles,
     get_level_size_x,
     get_level_size_y,
@@ -153,19 +153,22 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         _ => false,
     }) as i32 as f64;
     let number_of_opponents = world.units().iter()
-        .filter(|unit| unit.player_id != world.me().player_id)
+        .filter(|unit| world.is_opponent(unit))
         .count();
-    let hit_by_opponent_score = world.units().iter()
-        .filter(|unit| unit.player_id != world.me().player_id)
-        .map(|unit| {
-            if let Some(weapon) = unit.weapon.as_ref() {
-                get_hit_probability_over_obstacles(&unit.rect(), &me, world.level())
-                    * get_hit_probability_by_spread(unit.rect().center(), &me, weapon.spread, weapon.params.bullet.size)
-            } else {
-                0.0
-            }
-        })
-        .sum::<f64>() / (number_of_opponents as f64);
+    let hit_by_opponent_score = if number_of_opponents > 0 {
+        world.units().iter()
+            .filter(|unit| world.is_opponent(unit))
+            .map(|unit| {
+                if let Some(weapon) = unit.weapon.as_ref() {
+                    get_hit_probabilities(unit.id, unit.rect().center(), &Target::from_unit(world.me()), weapon.spread, weapon.params.bullet.size, world).target
+                } else {
+                    0.0
+                }
+            })
+            .sum::<f64>() / (number_of_opponents as f64)
+    } else {
+        0.0
+    };
     let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
     let mine_obstacle_score = path_info.has_mine() as i32 as f64;
     let loot_box_mine_score = (match world.tile_item(location) {
@@ -174,14 +177,15 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     }) as i32 as f64;
     let nearest_opponent = if let Some(weapon) = world.me().weapon.as_ref() {
         world.units().iter()
-            .filter(|unit| world.is_opponent(unit) && should_shoot(&me, &unit.rect(), weapon, world, false))
+            .filter(|unit| world.is_opponent(unit) && should_shoot(&me, &unit, weapon, world, false))
             .min_by_key(|unit| as_score(position.distance(unit.position())))
     } else {
         None
     };
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        get_hit_probability_by_spread(center, &unit.rect(), weapon.spread, weapon.params.bullet.size)
-            * get_hit_probability_over_obstacles(&me, &unit.rect(), world.level())
+        let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
+        get_hit_probability_by_spread(center, &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size)
+            * hit_probabilities.target
     } else {
         0.0
     };
@@ -207,7 +211,8 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     let hit_teammates_score = if let (true, Some(weapon)) = (number_of_opponents > 0, world.me().weapon.as_ref()) {
         world.units().iter()
             .filter(|v| world.is_opponent(v))
-            .map(|v| get_hit_teammates_probability(&me, v.rect().center(), weapon.spread, weapon.params.bullet.size, world))
+            .map(|v| get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
+            .map(|v| v.teammate_units)
             .sum::<f64>() / number_of_opponents as f64
     } else {
         0.0
@@ -240,48 +245,24 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
     }
 }
 
-pub fn get_hit_teammates_probability(me: &Rect, target: Vec2, spread: f64, bullet_size: f64, world: &World) -> f64 {
-    if world.number_of_teammates() > 0 {
-        world.units().iter()
-            .filter(|unit| world.is_teammate(unit))
-            .map(|unit| {
-                get_hit_probability_over_obstacles(me, &unit.rect(), world.level())
-                    * get_hit_probability_by_spread_with_target(me.center(), target, &unit.rect(), spread, bullet_size, world.max_distance())
-            })
-            .sum::<f64>() / world.number_of_teammates() as f64
-    } else {
-        0.0
-    }
-}
-
-pub fn should_shoot(me: &Rect, opponent: &Rect, weapon: &Weapon, world: &World, use_current_spread: bool) -> bool {
+pub fn should_shoot(me: &Rect, opponent: &Unit, weapon: &Weapon, world: &World, use_current_spread: bool) -> bool {
     let spread = if use_current_spread {
         weapon.spread
     } else {
         weapon.params.min_spread
     };
 
-    if let Some(explosion) = weapon.params.explosion.as_ref() {
-        if let Some(distance_to_nearest_obstacle) = get_distance_to_nearest_hit_obstacle(me, opponent.center(), spread, weapon.params.bullet.size, world.level()) {
-            if distance_to_nearest_obstacle < explosion.radius + 2.0 {
-                return false;
-            }
-        }
-        let distance_to_nearest_unit = world.units().iter()
-            .filter(|v| !world.is_me(v))
-            .filter_map(|v| get_distance_to_nearest_hit_rect(me.center(), opponent.center(), &v.rect(), spread, weapon.params.bullet.size, world.max_distance()))
-            .min_by_key(|&v| as_score(v));
-        if let Some(v) = distance_to_nearest_unit {
-            if v < explosion.radius + 3.0 {
-                return false;
-            }
+    let hit_probabilities = get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
+
+    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
+        if min_distance < explosion.radius + 2.0 {
+            return false;
         }
     }
 
-    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), opponent, spread, weapon.params.bullet.size);
-    let hit_probability_over_obstacles = get_hit_probability_over_obstacles(me, opponent, world.level());
-    let hit_teammates_probability = get_hit_teammates_probability(me, opponent.center(), spread, weapon.params.bullet.size, &world);
+    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), &opponent.rect(), spread, weapon.params.bullet.size);
+
     hit_probability_by_spread >= world.config().min_hit_probability_by_spread_to_shoot
-    && hit_probability_over_obstacles >= world.config().min_hit_probability_over_obstacles_to_shoot
-    && hit_teammates_probability <= world.config().max_hit_teammates_probability_to_shoot
+    && hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_hit_target_probability_to_shoot
+    && hit_probabilities.teammate_units <= world.config().max_hit_teammates_probability_to_shoot
 }

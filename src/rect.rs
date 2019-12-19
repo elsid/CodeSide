@@ -112,4 +112,12 @@ impl Rect {
         }
         u1 <= u2
     }
+
+    pub fn get_intersection_with_line(&self, a: Vec2, b: Vec2) -> Option<f64> {
+        if self.has_intersection_with_line(a, b) {
+            Some(self.center.distance(a))
+        } else {
+            None
+        }
+    }
 }
