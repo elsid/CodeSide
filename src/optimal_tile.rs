@@ -118,7 +118,7 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
     get_tile_score_components(world, location, path_info).iter().sum()
 }
 
-pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 15] {
+pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 16] {
     let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
     let me = Rect::new(center, Vec2::from_model(&world.me().size));
@@ -212,6 +212,9 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
+    let bullet_track_score = path_info.bullet_min_time_to()
+        .map(|v| v.min(world.config().optimal_tile_max_bullet_time))
+        .unwrap_or(world.config().optimal_tile_max_bullet_time);
 
     [
         distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight,
@@ -229,6 +232,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         bullets_score * world.config().optimal_tile_bullets_score_weight,
         mine_obstacle_score * world.config().optimal_tile_mine_obstacle_score_weight,
         hit_teammates_score * world.config().optimal_tile_hit_teammates_score_weight,
+        bullet_track_score * world.config().optimal_tile_bullet_track_score_weight,
     ]
 }
 

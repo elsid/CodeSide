@@ -18,6 +18,7 @@ use crate::my_strategy::{
     Positionable,
     Vec2,
     Vec2i,
+    WalkGrid,
     as_score,
     get_level_size_x,
     get_level_size_y,
@@ -39,9 +40,10 @@ pub struct World {
     backtracks: Vec<Vec<usize>>,
     teammates: Vec<i32>,
     me_index: usize,
-    changed_locations: bool,
+    rebuld_tiles_path: bool,
     max_distance: f64,
     number_of_teammates: usize,
+    bullet_tracks: Vec<Vec<Option<f64>>>,
 }
 
 impl World {
@@ -59,31 +61,57 @@ impl World {
             paths: (0 .. teammates.len()).map(|_| BTreeMap::new()).collect(),
             backtracks: (0 .. teammates.len()).map(|_| Vec::new()).collect(),
             number_of_teammates: teammates.len() - 1,
+            bullet_tracks: (0 .. teammates.len()).map(|_| std::iter::repeat(None).take(get_level_size_x(&game.level) * get_level_size_y(&game.level)).collect()).collect(),
             teammates,
             config,
             me,
             game,
             me_index: 0,
-            changed_locations: true,
+            rebuld_tiles_path: true,
             max_distance: size.norm(),
         }
     }
 
     pub fn update(&mut self, game: &Game) {
-        let old_units_locations = get_units_locations(&self.game.units);
+        self.rebuld_tiles_path = self.paths.iter().find(|v| v.is_empty()).is_some()
+            || self.game.units.len() != game.units.len()
+            || self.game.bullets.len() != game.bullets.len()
+            || get_units_locations(&self.game.units) != get_units_locations(&game.units)
+            || get_bullets_locations(&self.game.bullets) != get_bullets_locations(&game.bullets);
         self.game = game.clone();
         self.items_by_tile = game.loot_boxes.iter()
             .map(|v| (v.location(), v.item.clone()))
             .collect();
-        let new_units_locations = get_units_locations(&self.game.units);
-        self.changed_locations = self.paths.iter().find(|v| v.is_empty()).is_some() || old_units_locations != new_units_locations;
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate(v)).count();
     }
 
     pub fn update_me(&mut self, me: &Unit) {
         self.me = me.clone();
         self.me_index = self.teammates.iter().position(|&v| v == self.me.id).unwrap();
-        if self.changed_locations {
+        if self.rebuld_tiles_path {
+            for v in self.bullet_tracks[self.me_index].iter_mut() {
+                *v = None;
+            }
+            for bullet in self.game.bullets.iter() {
+                if bullet.unit_id != me.id {
+                    let velocity = Vec2::from_model(&bullet.velocity);
+                    let speed = velocity.norm();
+                    for position in WalkGrid::new(bullet.position(), bullet.position() + velocity * self.max_distance()) {
+                        if get_tile_by_vec2(&self.game.level, position) == Tile::Wall {
+                            break;
+                        }
+                        let index = get_tile_index(&self.game.level, position.as_location());
+                        let time = bullet.position().distance(position.as_location().center()) * speed;
+                        if let Some(v) = self.bullet_tracks[self.me_index][index] {
+                            if v > time {
+                                self.bullet_tracks[self.me_index][index] = Some(time);
+                            }
+                        } else {
+                            self.bullet_tracks[self.me_index][index] = Some(time);
+                        }
+                    }
+                }
+            }
             let source = me.location();
             let (infos, backtrack) = get_tile_path_infos(source, self);
             for (destination, info) in infos.into_iter() {
@@ -192,6 +220,10 @@ impl World {
             .is_some()
     }
 
+    pub fn bullet_min_time_to(&self, location: Location) -> Option<f64> {
+        self.bullet_tracks[self.me_index][get_tile_index(&self.game.level, location)]
+    }
+
     pub fn paths(&self) -> &BTreeMap<(Location, Location), TilePathInfo> {
         &self.paths[self.me_index]
     }
@@ -267,6 +299,7 @@ impl World {
 pub struct TilePathInfo {
     has_opponent_unit: bool,
     has_mine: bool,
+    bullet_min_time_to: Option<f64>,
     distance: f64,
 }
 
@@ -279,6 +312,11 @@ impl TilePathInfo {
     #[inline(always)]
     pub fn has_mine(&self) -> bool {
         self.has_mine
+    }
+
+    #[inline(always)]
+    pub fn bullet_min_time_to(&self) -> Option<f64> {
+        self.bullet_min_time_to
     }
 
     #[inline(always)]
@@ -301,6 +339,8 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
     let mut has_mine: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
 
     let mut backtrack: Vec<usize> = (0 .. size_x * size_y).collect();
+
+    let mut bullet_min_time_to: Vec<Option<f64>> = std::iter::repeat(None).take(size_x * size_y).collect();
 
     let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
     ordered.push((0, from));
@@ -334,6 +374,11 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
                 distances[neighbor_index] = new_distance;
                 has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || world.has_opponent_unit(neighbor_location);
                 has_mine[neighbor_index] = has_mine[node_index] || world.has_mine(neighbor_location);
+                bullet_min_time_to[neighbor_index] = if let Some(node_time) = bullet_min_time_to[node_index] {
+                    world.bullet_min_time_to(neighbor_location).map(|v| v.min(node_time)).or(Some(node_time))
+                } else {
+                    world.bullet_min_time_to(neighbor_location)
+                };
                 backtrack[neighbor_index] = node_index;
                 if destinations.insert(neighbor_location) {
                     ordered.push((as_score(distance), neighbor_location));
@@ -354,6 +399,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
                     distance,
                     has_opponent_unit: has_opponent_unit[index],
                     has_mine: has_mine[index],
+                    bullet_min_time_to: bullet_min_time_to[index],
                 }));
             }
         }
@@ -428,6 +474,14 @@ pub fn is_walkable(tile: Tile) -> bool {
 fn get_units_locations(units: &Vec<Unit>) -> Vec<(i32, Location)> {
     let mut result: Vec<(i32, Location)> = units.iter()
         .map(|v| (v.id, v.location()))
+        .collect();
+    result.sort_by_key(|&(id, _)| id);
+    result
+}
+
+fn get_bullets_locations(bullets: &Vec<Bullet>) -> Vec<Location> {
+    let mut result: Vec<Location> = bullets.iter()
+        .map(|v| v.location())
         .collect();
     result.sort();
     result
