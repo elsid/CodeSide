@@ -53,7 +53,7 @@ impl Search {
                 log!(current_tick, "optimal_final_state={:?}", state.state);
             }
             if iterations >= self.max_iterations {
-                break;
+                continue;
             }
             iterations += 1;
             for transition in visitor.get_transitions(&state.state) {
