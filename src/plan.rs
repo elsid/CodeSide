@@ -151,7 +151,7 @@ impl<'r, 'd> VisitorImpl<'r, 'd> {
 
 impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> {
     fn is_final(&self, state: &State) -> bool {
-        true
+        state.depth >= state.planner.config.plan_min_state_depth
     }
 
     fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
