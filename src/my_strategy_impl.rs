@@ -41,6 +41,7 @@ use crate::my_strategy::{
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
     WalkGrid,
+    get_tile_location,
     normalize_angle,
 };
 
@@ -139,6 +140,23 @@ impl MyStrategyImpl {
                         color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
                     });
                 }
+            }
+        }
+        #[cfg(feature = "enable_debug")]
+        {
+            let backtrack = self.world.backtrack();
+            for i in 0 .. backtrack.len() {
+                if backtrack[i] == i {
+                    continue;
+                }
+                let dst = get_tile_location(self.world.level(), i).center();
+                let src = get_tile_location(self.world.level(), backtrack[i]).center();
+                debug.draw(CustomData::Line {
+                    p1: get_tile_location(self.world.level(), i).center().as_model_f32(),
+                    p2: get_tile_location(self.world.level(), backtrack[i]).center().as_model_f32(),
+                    width: 0.05,
+                    color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.33 },
+                });
             }
         }
         let nearest_opponent = self.world.units().iter()
