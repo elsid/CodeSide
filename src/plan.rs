@@ -161,11 +161,11 @@ impl<'r, 'c, 'd, 'p> Visitor<State<'c, 'p>, Transition> for VisitorImpl<'r, 'd> 
 
         let mut result = Vec::new();
 
-        result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-        result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
+        result.push(Transition::jump(self.transition_id_generator.next()));
         result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
         result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
-        result.push(Transition::jump(self.transition_id_generator.next()));
+        result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
+        result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
         result.push(Transition::jump_down(self.transition_id_generator.next()));
         result.push(Transition::idle(self.transition_id_generator.next()));
 
