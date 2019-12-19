@@ -22,6 +22,7 @@ dump_level = []
 verify_collisions = []
 enable_log = []
 dump_properties_json = []
+weapon_spread = []
 
 [[bench]]
 name = "simulator"

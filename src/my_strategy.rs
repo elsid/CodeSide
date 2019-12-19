@@ -162,9 +162,14 @@ pub mod my_strategy_dump_opponent;
 #[path = "my_strategy_dump_properties_json.rs"]
 pub mod my_strategy_dump_properties_json;
 
+#[cfg(feature = "weapon_spread")]
+#[path = "my_strategy_weapon_spread.rs"]
+pub mod my_strategy_weapon_spread;
+
 #[cfg(all(not(feature = "dump_examples"),
           not(feature = "dump_opponent"),
-          not(feature = "dump_properties_json")))]
+          not(feature = "dump_properties_json"),
+          not(feature = "weapon_spread")))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
 
@@ -177,9 +182,13 @@ pub use self::my_strategy_dump_opponent::MyStrategyImpl;
 #[cfg(feature = "dump_properties_json")]
 pub use self::my_strategy_dump_properties_json::MyStrategyImpl;
 
+#[cfg(feature = "weapon_spread")]
+pub use self::my_strategy_weapon_spread::MyStrategyImpl;
+
 #[cfg(all(not(feature = "dump_examples"),
           not(feature = "dump_opponent"),
-          not(feature = "dump_properties_json")))]
+          not(feature = "dump_properties_json"),
+          not(feature = "weapon_spread")))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
@@ -199,11 +208,11 @@ impl MyStrategy {
     ) -> model::UnitAction {
         if self.strategy_impl.is_none() {
             let config = get_config();
-            #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"))))]
+            #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"), not(feature = "weapon_spread"))))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
             }
-            #[cfg(any(feature = "dump_examples", feature = "dump_opponent", feature = "dump_properties_json"))]
+            #[cfg(any(feature = "dump_examples", feature = "dump_opponent", feature = "dump_properties_json", feature = "weapon_spread"))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new());
             }
