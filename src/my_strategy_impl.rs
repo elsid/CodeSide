@@ -66,6 +66,7 @@ pub struct MyStrategyImpl {
     optimal_tiles: Vec<Option<(f64, Location)>>,
     calls_per_tick: usize,
     last_tick: i32,
+    slow_down: bool,
 }
 
 impl MyStrategyImpl {
@@ -92,6 +93,7 @@ impl MyStrategyImpl {
             world,
             calls_per_tick: 0,
             last_tick: -1,
+            slow_down: false,
         }
     }
 
@@ -212,34 +214,44 @@ impl MyStrategyImpl {
                 )
                 .unwrap()
             });
-        let mut target = Vec2::from_model(&me.position);
-        if let Some((score, location)) = get_optimal_tile(&self.world, &self.optimal_tiles, debug) {
-            #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Rect {
-                pos: (location.center() - Vec2::new(0.25, 0.25)).as_model_f32(),
-                size: Vec2F32 { x: 0.5, y: 0.5 },
-                color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
-            });
-            #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Line {
-                p1: self.world.me().rect().center().as_model_f32(),
-                p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
-                width: 0.1,
-                color: ColorF32 { a: 0.66, r: 0.0, g: 0.66, b: 0.0 },
-            });
-            target = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
-            self.optimal_tiles[self.world.me_index()] = Some((score, location));
-        } else if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
-            target = weapon.position();
-        } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
-            target = health_pack.position();
-        } else if let Some(opponent) = nearest_opponent {
-            target = opponent.position();
-        }
-        #[cfg(feature = "enable_debug")]
-        debug.draw(CustomData::Log {
-            text: format!("target: {:?}", target),
-        });
+        let optimal_tile_target = if !self.slow_down {
+            if let Some((score, location)) = get_optimal_tile(&self.world, &self.optimal_tiles, debug) {
+                #[cfg(feature = "enable_debug")]
+                debug.draw(CustomData::Rect {
+                    pos: (location.center() - Vec2::new(0.25, 0.25)).as_model_f32(),
+                    size: Vec2F32 { x: 0.5, y: 0.5 },
+                    color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
+                });
+                #[cfg(feature = "enable_debug")]
+                debug.draw(CustomData::Line {
+                    p1: self.world.me().rect().center().as_model_f32(),
+                    p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
+                    width: 0.1,
+                    color: ColorF32 { a: 0.66, r: 0.0, g: 0.66, b: 0.0 },
+                });
+                self.optimal_tiles[self.world.me_index()] = Some((score, location));
+                Some(Vec2::new(location.x() as f64 + 0.5, location.y() as f64))
+            } else {
+                None
+            }
+        } else {
+            if let Some((_, location)) = self.optimal_tiles[self.world.me_index()] {
+                Some(Vec2::new(location.x() as f64 + 0.5, location.y() as f64))
+            } else {
+                None
+            }
+        };
+        let global_target = if let Some(v) = optimal_tile_target {
+            v
+        } else {
+            if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
+                weapon.position()
+            } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
+                health_pack.position()
+            } else {
+                me.position()
+            }
+        };
         let (shoot, aim) = if let Some(opponent) = nearest_opponent {
             #[cfg(feature = "enable_debug")]
             {
@@ -298,9 +310,8 @@ impl MyStrategyImpl {
         } else {
             (false, model::Vec2F64 { x: 0.0, y: 0.0 })
         };
-        let tiles_path = self.world.find_shortcut_tiles_path(self.world.me().location(), target.as_location());
-        if !tiles_path.is_empty() {
-            target = tiles_path[0].bottom();
+        let tiles_path = self.world.find_shortcut_tiles_path(self.world.me().location(), global_target.as_location());
+        let local_target = if !tiles_path.is_empty() {
             #[cfg(feature = "enable_debug")]
             {
                 debug.draw(CustomData::Line {
@@ -318,9 +329,16 @@ impl MyStrategyImpl {
                     });
                 }
             }
-        }
+            tiles_path[0].bottom()
+        } else {
+            global_target
+        };
+
+        #[cfg(feature = "enable_debug")]
+        debug.draw(CustomData::Log { text: format!("global_target: {:?} local_target: {:?}", global_target, local_target) });
+
         let simulator = Simulator::new(&self.world, me.id);
-        let plan = Planner::new(target, &self.config, self.world.paths(), simulator)
+        let plan = Planner::new(local_target, &self.config, self.world.paths(), simulator)
             .make(game.current_tick, &mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
@@ -335,23 +353,23 @@ impl MyStrategyImpl {
             debug.draw(CustomData::Log { text: format!("action: {:?}", action) });
             return action;
         }
-        let mut jump = target.y() > me.position.y;
-        if target.x() > me.position.x
+        let mut jump = local_target.y() > me.position.y;
+        if local_target.x() > me.position.x
             && self.world.game().level.tiles[(me.position.x + 1.0) as usize][(me.position.y) as usize]
                 == Tile::Wall
         {
             jump = true
         }
-        if target.x() < me.position.x
+        if local_target.x() < me.position.x
             && self.world.game().level.tiles[(me.position.x - 1.0) as usize][(me.position.y) as usize]
                 == Tile::Wall
         {
             jump = true
         }
         UnitAction {
-            velocity: target.x() - me.position.x,
+            velocity: local_target.x() - me.position.x,
             jump,
-            jump_down: target.y() < me.position.y,
+            jump_down: local_target.y() < me.position.y,
             shoot,
             aim,
             reload: false,
@@ -383,15 +401,18 @@ impl MyStrategyImpl {
         self.max_time_budget_spent = self.max_time_budget_spent.max(time_budget_spent);
         self.calls_per_tick = 0;
 
-        #[cfg(not(feature = "disable_output"))]
-        {
-            if cpu_time_budget_spent > 90.0 {
+        if cpu_time_budget_spent > 90.0 {
+            self.slow_down = true;
+            #[cfg(not(feature = "disable_output"))]
+            {
                 eprintln!(
                     "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                     self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
                     cpu_time_budget_spent, time_budget_spent, self.max_cpu_time_budget_spent, self.max_time_budget_spent
                 );
             }
+        } else {
+            self.slow_down = false;
         }
     }
 
