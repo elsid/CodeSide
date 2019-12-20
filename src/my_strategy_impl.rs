@@ -65,6 +65,7 @@ pub struct MyStrategyImpl {
     max_cpu_time_budget_spent: f64,
     optimal_tiles: Vec<Option<(f64, Location)>>,
     calls_per_tick: usize,
+    last_tick: i32,
 }
 
 impl MyStrategyImpl {
@@ -90,6 +91,7 @@ impl MyStrategyImpl {
             optimal_tiles: std::iter::repeat(None).take(world.properties().team_size as usize).collect(),
             world,
             calls_per_tick: 0,
+            last_tick: -1,
         }
     }
 
@@ -104,7 +106,8 @@ impl MyStrategyImpl {
         fn distance_sqr(a: &Vec2F64, b: &Vec2F64) -> f64 {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
-        if game.current_tick != self.world.game().current_tick {
+        if self.last_tick != game.current_tick {
+            self.last_tick = game.current_tick;
             self.world.update(game);
         }
         self.world.update_me(me);
