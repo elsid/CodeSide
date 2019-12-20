@@ -288,10 +288,13 @@ impl Simulator {
                             self.units[unit].base.on_ladder = true;
                             self.units[unit].base.on_ground = true;
                             allow_jump(&mut self.units[unit], &self.properties);
+                            break;
                         }
                     },
                     Tile::JumpPad => {
-                        start_pad_jump(&mut self.units[unit], &self.properties);
+                        if !self.units[unit].base.on_ladder {
+                            start_pad_jump(&mut self.units[unit], &self.properties);
+                        }
                     },
                     _ => (),
                 }
