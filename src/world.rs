@@ -217,13 +217,8 @@ impl World {
 
     pub fn has_mine(&self, location: Location) -> bool {
         self.mines.iter()
-            .filter(|v| v.player_id != self.me.player_id)
-            .find(|v| v.location() == location)
+            .find(|v| v.location().center().distance(location.center()) <= 2.0 * self.properties.mine_trigger_radius)
             .is_some()
-    }
-
-    pub fn paths(&self) -> &BTreeMap<(Location, Location), TilePathInfo> {
-        &self.paths[self.me_index]
     }
 
     pub fn backtrack(&self) -> &Vec<usize> {

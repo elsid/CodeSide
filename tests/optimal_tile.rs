@@ -125,7 +125,7 @@ fn test_get_tile_score_for_tile_with_mine() {
     let location = world.mines()[0].location();
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        -1.47
+        -5.970000000000001
     );
 }
 
@@ -135,7 +135,7 @@ fn test_get_tile_score_for_tile_with_mine_on_the_way() {
     let location = Location::new(24, 9);
     assert_eq!(
         get_tile_score(&world, location, world.path_info(world.me().location(), location).unwrap()),
-        -0.975
+        -5.975
     );
 }
 

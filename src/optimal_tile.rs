@@ -217,7 +217,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     };
     let mines_score = if world.mines().len() > 0 {
         world.mines().iter()
-            .filter(|v| v.rect().has_collision(&tile_rect))
+            .filter(|v| v.rect().center().distance(tile_rect.center()) <= 2.0 * world.properties().mine_trigger_radius)
             .count() as f64 / (world.mines().len() as f64)
     } else {
         0.0
