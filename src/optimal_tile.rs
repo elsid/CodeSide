@@ -163,7 +163,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
                 if let Some(weapon) = unit.weapon.as_ref() {
                     if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
                         let hit_probabilities = get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world);
-                        hit_probabilities.target as f64 / hit_probabilities.total as f64
+                        (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                     } else {
                         0.0
                     }
