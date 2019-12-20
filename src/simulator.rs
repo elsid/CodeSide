@@ -25,6 +25,7 @@ use crate::my_strategy::{
     get_level_size_x,
     get_level_size_y,
     get_tile,
+    remove_if,
 };
 
 #[derive(Clone)]
@@ -136,9 +137,9 @@ impl<'r> Simulator<'r> {
         self.current_tick += 1;
         self.current_time += time_interval;
         self.me_index = self.units.iter().position(|v| v.is_me()).unwrap();
-        self.bullets = self.bullets.iter().filter(|v| !v.hit).map(|v| v.clone()).collect();
-        self.mines = self.mines.iter().filter(|v| v.base.state != MineState::Exploded).map(|v| v.clone()).collect();
-        self.loot_boxes = self.loot_boxes.iter().filter(|v| !v.used).map(|v| v.clone()).collect();
+        remove_if(&mut self.bullets, |v| v.hit);
+        remove_if(&mut self.mines, |v| v.base.state == MineState::Exploded);
+        remove_if(&mut self.loot_boxes, |v| v.used);
     }
 
     fn micro_tick(&mut self, time_interval: f64, rng: &mut XorShiftRng) {

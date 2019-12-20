@@ -83,3 +83,22 @@ pub fn normalize_angle(value: f64) -> f64 {
         value
     }
 }
+
+pub fn remove_if<T: Clone, F>(vec: &mut Vec<T>, predicate: F)
+        where F: Fn(&T) -> bool {
+    let end = vec.len();
+    let mut i = 0;
+    let mut shrink = 0;
+    while i + shrink < end {
+        if predicate(&vec[i]) {
+            if i + 1 + shrink < end {
+                let (left, right) = vec.split_at_mut(i + 1);
+                std::mem::swap(&mut left[i], &mut right[right.len() - 1 - shrink]);
+            }
+            shrink += 1;
+        } else {
+            i += 1;
+        }
+    }
+    vec.truncate(end - shrink);
+}
