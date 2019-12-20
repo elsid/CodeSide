@@ -161,8 +161,12 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
             .filter(|unit| world.is_opponent(unit))
             .map(|unit| {
                 if let Some(weapon) = unit.weapon.as_ref() {
-                    let hit_probabilities = get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world);
-                    hit_probabilities.target as f64 / hit_probabilities.total as f64
+                    if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+                        let hit_probabilities = get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world);
+                        hit_probabilities.target as f64 / hit_probabilities.total as f64
+                    } else {
+                        0.0
+                    }
                 } else {
                     0.0
                 }
@@ -189,8 +193,12 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         if by_spread == 0.0 {
             0.0
         } else {
-            let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
-            by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
+            if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+                let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
+                by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
+            } else {
+                0.0
+            }
         }
     } else {
         0.0
@@ -215,11 +223,15 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         0.0
     };
     let hit_teammates_score = if let (true, Some(weapon)) = (number_of_opponents > 0, world.me().weapon.as_ref()) {
-        world.units().iter()
-            .filter(|v| world.is_opponent(v))
-            .map(|v| get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
-            .map(|v| v.teammate_units as f64 / v.total as f64)
-            .sum::<f64>() / number_of_opponents as f64
+        if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+            world.units().iter()
+                .filter(|v| world.is_opponent(v))
+                .map(|v| get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
+                .map(|v| v.teammate_units as f64 / v.total as f64)
+                .sum::<f64>() / number_of_opponents as f64
+        } else {
+            0.0
+        }
     } else {
         0.0
     };
