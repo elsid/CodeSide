@@ -41,7 +41,6 @@ pub struct Simulator {
     current_time: f64,
     current_micro_tick: i32,
     me_index: usize,
-    world_size: Vec2,
     my_player_index: usize,
 }
 
@@ -87,7 +86,6 @@ impl Simulator {
             current_time: 0.0,
             current_micro_tick: 0,
             me_index,
-            world_size: world.size(),
             my_player_index: world.players().iter().position(|v| v.id == player_id).unwrap(),
         }
     }
@@ -130,10 +128,6 @@ impl Simulator {
 
     pub fn loot_boxes(&self) -> &Vec<LootBoxExt> {
         &self.loot_boxes
-    }
-
-    pub fn world_size(&self) -> Vec2 {
-        self.world_size
     }
 
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {

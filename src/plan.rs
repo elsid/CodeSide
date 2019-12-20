@@ -43,11 +43,12 @@ pub struct Planner<'c, 'p> {
     config: &'c Config,
     paths: &'p BTreeMap<(Location, Location), TilePathInfo>,
     simulator: Simulator,
+    max_distance: f64,
 }
 
 impl<'c, 'p> Planner<'c, 'p> {
-    pub fn new(target: Vec2, config: &'c Config, paths: &'p BTreeMap<(Location, Location), TilePathInfo>, simulator: Simulator) -> Self {
-        Self { target, config, paths, simulator }
+    pub fn new(target: Vec2, config: &'c Config, paths: &'p BTreeMap<(Location, Location), TilePathInfo>, simulator: Simulator, max_distance: f64) -> Self {
+        Self { target, config, paths, simulator, max_distance }
     }
 
     pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
@@ -79,9 +80,7 @@ impl<'c, 'p> Planner<'c, 'p> {
     }
 
     pub fn get_score_components(&self) -> [f64; 3] {
-        let max_distance = self.simulator.world_size().norm();
-
-        let distance_score = max_distance - self.simulator.me().position().distance(self.target) / max_distance;
+        let distance_score = self.max_distance - self.simulator.me().position().distance(self.target) / self.max_distance;
 
         let teammates_health = self.simulator.units().iter()
             .filter(|v| v.is_teammate())
