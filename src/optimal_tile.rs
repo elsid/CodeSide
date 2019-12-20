@@ -183,9 +183,13 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         None
     };
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
-        get_hit_probability_by_spread(center, &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size)
-            * hit_probabilities.target
+        let by_spread = get_hit_probability_by_spread(center, &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size);
+        if by_spread == 0.0 {
+            0.0
+        } else {
+            let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
+            by_spread * hit_probabilities.target
+        }
     } else {
         0.0
     };
@@ -252,6 +256,12 @@ pub fn should_shoot(me: &Rect, opponent: &Unit, weapon: &Weapon, world: &World, 
         weapon.params.min_spread
     };
 
+    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), &opponent.rect(), spread, weapon.params.bullet.size);
+
+    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+        return false;
+    }
+
     let hit_probabilities = get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
 
     if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
@@ -260,9 +270,6 @@ pub fn should_shoot(me: &Rect, opponent: &Unit, weapon: &Weapon, world: &World, 
         }
     }
 
-    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), &opponent.rect(), spread, weapon.params.bullet.size);
-
-    hit_probability_by_spread >= world.config().min_hit_probability_by_spread_to_shoot
-    && hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_hit_target_probability_to_shoot
+    hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_hit_target_probability_to_shoot
     && hit_probabilities.teammate_units <= world.config().max_hit_teammates_probability_to_shoot
 }
