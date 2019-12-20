@@ -42,6 +42,13 @@ pub struct Simulator<'r> {
     current_micro_tick: i32,
     me_index: usize,
     my_player_index: usize,
+    counters: Counters,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Counters {
+    pub max_number_of_mines: usize,
+    pub triggered_mines_by_me: usize,
 }
 
 const EPSILON: f64 = 1e-9;
@@ -86,6 +93,7 @@ impl<'r> Simulator<'r> {
             current_micro_tick: 0,
             me_index,
             my_player_index: world.players().iter().position(|v| v.id == player_id).unwrap(),
+            counters: Counters::default(),
         }
     }
 
@@ -129,6 +137,10 @@ impl<'r> Simulator<'r> {
         &self.loot_boxes
     }
 
+    pub fn counters(&self) -> &Counters {
+        &self.counters
+    }
+
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
@@ -137,6 +149,7 @@ impl<'r> Simulator<'r> {
         self.current_tick += 1;
         self.current_time += time_interval;
         self.me_index = self.units.iter().position(|v| v.is_me()).unwrap();
+        self.counters.max_number_of_mines = self.counters.max_number_of_mines.max(self.mines.len());
         remove_if(&mut self.bullets, |v| v.hit);
         remove_if(&mut self.mines, |v| v.base.state == MineState::Exploded);
         remove_if(&mut self.loot_boxes, |v| v.used);
@@ -235,6 +248,7 @@ impl<'r> Simulator<'r> {
                         continue;
                     }
                     if activate(&self.properties, &mut self.mines[mine], &mut self.units[unit]) {
+                        self.counters.triggered_mines_by_me += self.units[unit].is_me as usize;
                         break;
                     }
                 }
