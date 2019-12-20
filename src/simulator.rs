@@ -229,7 +229,7 @@ impl<'r> Simulator<'r> {
                     }
                     explode(&explosion, self.properties.kill_score, &mut self.units[unit], &mut self.players);
                 }
-            } else {
+            } else if self.mines[mine].base.state == MineState::Idle {
                 for unit in 0 .. self.units.len() {
                     if self.units[unit].ignore() {
                         continue;
@@ -973,9 +973,6 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
 }
 
 fn activate(properties: &Properties, mine: &mut MineExt, unit: &mut UnitExt) -> bool {
-    if mine.base.state != MineState::Idle {
-        return true;
-    }
     if !mine.rect().has_collision(&unit.holding_rect()) {
         return false;
     }
