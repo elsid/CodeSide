@@ -27,8 +27,8 @@ pub struct Config {
     pub optimal_tile_hit_probability_score_weight: f64,
     pub min_hit_probability_by_spread_to_shoot: f64,
     pub min_hit_probability_over_obstacles_to_shoot: f64,
-    pub max_hit_teammates_probability_to_shoot: f64,
-    pub min_hit_target_probability_to_shoot: f64,
+    pub max_teammates_hits_to_shoot: usize,
+    pub min_target_hits_to_shoot: usize,
     pub hit_number_of_directions: usize,
 }
 
@@ -62,8 +62,8 @@ impl Config {
             optimal_tile_hit_probability_score_weight: 1.0,
             min_hit_probability_by_spread_to_shoot: 0.3,
             min_hit_probability_over_obstacles_to_shoot: 0.1,
-            max_hit_teammates_probability_to_shoot: 0.1,
-            min_hit_target_probability_to_shoot: 0.1,
+            max_teammates_hits_to_shoot: 1,
+            min_target_hits_to_shoot: 1,
             hit_number_of_directions: 11,
         }
     }

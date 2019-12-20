@@ -161,7 +161,8 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
             .filter(|unit| world.is_opponent(unit))
             .map(|unit| {
                 if let Some(weapon) = unit.weapon.as_ref() {
-                    get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world).target
+                    let hit_probabilities = get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world);
+                    hit_probabilities.target as f64 / hit_probabilities.total as f64
                 } else {
                     0.0
                 }
@@ -189,7 +190,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
             0.0
         } else {
             let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
-            by_spread * hit_probabilities.target
+            by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
         }
     } else {
         0.0
@@ -217,7 +218,7 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         world.units().iter()
             .filter(|v| world.is_opponent(v))
             .map(|v| get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
-            .map(|v| v.teammate_units)
+            .map(|v| v.teammate_units as f64 / v.total as f64)
             .sum::<f64>() / number_of_opponents as f64
     } else {
         0.0
@@ -271,6 +272,6 @@ pub fn should_shoot(me: &Rect, opponent: &Unit, weapon: &Weapon, world: &World, 
         }
     }
 
-    hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_hit_target_probability_to_shoot
-    && hit_probabilities.teammate_units <= world.config().max_hit_teammates_probability_to_shoot
+    hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
+    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }

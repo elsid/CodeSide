@@ -18,12 +18,13 @@ use crate::my_strategy::{
 
 #[derive(Debug)]
 pub struct HitProbabilities {
-    pub wall: f64,
-    pub opponent_units: f64,
-    pub teammate_units: f64,
-    pub opponent_mines: f64,
-    pub teammate_mines: f64,
-    pub target: f64,
+    pub wall: usize,
+    pub opponent_units: usize,
+    pub teammate_units: usize,
+    pub opponent_mines: usize,
+    pub teammate_mines: usize,
+    pub target: usize,
+    pub total: usize,
     pub min_distance: Option<f64>,
 }
 
@@ -70,27 +71,26 @@ pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: 
             (source, destination)
         };
         if let Some(hit) = get_nearest_hit(my_id, src, dst, target, world) {
-            hit_opponent_units += !hit.is_teammate as i32 & (hit.object_type == ObjectType::Unit) as i32;
-            hit_teammate_units += hit.is_teammate as i32 & (hit.object_type == ObjectType::Unit) as i32;
-            hit_opponent_mines += !hit.is_teammate as i32 & (hit.object_type == ObjectType::Mine) as i32;
-            hit_teammate_mines += hit.is_teammate as i32 & (hit.object_type == ObjectType::Mine) as i32;
-            hit_wall += (hit.object_type == ObjectType::Wall) as i32;
-            hit_target += hit.is_target as i32;
+            hit_opponent_units += !hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
+            hit_teammate_units += hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
+            hit_opponent_mines += !hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
+            hit_teammate_mines += hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
+            hit_wall += (hit.object_type == ObjectType::Wall) as usize;
+            hit_target += hit.is_target as usize;
             if min_distance.is_none() || min_distance.unwrap() > hit.distance {
                 min_distance = Some(hit.distance);
             }
         }
     }
 
-    let number_of_rays = number_of_directions as f64;
-
     HitProbabilities {
-        wall: hit_wall as f64 / number_of_rays,
-        opponent_units: hit_opponent_units as f64 / number_of_rays,
-        teammate_units: hit_teammate_units as f64 / number_of_rays,
-        opponent_mines: hit_opponent_mines as f64 / number_of_rays,
-        teammate_mines: hit_teammate_mines as f64 / number_of_rays,
-        target: hit_target as f64 / number_of_rays,
+        wall: hit_wall,
+        opponent_units: hit_opponent_units,
+        teammate_units: hit_teammate_units,
+        opponent_mines: hit_opponent_mines,
+        teammate_mines: hit_teammate_mines,
+        target: hit_target,
+        total: number_of_directions,
         min_distance,
     }
 }
