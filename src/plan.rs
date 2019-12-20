@@ -27,10 +27,9 @@ use crate::my_strategy::{
     as_score,
 };
 
-pub struct Plan<'s> {
+pub struct Plan {
     pub transitions: Vec<Transition>,
     pub score: i32,
-    pub simulator: Simulator<'s>,
 }
 
 #[derive(Clone)]
@@ -66,7 +65,6 @@ impl<'c, 's> Planner<'c, 's> {
         Plan {
             transitions,
             score: planner.get_score(),
-            simulator: planner.simulator,
         }
     }
 
