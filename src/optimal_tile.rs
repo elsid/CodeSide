@@ -121,7 +121,7 @@ pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInf
 pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 15] {
     let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
-    let me = Rect::new(center, Vec2::from_model(&world.me().size));
+    let me = Rect::new(center, Vec2::from_model(&world.me().size) / 2.0);
     let max_distance = world.size().norm();
     let tile_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),

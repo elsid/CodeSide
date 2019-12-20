@@ -117,18 +117,30 @@ pub fn get_nearest_hit(my_id: i32, source: Vec2, mut destination: Vec2, target: 
     let mut max_distance = to_destination.norm();
     let direction = to_destination / max_distance;
 
-    let mut hit = if let Some(unit_hit) = get_distance_to_nearest_hit_unit_by_line(my_id, source, destination, world) {
-        max_distance = unit_hit.distance;
-        destination = source + direction * unit_hit.distance;
+    let mut hit = if let Some(distance) = target.rect.get_intersection_with_line(source, destination) {
+        max_distance = distance;
         Some(Hit {
-            distance: max_distance,
+            distance,
             object_type: ObjectType::Unit,
-            is_target: target.id == unit_hit.id,
-            is_teammate: unit_hit.is_teammate,
+            is_target: true,
+            is_teammate: false,
         })
     } else {
         None
     };
+
+    if let Some(unit_hit) = get_distance_to_nearest_hit_unit_by_line(my_id, target.id, source, destination, world) {
+        if max_distance > unit_hit.distance {
+            max_distance = unit_hit.distance;
+            destination = source + direction * unit_hit.distance;
+            hit = Some(Hit {
+                distance: max_distance,
+                object_type: ObjectType::Unit,
+                is_target: target.id == unit_hit.id,
+                is_teammate: unit_hit.is_teammate,
+            });
+        }
+    }
 
     if let Some(mine_hit) = get_distance_to_nearest_hit_mine_by_line(source, destination, world) {
         if max_distance > mine_hit.distance {
@@ -235,9 +247,9 @@ pub struct UnitHit {
     is_teammate: bool,
 }
 
-pub fn get_distance_to_nearest_hit_unit_by_line(my_id: i32, source: Vec2, target: Vec2, world: &World) -> Option<UnitHit> {
+pub fn get_distance_to_nearest_hit_unit_by_line(my_id: i32, target_id: i32, source: Vec2, target: Vec2, world: &World) -> Option<UnitHit> {
     world.units().iter()
-        .filter(|unit| unit.id != my_id)
+        .filter(|unit| unit.id != my_id && unit.id != target_id)
         .filter_map(|unit| {
             unit.rect().get_intersection_with_line(source, target)
                 .map(|v| (unit.id, v, world.is_teammate(unit)))
