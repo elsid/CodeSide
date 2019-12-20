@@ -328,6 +328,7 @@ impl MyStrategyImpl {
             action.shoot = shoot;
             action.aim = aim;
             action.swap_weapon = self.should_swap_weapon(shoot);
+            action.plant_mine = self.should_plant_mine();
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log { text: format!("action: {:?}", action) });
             return action;
@@ -409,6 +410,24 @@ impl MyStrategyImpl {
         } else {
             false
         }
+    }
+
+    fn should_plant_mine(&self) -> bool {
+        if !self.world.me().on_ground || self.world.me().on_ladder || self.world.me().mines == 0 {
+            return false;
+        }
+        if self.world.number_of_teammates() > 0 {
+            let will_explode_teammate = self.world.units().iter()
+                .find(|v| self.world.is_teammate(v) && v.rect().center().distance(self.world.me().position()) < 2.0 * self.world.properties().mine_explosion_params.radius)
+                .is_some();
+            if will_explode_teammate {
+                return false;
+            }
+        }
+        let number_of_exploded_opponents = self.world.units().iter()
+            .filter(|v| self.world.is_opponent(v) && v.rect().center().distance(self.world.me().position()) < self.world.properties().mine_explosion_params.radius)
+            .count();
+        number_of_exploded_opponents >= 2
     }
 }
 
