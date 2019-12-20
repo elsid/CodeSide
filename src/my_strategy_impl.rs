@@ -41,6 +41,7 @@ use crate::my_strategy::{
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
     ObjectType,
+    Target,
     WalkGrid,
     get_nearest_hit,
     get_tile_location,
@@ -253,7 +254,7 @@ impl MyStrategyImpl {
                         } else {
                             (source, destination)
                         };
-                        if let Some(hit) = get_nearest_hit(me.id, src, dst, &opponent, &self.world) {
+                        if let Some(hit) = get_nearest_hit(me.id, src, dst, &Target::from_unit(opponent), &self.world) {
                             let color = match hit.object_type {
                                 ObjectType::Wall => ColorF32 { a: 0.5, r: 0.66, g: 0.66, b: 0.66 },
                                 ObjectType::Unit => if hit.is_teammate {
