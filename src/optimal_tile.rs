@@ -156,11 +156,12 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         .filter(|unit| world.is_opponent(unit))
         .count();
     let hit_by_opponent_score = if number_of_opponents > 0 {
+        let target = Target::new(world.me().id, me.clone());
         world.units().iter()
             .filter(|unit| world.is_opponent(unit))
             .map(|unit| {
                 if let Some(weapon) = unit.weapon.as_ref() {
-                    get_hit_probabilities(unit.id, unit.rect().center(), &Target::from_unit(world.me()), weapon.spread, weapon.params.bullet.size, world).target
+                    get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world).target
                 } else {
                     0.0
                 }

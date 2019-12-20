@@ -106,9 +106,10 @@ pub fn me_with_weapon(world: World, weapon_type: WeaponType) -> World {
 
 pub fn opponent_with_weapon(world: World, weapon_type: WeaponType) -> World {
     let mut game = world.game().clone();
+    let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
     let unit_index = game.units.iter().position(|v| v.player_id != world.me().player_id).unwrap();
     game.units[unit_index].weapon = Some(make_weapon(weapon_type.clone(), world.properties()));
-    World::new(world.config().clone(), game.units[unit_index].clone(), game)
+    World::new(world.config().clone(), game.units[me_index].clone(), game)
 }
 
 pub fn with_my_position(world: World, position: Vec2) -> World {

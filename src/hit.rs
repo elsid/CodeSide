@@ -1,6 +1,5 @@
 use model::{
     Level,
-    Mine,
     Tile,
     Unit,
 };
@@ -14,6 +13,7 @@ use crate::my_strategy::{
     as_score,
     get_tile,
     get_tile_by_vec2,
+    normalize_angle,
 };
 
 #[derive(Debug)]
@@ -27,6 +27,23 @@ pub struct HitProbabilities {
     pub min_distance: Option<f64>,
 }
 
+#[derive(Debug)]
+pub struct Target {
+    id: i32,
+    rect: Rect,
+}
+
+impl Target {
+    pub fn new(id: i32, rect: Rect) -> Self {
+        Self { id, rect }
+    }
+
+    pub fn from_unit(unit: &Unit) -> Self {
+        Self { id: unit.id, rect: unit.rect() }
+    }
+}
+
+#[inline(never)]
 pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: f64, bullet_size: f64, world: &World) -> HitProbabilities {
     let direction = (target.rect.center() - source).normalized();
     let to_target = direction * world.max_distance();
@@ -44,20 +61,20 @@ pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: 
 
     for i in 0 .. number_of_directions {
         let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * spread;
-        let destination = source + to_target.rotated(angle);
-        let hits = [
-            get_nearest_hit(my_id, source, destination, target, world),
-            get_nearest_hit(my_id, source + left, destination + left, target, world),
-            get_nearest_hit(my_id, source + right, destination + right, target, world),
-        ];
-        for hit in hits.into_iter().filter_map(|v| *v).min_by_key(|v| as_score(v.distance)) {
-            match hit.object {
-                Object::Wall => hit_wall += 1,
-                Object::OpponentUnit => hit_opponent_units += 1,
-                Object::TeammateUnit => hit_teammate_units += 1,
-                Object::OpponentMine => hit_opponent_mines += 1,
-                Object::TeammateMine => hit_teammate_mines += 1,
-            }
+        let destination = source + to_target.rotated(normalize_angle(angle));
+        let (src, dst) = if i == 0 {
+            (source + right, destination + right)
+        } else if i == number_of_directions - 1 {
+            (source + left, destination + left)
+        } else {
+            (source, destination)
+        };
+        if let Some(hit) = get_nearest_hit(my_id, src, dst, target, world) {
+            hit_opponent_units += !hit.is_teammate as i32 & (hit.object_type == ObjectType::Unit) as i32;
+            hit_teammate_units += hit.is_teammate as i32 & (hit.object_type == ObjectType::Unit) as i32;
+            hit_opponent_mines += !hit.is_teammate as i32 & (hit.object_type == ObjectType::Mine) as i32;
+            hit_teammate_mines += hit.is_teammate as i32 & (hit.object_type == ObjectType::Mine) as i32;
+            hit_wall += (hit.object_type == ObjectType::Wall) as i32;
             hit_target += hit.is_target as i32;
             if min_distance.is_none() || min_distance.unwrap() > hit.distance {
                 min_distance = Some(hit.distance);
@@ -78,62 +95,66 @@ pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: 
     }
 }
 
-pub enum TargetType {
-    Unit { id: i32 },
-    Mine { position: Vec2 },
-}
-
-pub struct Target {
-    rect: Rect,
-    typ: TargetType,
-}
-
-impl Target {
-    pub fn from_unit(unit: &Unit) -> Self {
-        Self { rect: unit.rect(), typ: TargetType::Unit { id: unit.id } }
-    }
-
-    pub fn from_mine(mine: &Mine) -> Self {
-        Self { rect: mine.rect(), typ: TargetType::Mine { position: Vec2::from_model(&mine.position) } }
-    }
-}
-
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Hit {
     pub distance: f64,
-    pub object: Object,
+    pub object_type: ObjectType,
     pub is_target: bool,
+    pub is_teammate: bool,
 }
 
-#[derive(Clone, Copy)]
-pub enum Object {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(usize)]
+pub enum ObjectType {
+    Mine,
+    Unit,
     Wall,
-    OpponentUnit,
-    TeammateUnit,
-    OpponentMine,
-    TeammateMine,
 }
 
-pub fn get_nearest_hit(my_id: i32, source: Vec2, destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
-    let target_unit_id = if let &TargetType::Unit { id } = &target.typ { id } else { -1 };
-    let target_mine_position = if let &TargetType::Mine { position } = &target.typ { position } else { Vec2::zero() };
-    let unit_hit = get_distance_to_nearest_hit_unit_by_line(my_id, source, destination, world)
-        .map(|unit| Hit {
-            distance: unit.distance,
-            object: if unit.is_teammate { Object::TeammateUnit } else { Object::OpponentUnit },
-            is_target: target_unit_id == unit.id,
-        });
-    let mine_hit = get_distance_to_nearest_hit_mine_by_line(source, destination, world)
-        .map(|mine| Hit {
-            distance: mine.distance,
-            object: if mine.is_teammate { Object::TeammateMine } else { Object::OpponentMine },
-            is_target: target_mine_position == mine.position,
-        });
-    let wall_hit = get_distance_to_nearest_hit_wall_by_line(source, destination, world.level())
-        .map(|distance| Hit { distance, object: Object::Wall, is_target: false });
-    [unit_hit, mine_hit, wall_hit].into_iter()
-        .filter_map(|v| *v)
-        .min_by_key(|v| as_score(v.distance))
+#[inline(never)]
+pub fn get_nearest_hit(my_id: i32, source: Vec2, mut destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
+    let to_destination = destination - source;
+    let mut max_distance = to_destination.norm();
+    let direction = to_destination / max_distance;
+
+    let mut hit = if let Some(unit_hit) = get_distance_to_nearest_hit_unit_by_line(my_id, source, destination, world) {
+        max_distance = unit_hit.distance;
+        destination = source + direction * unit_hit.distance;
+        Some(Hit {
+            distance: max_distance,
+            object_type: ObjectType::Unit,
+            is_target: target.id == unit_hit.id,
+            is_teammate: unit_hit.is_teammate,
+        })
+    } else {
+        None
+    };
+
+    if let Some(mine_hit) = get_distance_to_nearest_hit_mine_by_line(source, destination, world) {
+        if max_distance > mine_hit.distance {
+            max_distance = mine_hit.distance;
+            destination = source + direction * mine_hit.distance;
+            hit = Some(Hit {
+                distance: mine_hit.distance,
+                object_type: ObjectType::Mine,
+                is_target: false,
+                is_teammate: mine_hit.is_teammate,
+            });
+        }
+    }
+
+    if let Some(distance) = get_distance_to_nearest_hit_wall_by_line(source, destination, world.level()) {
+        if max_distance > distance {
+            hit = Some(Hit {
+                distance: distance,
+                object_type: ObjectType::Wall,
+                is_target: false,
+                is_teammate: false,
+            });
+        }
+    }
+
+    hit
 }
 
 pub fn get_hit_probability_by_spread(shooter: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
@@ -207,6 +228,7 @@ pub fn get_distance_to_nearest_hit_wall_by_line(begin: Vec2, end: Vec2, level: &
     None
 }
 
+#[derive(Debug)]
 pub struct UnitHit {
     id: i32,
     distance: f64,
@@ -224,8 +246,8 @@ pub fn get_distance_to_nearest_hit_unit_by_line(my_id: i32, source: Vec2, target
         .map(|(id, distance, is_teammate)| UnitHit { id, distance, is_teammate })
 }
 
+#[derive(Debug)]
 pub struct MineHit {
-    position: Vec2,
     distance: f64,
     is_teammate: bool,
 }
@@ -234,8 +256,8 @@ pub fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, worl
     world.mines().iter()
         .filter_map(|mine| {
             mine.rect().get_intersection_with_line(source, target)
-                .map(|v| (Vec2::from_model(&mine.position), v, world.is_teammate_mine(mine)))
+                .map(|v| (v, world.is_teammate_mine(mine)))
         })
-        .min_by_key(|&(_, distance, _)| as_score(distance))
-        .map(|(position, distance, is_teammate)| MineHit { position, distance, is_teammate })
+        .min_by_key(|&(distance, _)| as_score(distance))
+        .map(|(distance, is_teammate)| MineHit { distance, is_teammate })
 }

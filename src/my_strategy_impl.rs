@@ -40,10 +40,8 @@ use crate::my_strategy::{
 
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
-    Object,
-    Target,
+    ObjectType,
     WalkGrid,
-    as_score,
     get_nearest_hit,
     get_tile_location,
     normalize_angle,
@@ -104,6 +102,7 @@ impl MyStrategyImpl {
         result
     }
 
+    #[inline(never)]
     pub fn get_action_measured(&mut self, me: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
         fn distance_sqr(a: &Vec2F64, b: &Vec2F64) -> f64 {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
@@ -122,34 +121,6 @@ impl MyStrategyImpl {
                 size: 40.0,
                 color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
             });
-        }
-        #[cfg(feature = "enable_debug")]
-        for unit in self.world.units().iter() {
-            if let Some(weapon) = unit.weapon.as_ref() {
-                if let Some(last_angle) = weapon.last_angle {
-                    let direction = Vec2::i().rotated(normalize_angle(last_angle));
-                    let lower_spread = Vec2::i().rotated(normalize_angle(last_angle - weapon.spread));
-                    let upper_spread = Vec2::i().rotated(normalize_angle(last_angle + weapon.spread));
-                    debug.draw(CustomData::Line {
-                        p1: unit.rect().center().as_model_f32(),
-                        p2: (unit.rect().center() + direction * self.world.max_distance()).as_model_f32(),
-                        width: 0.1,
-                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
-                    });
-                    debug.draw(CustomData::Line {
-                        p1: unit.rect().center().as_model_f32(),
-                        p2: (unit.rect().center() + lower_spread * self.world.max_distance()).as_model_f32(),
-                        width: 0.1,
-                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
-                    });
-                    debug.draw(CustomData::Line {
-                        p1: unit.rect().center().as_model_f32(),
-                        p2: (unit.rect().center() + upper_spread * self.world.max_distance()).as_model_f32(),
-                        width: 0.1,
-                        color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
-                    });
-                }
-            }
         }
         #[cfg(feature = "enable_debug")]
         {
@@ -271,28 +242,35 @@ impl MyStrategyImpl {
                     let left = direction.left() * weapon.params.bullet.size;
                     let right = direction.right() * weapon.params.bullet.size;
                     let number_of_directions = self.world.config().hit_number_of_directions;
-                    let target = Target::from_unit(opponent);
 
                     for i in 0 .. number_of_directions {
                         let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * weapon.spread;
-                        let destination = source + to_target.rotated(angle);
-                        let rays = [
-                            (source, destination),
-                            (source + left, destination + left),
-                            (source + right, destination + right),
-                        ];
-                        for (src, dst, hit) in rays.into_iter().filter_map(|&(src, dst)| get_nearest_hit(me.id, src, dst, &target, &self.world).map(|v| (src, dst, v))).min_by_key(|(_, _, v)| as_score(v.distance)) {
-                            let color = match hit.object {
-                                Object::Wall => ColorF32 { a: 0.33, r: 0.66, g: 0.66, b: 0.66 },
-                                Object::OpponentUnit => ColorF32 { a: 0.33, r: 0.0, g: 0.66, b: 0.33 },
-                                Object::TeammateUnit => ColorF32 { a: 0.33, r: 0.66, g: 0.33, b: 0.0 },
-                                Object::OpponentMine => ColorF32 { a: 0.33, r: 0.5, g: 0.33, b: 0.0 },
-                                Object::TeammateMine => ColorF32 { a: 0.33, r: 0.33, g: 0.5, b: 0.0 },
+                        let destination = source + to_target.rotated(normalize_angle(angle));
+                        let (src, dst) = if i == 0 {
+                            (source + right, destination + right)
+                        } else if i == number_of_directions - 1 {
+                            (source + left, destination + left)
+                        } else {
+                            (source, destination)
+                        };
+                        if let Some(hit) = get_nearest_hit(me.id, src, dst, &opponent, &self.world) {
+                            let color = match hit.object_type {
+                                ObjectType::Wall => ColorF32 { a: 0.5, r: 0.66, g: 0.66, b: 0.66 },
+                                ObjectType::Unit => if hit.is_teammate {
+                                    ColorF32 { a: 0.5, r: 0.66, g: 0.33, b: 0.0 }
+                                } else {
+                                    ColorF32 { a: 0.5, r: 0.0, g: 0.66, b: 0.33 }
+                                },
+                                ObjectType::Mine => if hit.is_teammate {
+                                    ColorF32 { a: 0.5, r: 0.33, g: 0.5, b: 0.0 }
+                                } else {
+                                    ColorF32 { a: 0.5, r: 0.5, g: 0.33, b: 0.0 }
+                                },
                             };
                             #[cfg(feature = "enable_debug")]
                             debug.draw(CustomData::Line {
-                                p1: source.as_model_f32(),
-                                p2: (source + (destination - source).normalized() * hit.distance).as_model_f32(),
+                                p1: src.as_model_f32(),
+                                p2: (src + (dst - src).normalized() * hit.distance).as_model_f32(),
                                 width: 0.075,
                                 color,
                             });
