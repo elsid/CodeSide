@@ -317,8 +317,8 @@ impl MyStrategyImpl {
         debug.draw(CustomData::Log { text: format!("global_target: {:?} local_target: {:?}", global_target, local_target) });
 
         let simulator = Simulator::new(&self.world, me.id);
-        let plan = Planner::new(local_target, &self.config, self.world.paths(), simulator, self.world.max_distance())
-            .make(game.current_tick, &mut self.rng, debug);
+        let planner = Planner::new(local_target, &self.config, self.world.paths(), simulator, self.world.max_distance());
+        let plan = planner.make(game.current_tick, &mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log {

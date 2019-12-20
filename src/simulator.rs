@@ -28,14 +28,14 @@ use crate::my_strategy::{
 };
 
 #[derive(Clone)]
-pub struct Simulator {
+pub struct Simulator<'r> {
     players: Vec<Player>,
     units: Vec<UnitExt>,
     bullets: Vec<BulletExt>,
     mines: Vec<MineExt>,
     loot_boxes: Vec<LootBoxExt>,
     properties: Properties,
-    level: Level,
+    level: &'r Level,
     current_tick: i32,
     current_time: f64,
     current_micro_tick: i32,
@@ -45,8 +45,8 @@ pub struct Simulator {
 
 const EPSILON: f64 = 1e-9;
 
-impl Simulator {
-    pub fn new(world: &World, me_id: i32) -> Self {
+impl<'r> Simulator<'r> {
+    pub fn new(world: &'r World, me_id: i32) -> Self {
         let player_id = world.get_unit(me_id).player_id;
         let units: Vec<UnitExt> = world.units().iter()
             .map(|unit| {
@@ -79,7 +79,7 @@ impl Simulator {
             loot_boxes,
             mines,
             properties: world.properties().clone(),
-            level: world.level().clone(),
+            level: world.level(),
             current_tick: 0,
             current_time: 0.0,
             current_micro_tick: 0,
