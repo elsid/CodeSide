@@ -75,7 +75,7 @@ impl<'c, 's> Planner<'c, 's> {
     }
 
     pub fn get_score_components(&self) -> [f64; 3] {
-        let distance_score = self.max_distance - self.simulator.me().position().distance(self.target) / self.max_distance;
+        let distance_score = 1.0 - self.simulator.me().position().distance(self.target) / self.max_distance;
 
         let teammates_health = self.simulator.units().iter()
             .filter(|v| v.is_teammate())
