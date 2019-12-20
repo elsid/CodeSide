@@ -27,11 +27,9 @@ pub struct HitProbabilities {
     pub min_distance: Option<f64>,
 }
 
-pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: f64, bullet_size: f64, world: &World) -> HitProbabilities {
+pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: f64, world: &World) -> HitProbabilities {
     let direction = (target.rect.center() - source).normalized();
     let to_target = direction * world.max_distance();
-    let left = direction.left() * bullet_size;
-    let right = direction.right() * bullet_size;
     let number_of_directions = world.config().hit_number_of_directions;
 
     let mut hit_wall = 0;
@@ -45,12 +43,7 @@ pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: 
     for i in 0 .. number_of_directions {
         let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * spread;
         let destination = source + to_target.rotated(angle);
-        let hits = [
-            get_nearest_hit(my_id, source, destination, target, world),
-            get_nearest_hit(my_id, source + left, destination + left, target, world),
-            get_nearest_hit(my_id, source + right, destination + right, target, world),
-        ];
-        for hit in hits.into_iter().filter_map(|v| *v).min_by_key(|v| as_score(v.distance)) {
+        if let Some(hit) = get_nearest_hit(my_id, source, destination, target, world) {
             match hit.object {
                 Object::Wall => hit_wall += 1,
                 Object::OpponentUnit => hit_opponent_units += 1,
