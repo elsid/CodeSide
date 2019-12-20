@@ -64,7 +64,7 @@ impl Config {
             min_hit_probability_over_obstacles_to_shoot: 0.1,
             max_hit_teammates_probability_to_shoot: 0.1,
             min_hit_target_probability_to_shoot: 0.1,
-            hit_number_of_directions: 10,
+            hit_number_of_directions: 11,
         }
     }
 }
