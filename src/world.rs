@@ -50,14 +50,16 @@ impl World {
             .filter(|v| v.player_id == me.player_id)
             .map(|v| v.id)
             .collect();
-        let size = Vec2::new(get_level_size_x(&game.level) as f64, get_level_size_y(&game.level) as f64);
+        let level_size_x = get_level_size_x(&game.level);
+        let level_size_y = get_level_size_y(&game.level);
+        let size = Vec2::new(level_size_x as f64, level_size_y as f64);
         Self {
             size,
             items_by_tile: game.loot_boxes.iter()
                 .map(|v| (v.location(), v.item.clone()))
                 .collect(),
             paths: (0 .. teammates.len()).map(|_| BTreeMap::new()).collect(),
-            backtracks: (0 .. teammates.len()).map(|_| Vec::new()).collect(),
+            backtracks: (0 .. teammates.len()).map(|_| std::iter::repeat(0).take(level_size_x * level_size_y).collect::<Vec<_>>()).collect(),
             number_of_teammates: teammates.len() - 1,
             teammates,
             config,
@@ -85,11 +87,10 @@ impl World {
         self.me_index = self.teammates.iter().position(|&v| v == self.me.id).unwrap();
         if self.changed_locations {
             let source = me.location();
-            let (infos, backtrack) = get_tile_path_infos(source, self);
+            let infos = get_tile_path_infos(source, self);
             for (destination, info) in infos.into_iter() {
                 self.paths[self.me_index].insert((source, destination), info);
             }
-            self.backtracks[self.me_index] = backtrack;
         }
     }
 
@@ -291,7 +292,7 @@ impl TilePathInfo {
     }
 }
 
-pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, TilePathInfo)>, Vec<usize>) {
+pub fn get_tile_path_infos(from: Location, world: &mut World) -> Vec<(Location, TilePathInfo)> {
     use std::collections::{BTreeSet, BinaryHeap};
 
     let size_x = get_level_size_x(world.level());
@@ -304,7 +305,9 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
 
     let mut has_mine: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
 
-    let mut backtrack: Vec<usize> = (0 .. size_x * size_y).collect();
+    for i in 0 .. world.backtracks[world.me_index].len() {
+        world.backtracks[world.me_index][i] = i;
+    }
 
     let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
     ordered.push((0, from));
@@ -338,7 +341,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
                 distances[neighbor_index] = new_distance;
                 has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || world.has_opponent_unit(neighbor_location);
                 has_mine[neighbor_index] = has_mine[node_index] || world.has_mine(neighbor_location);
-                backtrack[neighbor_index] = node_index;
+                world.backtracks[world.me_index][neighbor_index] = node_index;
                 if destinations.insert(neighbor_location) {
                     ordered.push((as_score(distance), neighbor_location));
                 }
@@ -363,7 +366,7 @@ pub fn get_tile_path_infos(from: Location, world: &World) -> (Vec<(Location, Til
         }
     }
 
-    (result, backtrack)
+    result
 }
 
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
