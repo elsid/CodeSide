@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use model::{
     Properties,
     UnitAction,
@@ -19,10 +17,8 @@ use crate::my_strategy::{
     Config,
     IdGenerator,
     Identifiable,
-    Location,
     Search,
     Simulator,
-    TilePathInfo,
     UnitActionWrapper,
     UnitExt,
     Vec2,
@@ -38,17 +34,16 @@ pub struct Plan<'s> {
 }
 
 #[derive(Clone)]
-pub struct Planner<'c, 'p, 's> {
+pub struct Planner<'c, 's> {
     target: Vec2,
     config: &'c Config,
-    paths: &'p BTreeMap<(Location, Location), TilePathInfo>,
     simulator: Simulator<'s>,
     max_distance: f64,
 }
 
-impl<'c, 'p, 's> Planner<'c, 'p, 's> {
-    pub fn new(target: Vec2, config: &'c Config, paths: &'p BTreeMap<(Location, Location), TilePathInfo>, simulator: Simulator<'s>, max_distance: f64) -> Self {
-        Self { target, config, paths, simulator, max_distance }
+impl<'c, 's> Planner<'c, 's> {
+    pub fn new(target: Vec2, config: &'c Config, simulator: Simulator<'s>, max_distance: f64) -> Self {
+        Self { target, config, simulator, max_distance }
     }
 
     pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
@@ -143,12 +138,12 @@ impl<'r, 'd> VisitorImpl<'r, 'd> {
         }
     }
 
-    pub fn make_initial_state<'c, 'p, 's>(&mut self, planner: Planner<'c, 'p, 's>) -> State<'c, 'p, 's> {
+    pub fn make_initial_state<'c, 's>(&mut self, planner: Planner<'c, 's>) -> State<'c, 's> {
         State::initial(self.state_id_generator.next(), planner)
     }
 }
 
-impl<'r, 'c, 'd, 'p, 's> Visitor<State<'c, 'p, 's>, Transition> for VisitorImpl<'r, 'd> {
+impl<'r, 'c, 'd, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd> {
     fn is_final(&self, state: &State) -> bool {
         state.depth >= state.planner.config.plan_min_state_depth
     }
@@ -171,7 +166,7 @@ impl<'r, 'c, 'd, 'p, 's> Visitor<State<'c, 'p, 's>, Transition> for VisitorImpl<
         result
     }
 
-    fn apply(&mut self, iteration: usize, state: &State<'c, 'p, 's>, transition: &Transition) -> State<'c, 'p, 's> {
+    fn apply(&mut self, iteration: usize, state: &State<'c, 's>, transition: &Transition) -> State<'c, 's> {
         let mut next = state.clone();
         let time_interval = 1.0 / state.properties().ticks_per_second as f64;
         next.id = self.state_id_generator.next();
@@ -207,15 +202,15 @@ impl<'r, 'c, 'd, 'p, 's> Visitor<State<'c, 'p, 's>, Transition> for VisitorImpl<
 }
 
 #[derive(Clone)]
-pub struct State<'c, 'p, 's> {
+pub struct State<'c, 's> {
     id: i32,
     score: i32,
-    planner: Planner<'c, 'p, 's>,
+    planner: Planner<'c, 's>,
     depth: usize,
 }
 
-impl<'c, 'p, 's> State<'c, 'p, 's> {
-    pub fn initial(id: i32, planner: Planner<'c, 'p, 's>) -> Self {
+impl<'c, 's> State<'c, 's> {
+    pub fn initial(id: i32, planner: Planner<'c, 's>) -> Self {
         Self {
             id,
             score: 0,
@@ -224,7 +219,7 @@ impl<'c, 'p, 's> State<'c, 'p, 's> {
         }
     }
 
-    pub fn planner(&self) -> &Planner<'c, 'p, 's> {
+    pub fn planner(&self) -> &Planner<'c, 's> {
         &self.planner
     }
 
@@ -245,13 +240,13 @@ impl<'c, 'p, 's> State<'c, 'p, 's> {
     }
 }
 
-impl<'c, 'p, 's> std::fmt::Debug for State<'c, 'p, 's> {
+impl<'c, 's> std::fmt::Debug for State<'c, 's> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "id={} position={:?} score={:?}", self.id, self.planner.simulator.me().position(), self.planner.get_score_components())
     }
 }
 
-impl<'c, 'p, 's> Identifiable for State<'c, 'p, 's> {
+impl<'c, 's> Identifiable for State<'c, 's> {
     fn id(&self) -> i32 {
         self.id
     }
