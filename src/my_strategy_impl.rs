@@ -70,9 +70,9 @@ pub struct MyStrategyImpl {
 
 impl MyStrategyImpl {
     pub fn new(config: Config, me: Unit, game: Game) -> Self {
-        #[cfg(feature = "dump_level")]
-        println!("{}", dump_level(&game.level));
         let world = World::new(config.clone(), me, game);
+        #[cfg(feature = "dump_level")]
+        println!("{}", dump_level(world.level()));
         Self {
             config,
             rng: XorShiftRng::from_seed([
@@ -334,13 +334,13 @@ impl MyStrategyImpl {
         }
         let mut jump = local_target.y() > me.position.y;
         if local_target.x() > me.position.x
-            && self.world.game().level.tiles[(me.position.x + 1.0) as usize][(me.position.y) as usize]
+            && self.world.tile(Location::new((me.position.x + 1.0) as usize, (me.position.y) as usize))
                 == Tile::Wall
         {
             jump = true
         }
         if local_target.x() < me.position.x
-            && self.world.game().level.tiles[(me.position.x - 1.0) as usize][(me.position.y) as usize]
+            && self.world.tile(Location::new((me.position.x - 1.0) as usize, (me.position.y) as usize))
                 == Tile::Wall
         {
             jump = true
@@ -374,8 +374,8 @@ impl MyStrategyImpl {
         self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
         self.cpu_time_spent += cpu_time_spent;
         self.time_spent = finish - self.start_time;
-        let cpu_time_budget_spent = time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent);
-        let time_budget_spent = time_bugdet_spent(self.world.game().current_tick, &self.time_spent);
+        let cpu_time_budget_spent = time_bugdet_spent(self.world.current_tick(), &self.cpu_time_spent);
+        let time_budget_spent = time_bugdet_spent(self.world.current_tick(), &self.time_spent);
         self.max_cpu_time_budget_spent = self.max_cpu_time_budget_spent.max(cpu_time_budget_spent);
         self.max_time_budget_spent = self.max_time_budget_spent.max(time_budget_spent);
         self.calls_per_tick = 0;
@@ -386,7 +386,7 @@ impl MyStrategyImpl {
             {
                 eprintln!(
                     "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                    self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
+                    self.world.current_tick(), self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
                     cpu_time_budget_spent, time_budget_spent, self.max_cpu_time_budget_spent, self.max_time_budget_spent
                 );
             }
@@ -417,9 +417,9 @@ impl Drop for MyStrategyImpl {
         #[cfg(not(feature = "disable_output"))]
         eprintln!(
             "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-            self.world.game().current_tick, self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
-            time_bugdet_spent(self.world.game().current_tick, &self.cpu_time_spent),
-            time_bugdet_spent(self.world.game().current_tick, &self.time_spent),
+            self.world.current_tick(), self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
+            time_bugdet_spent(self.world.current_tick(), &self.cpu_time_spent),
+            time_bugdet_spent(self.world.current_tick(), &self.time_spent),
             self.max_time_budget_spent,
             self.max_cpu_time_budget_spent
         );

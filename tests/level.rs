@@ -1,10 +1,10 @@
 use model::{
-    Level,
     Tile,
 };
 use aicup2019::{
     examples::example_level,
     my_strategy::{
+        Level,
         Location,
         dump_level,
         get_tile_index,
@@ -14,13 +14,13 @@ use aicup2019::{
 
 #[test]
 fn test_dump_level_1x1() {
-    assert_eq!(dump_level(&Level {tiles: vec![vec![Tile::Wall]]}), "#\n".to_string())
+    assert_eq!(dump_level(&Level::from_model(&model::Level {tiles: vec![vec![Tile::Wall]]})), "#\n".to_string())
 }
 
 #[test]
 fn test_dump_level_5x1() {
     assert_eq!(
-        dump_level(&Level {tiles: vec![vec![Tile::Empty], vec![Tile::Wall], vec![Tile::Ladder], vec![Tile::Platform], vec![Tile::JumpPad]]}),
+        dump_level(&Level::from_model(&model::Level {tiles: vec![vec![Tile::Empty], vec![Tile::Wall], vec![Tile::Ladder], vec![Tile::Platform], vec![Tile::JumpPad]]})),
         ".#H^T\n".to_string()
     );
 }
@@ -28,7 +28,7 @@ fn test_dump_level_5x1() {
 #[test]
 fn test_dump_level_example_level() {
     assert_eq!(
-        dump_level(&example_level()),
+        dump_level(&Level::from_model(&example_level())),
         "########################################\n\
          #.................#....................#\n\
          #......................................#\n\
@@ -64,18 +64,18 @@ fn test_dump_level_example_level() {
 
 #[test]
 fn test_get_tile_index() {
-    assert_eq!(get_tile_index(&example_level(), Location::new(0, 0)), 0);
-    assert_eq!(get_tile_index(&example_level(), Location::new(39, 0)), 1170);
-    assert_eq!(get_tile_index(&example_level(), Location::new(0, 29)), 29);
-    assert_eq!(get_tile_index(&example_level(), Location::new(39, 29)), 1199);
-    assert_eq!(get_tile_index(&example_level(), Location::new(10, 10)), 310);
+    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(0, 0)), 0);
+    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(39, 0)), 1170);
+    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(0, 29)), 29);
+    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(39, 29)), 1199);
+    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(10, 10)), 310);
 }
 
 #[test]
 fn test_get_tile_location() {
-    assert_eq!(get_tile_location(&example_level(), 0), Location::new(0, 0));
-    assert_eq!(get_tile_location(&example_level(), 1170), Location::new(39, 0));
-    assert_eq!(get_tile_location(&example_level(), 29), Location::new(0, 29));
-    assert_eq!(get_tile_location(&example_level(), 1199), Location::new(39, 29));
-    assert_eq!(get_tile_location(&example_level(), 310), Location::new(10, 10));
+    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 0), Location::new(0, 0));
+    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 1170), Location::new(39, 0));
+    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 29), Location::new(0, 29));
+    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 1199), Location::new(39, 29));
+    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 310), Location::new(10, 10));
 }

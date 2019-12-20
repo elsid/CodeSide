@@ -2,7 +2,6 @@ use model::{
     Bullet,
     ExplosionParams,
     Item,
-    Level,
     LootBox,
     Mine,
     MineState,
@@ -16,6 +15,7 @@ use model::{
     WeaponType,
 };
 use crate::my_strategy::{
+    Level,
     Location,
     Rect,
     Rng,

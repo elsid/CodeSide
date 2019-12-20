@@ -1,9 +1,9 @@
 use model::{
-    Level,
     Tile,
     Unit,
 };
 use crate::my_strategy::{
+    Level,
     Location,
     Rect,
     Rectangular,
