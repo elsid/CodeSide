@@ -863,9 +863,10 @@ impl MineExt {
         Vec2::from_model(&self.base.position) + Vec2::only_y(self.base.size.y / 2.0)
     }
 
-    pub fn rect(&self) -> Rect {
+    pub fn rect(&self, is_me: bool) -> Rect {
         let size = if self.base.state == MineState::Idle {
-            Vec2::new(self.base.trigger_radius, self.base.trigger_radius)
+            let factor = 2.0 * is_me as i32 as f64;
+            Vec2::new(self.base.trigger_radius, self.base.trigger_radius) * factor
         } else {
             Vec2::from_model(&self.base.size) / 2.0
         };
@@ -987,7 +988,7 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
 }
 
 fn activate(properties: &Properties, mine: &mut MineExt, unit: &mut UnitExt) -> bool {
-    if !mine.rect().has_collision(&unit.holding_rect()) {
+    if !mine.rect(unit.is_me).has_collision(&unit.holding_rect()) {
         return false;
     }
     mine.base.state = MineState::Triggered;
