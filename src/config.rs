@@ -10,6 +10,7 @@ pub struct Config {
     pub plan_health_diff_score_weight: f64,
     pub plan_game_score_diff_score_weight: f64,
     pub plan_triggered_mines_by_me_score_weight: f64,
+    pub plan_time_interval_factor: f64,
     pub optimal_tile_distance_to_position_score_weight: f64,
     pub optimal_tile_distance_to_opponent_score_weight: f64,
     pub optimal_tile_health_pack_score_weight: f64,
@@ -38,8 +39,8 @@ impl Config {
     pub fn new(team_size: i32) -> Self {
         Self {
             plan_max_iterations: 60,
-            plan_min_ticks_per_transition: 3,
-            plan_max_ticks_per_transition: 7,
+            plan_min_ticks_per_transition: 1,
+            plan_max_ticks_per_transition: 1,
             plan_microticks_per_tick: 3,
             plan_min_state_depth: 3,
             plan_max_state_depth: 30,
@@ -47,6 +48,7 @@ impl Config {
             plan_health_diff_score_weight: 1.0,
             plan_game_score_diff_score_weight: 1.0,
             plan_triggered_mines_by_me_score_weight: 1.0,
+            plan_time_interval_factor: 3.0,
             optimal_tile_distance_to_position_score_weight: -0.25,
             optimal_tile_distance_to_opponent_score_weight: 0.5,
             optimal_tile_health_pack_score_weight: 1.5 * (team_size * team_size) as f64,

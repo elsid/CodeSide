@@ -172,7 +172,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
 
     fn apply(&mut self, iteration: usize, state: &State<'c, 's>, transition: &Transition) -> State<'c, 's> {
         let mut next = state.clone();
-        let time_interval = 1.0 / state.properties().ticks_per_second as f64;
+        let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
         next.id = self.state_id_generator.next();
         next.depth += 1;
         *next.planner.simulator.unit_mut().action_mut() = transition.action.clone();
