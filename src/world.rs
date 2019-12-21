@@ -16,6 +16,7 @@ use crate::my_strategy::{
     Level,
     Location,
     Positionable,
+    Rectangular,
     Vec2,
     Vec2i,
     as_score,
@@ -212,10 +213,7 @@ impl World {
     pub fn has_opponent_unit(&self, location: Location) -> bool {
         self.units.iter()
             .filter(|v| self.is_opponent_unit(v))
-            .find(|v| {
-                let unit_location = v.location();
-                unit_location == location || unit_location + Vec2i::new(0, 1) == location
-            })
+            .find(|v| v.center().distance(location.center()) <= v.size.y)
             .is_some()
     }
 
