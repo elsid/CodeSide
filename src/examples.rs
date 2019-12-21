@@ -1,9 +1,7 @@
 use model::{
-    Bullet,
     Game,
     Level,
     LootBox,
-    Mine,
     Player,
     Properties,
     Unit,
@@ -16,6 +14,11 @@ use crate::my_strategy::{
     XorShiftRng,
 };
 
+pub const EXAMPLE_MY_PLAYER_ID: i32 = 11;
+pub const EXAMPLE_OPPONENT_PLAYER_ID: i32 = 12;
+pub const EXAMPLE_MY_UNIT_ID: i32 = 101;
+pub const EXAMPLE_OPPONENT_UNIT_ID: i32 = 102;
+
 pub fn example_rng(seed: u64) -> XorShiftRng {
     XorShiftRng::from_seed([
         seed as u32,
@@ -27,7 +30,11 @@ pub fn example_rng(seed: u64) -> XorShiftRng {
 
 pub fn example_world() -> World {
     let properties = example_properties();
-    World::new(Config::new(), example_me(&properties), example_game(properties))
+    let my_player = example_my_player();
+    let opponent = example_opponent();
+    let player_id = my_player.id;
+    let game = example_game(my_player, opponent, properties);
+    World::new(Config::new(), player_id, game)
 }
 
 pub fn example_properties() -> Properties {
@@ -124,7 +131,21 @@ pub fn example_properties() -> Properties {
     }
 }
 
-pub fn example_game(properties: Properties) -> Game {
+pub fn example_my_player() -> Player {
+    Player {
+        id: EXAMPLE_MY_PLAYER_ID,
+        score: 0
+    }
+}
+
+pub fn example_opponent() -> Player {
+    Player {
+        id: EXAMPLE_OPPONENT_PLAYER_ID,
+        score: 0
+    }
+}
+
+pub fn example_game(my_player: Player, opponent: Player, properties: Properties) -> Game {
     use model::{
         WeaponType::*,
         Item::*,
@@ -132,129 +153,122 @@ pub fn example_game(properties: Properties) -> Game {
 
     Game {
         current_tick: 0,
-        players: vec![
-            Player {
-                id: 1,
-                score: 0
-            },
-            Player {
-                id: 3,
-                score: 0
-            },
-        ],
         level: example_level(),
         units: vec![
-            example_me(&properties),
-            example_opponent_1(&properties),
+            example_my_unit(&my_player, &properties),
+            example_opponent_unit(&opponent, &properties),
         ],
-        bullets: vec![
-            example_bullet(&properties),
-        ],
-        mines: vec![
-            example_mine(&properties),
-        ],
+        players: vec![my_player, opponent],
+        bullets: vec![],
+        mines: vec![],
         loot_boxes: vec![
-            example_loot_box_weapon(&properties),
+            LootBox {
+                position: Vec2F64 { x: 10.5, y: 22.0 },
+                size: properties.loot_box_size.clone(),
+                item: Weapon {
+                    weapon_type: Pistol,
+                },
+            },
             LootBox {
                 position: Vec2F64 { x: 10.5, y: 1.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Weapon {
                     weapon_type: Pistol,
                 },
             },
             LootBox {
                 position: Vec2F64 { x: 29.5, y: 1.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Weapon {
                     weapon_type: Pistol,
                 },
             },
             LootBox {
                 position: Vec2F64 { x: 16.5, y: 22.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Weapon {
                     weapon_type: AssaultRifle,
                 },
             },
             LootBox {
                 position: Vec2F64 { x: 23.5, y: 22.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Weapon {
                     weapon_type: AssaultRifle,
                 },
             },
             LootBox {
                 position: Vec2F64 { x: 17.5, y: 9.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Weapon {
                     weapon_type: RocketLauncher,
                 },
             },
             LootBox {
                 position: Vec2F64 { x: 22.5, y: 9.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Weapon {
                     weapon_type: RocketLauncher,
                 },
             },
             LootBox {
                 position: Vec2F64 { x: 16.5, y: 26.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 23.5, y: 26.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 9.5, y: 22.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 30.5, y: 22.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 17.5, y: 22.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Mine {},
             },
             LootBox {
                 position: Vec2F64 { x: 22.5, y: 22.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Mine {},
             },
             LootBox {
                 position: Vec2F64 { x: 18.5, y: 9.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 21.5, y: 9.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 16.5, y: 5.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 23.5, y: 5.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
-                item: HealthPack { health: 50 },
+                size: properties.loot_box_size.clone(),
+                item: HealthPack { health: properties.health_pack_health },
             },
             LootBox {
                 position: Vec2F64 { x: 14.5, y: 1.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Mine {},
             },
             LootBox {
                 position: Vec2F64 { x: 25.5, y: 1.0 },
-                size: Vec2F64 { x: 0.5, y: 0.5 },
+                size: properties.loot_box_size.clone(),
                 item: Mine {},
             },
         ],
@@ -262,13 +276,13 @@ pub fn example_game(properties: Properties) -> Game {
     }
 }
 
-pub fn example_me(properties: &Properties) -> Unit {
+pub fn example_my_unit(player: &Player, properties: &Properties) -> Unit {
     use model::JumpState;
 
     Unit {
-        player_id: 3,
-        id: 4,
-        health: 100,
+        player_id: player.id,
+        id: EXAMPLE_MY_UNIT_ID,
+        health: properties.unit_max_health,
         position: Vec2F64 {
             x: 37.5,
             y: 1.0,
@@ -289,13 +303,13 @@ pub fn example_me(properties: &Properties) -> Unit {
     }
 }
 
-pub fn example_opponent_1(properties: &Properties) -> Unit {
+pub fn example_opponent_unit(player: &Player, properties: &Properties) -> Unit {
     use model::JumpState;
 
     Unit {
-        player_id: 1,
-        id: 2,
-        health: 100,
+        player_id: player.id,
+        id: EXAMPLE_OPPONENT_UNIT_ID,
+        health: properties.unit_max_health,
         position: Vec2F64 {
             x: 2.5,
             y: 1.0,
@@ -313,61 +327,6 @@ pub fn example_opponent_1(properties: &Properties) -> Unit {
         on_ladder: false,
         mines: 0,
         weapon: None,
-    }
-}
-
-pub fn example_bullet(properties: &Properties) -> Bullet {
-    use model::WeaponType::AssaultRifle;
-    let params = &properties.weapon_params.get(&AssaultRifle).unwrap();
-
-    Bullet {
-        weapon_type: AssaultRifle,
-        unit_id: 2,
-        player_id: 1,
-        position: Vec2F64 {
-            x: 15.832623548153254,
-            y: 5.93438708445076,
-        },
-        velocity: Vec2F64 {
-            x: params.bullet.speed,
-            y: 0.0,
-        },
-        damage: params.bullet.damage,
-        size: params.bullet.size,
-        explosion_params: params.explosion.clone(),
-    }
-}
-
-pub fn example_mine(properties: &Properties) -> Mine {
-    use model::MineState::Preparing;
-
-    Mine {
-        player_id: 1,
-        position: Vec2F64 {
-            x: 25.716666665660146,
-            y: 9.000000000999998,
-        },
-        size: properties.mine_size.clone(),
-        state: Preparing,
-        timer: Some(properties.mine_prepare_time),
-        trigger_radius: properties.mine_trigger_radius,
-        explosion_params: properties.mine_explosion_params.clone(),
-    }
-}
-
-pub fn example_loot_box_weapon(properties: &Properties) -> LootBox {
-    use model::Item::Weapon;
-    use model::WeaponType::Pistol;
-
-    LootBox {
-        position: Vec2F64 {
-            x: 10.5,
-            y: 22.0,
-        },
-        size: properties.loot_box_size.clone(),
-        item: Weapon {
-            weapon_type: Pistol,
-        },
     }
 }
 

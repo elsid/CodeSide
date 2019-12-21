@@ -73,7 +73,7 @@ impl<'c, 's> Planner<'c, 's> {
     }
 
     pub fn get_score_components(&self) -> [f64; 4] {
-        let distance_score = 1.0 - self.simulator.me().position().distance(self.target) / self.max_distance;
+        let distance_score = 1.0 - self.simulator.unit().position().distance(self.target) / self.max_distance;
 
         let teammates_health = self.simulator.units().iter()
             .filter(|v| v.is_teammate())
@@ -176,7 +176,7 @@ impl<'r, 'c, 'd, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd> 
         let time_interval = 1.0 / state.properties().ticks_per_second as f64;
         next.id = self.state_id_generator.next();
         next.depth += 1;
-        *next.planner.simulator.me_mut().action_mut() = transition.action.clone();
+        *next.planner.simulator.unit_mut().action_mut() = transition.action.clone();
         let min = state.planner.config.plan_min_ticks_per_transition;
         let max = state.planner.config.plan_max_ticks_per_transition;
         for _ in 0..next.depth.clamp1(min, max) {
@@ -185,8 +185,8 @@ impl<'r, 'c, 'd, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd> 
 
         #[cfg(feature = "enable_debug")]
         self.debug.draw(CustomData::Line {
-            p1: state.me().position().as_model_f32(),
-            p2: next.me().position().as_model_f32(),
+            p1: state.unit().position().as_model_f32(),
+            p2: next.unit().position().as_model_f32(),
             width: 0.1,
             color: ColorF32 { r: 0.25, g: 0.25, b: 0.75, a: 0.25 },
         });
@@ -240,14 +240,14 @@ impl<'c, 's> State<'c, 's> {
         self.planner.target()
     }
 
-    pub fn me(&self) -> &UnitExt {
-        self.planner.simulator().me()
+    pub fn unit(&self) -> &UnitExt {
+        self.planner.simulator().unit()
     }
 }
 
 impl<'c, 's> std::fmt::Debug for State<'c, 's> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "id={} position={:?} score={:?}", self.id, self.planner.simulator.me().position(), self.planner.get_score_components())
+        write!(f, "id={} position={:?} score={:?}", self.id, self.planner.simulator.unit().position(), self.planner.get_score_components())
     }
 }
 

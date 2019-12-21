@@ -17,10 +17,9 @@ impl MyStrategyImpl {
         }
     }
 
-    pub fn get_action(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
+    pub fn get_action(&mut self, unit: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
         if game.current_tick == 0 {
             println!("fn player() {{ {:?}; }}", game.players[0]);
-            println!("fn me() {{ {:?}; }}", me);
             println!("fn unit0() {{ {:?}; }}", game.units[0]);
             println!("fn unit1() {{ {:?}; }}", game.units[1]);
             println!("// fn properties() {{ {:?}; }}", game.properties);
@@ -42,7 +41,7 @@ impl MyStrategyImpl {
             self.has_mine = true;
             println!("fn mine() {{ {:?}; }}", game.mines[0]);
         }
-        let opponent = game.units.iter().find(|v| v.id != me.id).unwrap();
+        let opponent = game.units.iter().find(|v| v.id != unit.id).unwrap();
         if !self.has_weapon && opponent.weapon.is_some() {
             self.has_weapon = true;
             println!("fn weapon() {{ {:?}; }}", opponent.weapon.as_ref().unwrap());

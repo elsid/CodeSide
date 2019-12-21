@@ -40,8 +40,8 @@ pub struct Simulator<'r> {
     current_tick: i32,
     current_time: f64,
     current_micro_tick: i32,
-    me_index: usize,
-    my_player_index: usize,
+    unit_index: usize,
+    player_index: usize,
     counters: Counters,
 }
 
@@ -64,7 +64,7 @@ impl<'r> Simulator<'r> {
                 UnitExt::new(unit.clone(), is_me, is_teammate, player_index)
             })
             .collect();
-        let me_index = units.iter().position(|v| v.is_me()).unwrap();
+        let unit_index = units.iter().position(|v| v.is_me()).unwrap();
         let bullets: Vec<BulletExt> = world.bullets().iter()
             .map(|bullet| {
                 let player_index = world.players().iter().position(|v| bullet.player_id == v.id).unwrap();
@@ -91,26 +91,26 @@ impl<'r> Simulator<'r> {
             current_tick: 0,
             current_time: 0.0,
             current_micro_tick: 0,
-            me_index,
-            my_player_index: world.players().iter().position(|v| v.id == player_id).unwrap(),
+            unit_index,
+            player_index: world.players().iter().position(|v| v.id == player_id).unwrap(),
             counters: Counters::default(),
         }
     }
 
     pub fn my_player(&self) -> &Player {
-        &self.players[self.my_player_index]
+        &self.players[self.player_index]
     }
 
     pub fn players(&self) -> &Vec<Player> {
         &self.players
     }
 
-    pub fn me(&self) -> &UnitExt {
-        &self.units[self.me_index]
+    pub fn unit(&self) -> &UnitExt {
+        &self.units[self.unit_index]
     }
 
-    pub fn me_mut(&mut self) -> &mut UnitExt {
-        &mut self.units[self.me_index]
+    pub fn unit_mut(&mut self) -> &mut UnitExt {
+        &mut self.units[self.unit_index]
     }
 
     pub fn current_tick(&self) -> i32 {
@@ -141,6 +141,14 @@ impl<'r> Simulator<'r> {
         &self.counters
     }
 
+    pub fn player(&self) -> &Player {
+        &self.players[self.player_index]
+    }
+
+    pub fn opponent(&self) -> &Player {
+        &self.players[(self.player_index + 1) % 2]
+    }
+
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
@@ -148,7 +156,7 @@ impl<'r> Simulator<'r> {
         }
         self.current_tick += 1;
         self.current_time += time_interval;
-        self.me_index = self.units.iter().position(|v| v.is_me()).unwrap();
+        self.unit_index = self.units.iter().position(|v| v.is_me()).unwrap();
         self.counters.max_number_of_mines = self.counters.max_number_of_mines.max(self.mines.len());
         remove_if(&mut self.bullets, |v| v.hit);
         remove_if(&mut self.mines, |v| v.base.state == MineState::Exploded);

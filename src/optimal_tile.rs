@@ -38,21 +38,22 @@ use crate::my_strategy::{
     get_level_size_y,
 };
 
-pub fn get_optimal_tile(world: &World, optimal_tiles: &Vec<Option<(f64, Location)>>, debug: &mut Debug) -> Option<(f64, Location)> {
+pub fn get_optimal_tile(unit: &Unit, world: &World, optimal_tiles: &Vec<Option<(f64, Location)>>, debug: &mut Debug) -> Option<(f64, Location)> {
     let mut optimal: Option<(f64, Location)> = None;
     #[cfg(feature = "enable_debug")]
     let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
         .take(get_level_size_x(world.level()) * get_level_size_y(world.level()))
         .collect();
+    let unit_index = world.get_unit_index(unit.id);
     for x in 1 .. get_level_size_x(world.level()) - 1 {
         for y in 1 .. get_level_size_y(world.level()) - 2 {
             let location = Location::new(x, y);
             let tile = world.tile(location);
-            if tile == Tile::Wall || is_busy_by_other(location, optimal_tiles, world) {
+            if tile == Tile::Wall || is_busy_by_other(location, unit.id, unit_index, optimal_tiles, world) {
                 continue;
             }
-            if let Some(path_info) = world.path_info(world.me().location(), location) {
-                let candidate_score = get_tile_score(world, location, path_info);
+            if let Some(path_info) = world.path_info(unit_index, unit.location(), location) {
+                let candidate_score = get_tile_score(location, unit, world, path_info);
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
@@ -80,17 +81,18 @@ pub fn get_optimal_tile(world: &World, optimal_tiles: &Vec<Option<(f64, Location
             }
         }
         if let Some((score, location)) = optimal {
+            let path_info = world.path_info(unit_index, unit.location(), location).unwrap();
             debug.draw(CustomData::Log {
-                text: format!("optimal_tile: {:?} {:?} {:?}", location, score, get_tile_score_components(world, location, world.path_info(world.me().location(), location).unwrap())),
+                text: format!("optimal_tile: {:?} {:?} {:?}", location, score, get_tile_score_components(location, unit, world, path_info)),
             });
         }
     }
     optimal
 }
 
-pub fn is_busy_by_other(location: Location, optimal_tiles: &Vec<Option<(f64, Location)>>, world: &World) -> bool {
+pub fn is_busy_by_other(location: Location, unit_id: i32, unit_index: usize, optimal_tiles: &Vec<Option<(f64, Location)>>, world: &World) -> bool {
     for i in 0 .. optimal_tiles.len() {
-        if i == world.me_index() {
+        if i == unit_index {
             continue;
         }
         if let Some((_, v)) = optimal_tiles[i].as_ref() {
@@ -100,7 +102,7 @@ pub fn is_busy_by_other(location: Location, optimal_tiles: &Vec<Option<(f64, Loc
         }
     }
     world.units().iter()
-        .filter(|v| !world.is_me(v))
+        .filter(|v| v.id != unit_id)
         .find(|v| {
             for x in -1 .. 2 {
                 for y in -1 .. 3 {
@@ -114,31 +116,31 @@ pub fn is_busy_by_other(location: Location, optimal_tiles: &Vec<Option<(f64, Loc
         .is_some()
 }
 
-pub fn get_tile_score(world: &World, location: Location, path_info: &TilePathInfo) -> f64 {
-    get_tile_score_components(world, location, path_info).iter().sum()
+pub fn get_tile_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
+    get_tile_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_tile_score_components(world: &World, location: Location, path_info: &TilePathInfo) -> [f64; 15] {
-    let position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
-    let center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + world.me().size.y * 0.5);
-    let me = Rect::new(center, Vec2::from_model(&world.me().size) / 2.0);
+pub fn get_tile_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
+    let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
+    let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
+    let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
     let max_distance = world.size().norm();
     let tile_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
     );
     let distance_to_opponent_score = world.units().iter()
-        .filter(|unit| unit.player_id != world.me().player_id)
+        .filter(|unit| unit.player_id != current_unit.player_id)
         .map(|unit| {
-            get_hit_probability_over_obstacles(&me, &unit.rect(), world.level()) * center.distance(unit.position())
+            get_hit_probability_over_obstacles(&current_unit_rect, &unit.rect(), world.level()) * current_unit_center.distance(unit.position())
         })
         .sum::<f64>() / (world.units().len() as f64 * max_distance);
     let distance_to_position_score = path_info.distance() / max_distance;
     let health_pack_score = match world.tile_item(location) {
-        Some(&Item::HealthPack { .. }) => 2.0 - world.me().health as f64 / world.properties().unit_max_health as f64,
+        Some(&Item::HealthPack { .. }) => 2.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
         _ => 0.0,
     };
-    let first_weapon_score = if world.me().weapon.is_none() {
+    let first_weapon_score = if current_unit.weapon.is_none() {
         match world.tile_item(location) {
             Some(&Item::Weapon { .. }) => 1.0 - distance_to_position_score,
             _ => 0.0,
@@ -146,19 +148,19 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
-    let swap_weapon_score = (world.me().weapon.is_some() && match world.tile_item(location) {
+    let swap_weapon_score = (current_unit.weapon.is_some() && match world.tile_item(location) {
         Some(&Item::Weapon { ref weapon_type }) => {
-            get_weapon_score(&world.me().weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)
+            get_weapon_score(&current_unit.weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)
         },
         _ => false,
     }) as i32 as f64;
     let number_of_opponents = world.units().iter()
-        .filter(|unit| world.is_opponent(unit))
+        .filter(|unit| world.is_opponent_unit(unit))
         .count();
     let hit_by_opponent_score = if number_of_opponents > 0 {
-        let target = Target::new(world.me().id, me.clone());
+        let target = Target::new(current_unit.id, current_unit_rect.clone());
         world.units().iter()
-            .filter(|unit| world.is_opponent(unit))
+            .filter(|unit| world.is_opponent_unit(unit))
             .map(|unit| {
                 if let Some(weapon) = unit.weapon.as_ref() {
                     if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
@@ -181,20 +183,20 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
         Some(&Item::Mine { }) => true,
         _ => false,
     }) as i32 as f64;
-    let nearest_opponent = if let Some(weapon) = world.me().weapon.as_ref() {
+    let nearest_opponent = if let Some(weapon) = current_unit.weapon.as_ref() {
         world.units().iter()
-            .filter(|unit| world.is_opponent(unit) && should_shoot(&me, &unit, weapon, world, false))
-            .min_by_key(|unit| as_score(position.distance(unit.position())))
+            .filter(|unit| world.is_opponent_unit(unit) && should_shoot(current_unit.id, current_unit_center, &unit, weapon, world, false))
+            .min_by_key(|unit| as_score(current_unit_position.distance(unit.position())))
     } else {
         None
     };
-    let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (world.me().weapon.as_ref(), nearest_opponent.as_ref()) {
-        let by_spread = get_hit_probability_by_spread(center, &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size);
+    let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
+        let by_spread = get_hit_probability_by_spread(current_unit_center, &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size);
         if by_spread == 0.0 {
             0.0
         } else {
             if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
-                let hit_probabilities = get_hit_probabilities(world.me().id, center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
+                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
                 by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
             } else {
                 0.0
@@ -206,11 +208,11 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     let height_score = location.y() as f64 / world.size().y();
     let over_ground_score = (world.tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
     let number_of_bullets = world.bullets().iter()
-        .filter(|v| v.unit_id != world.me().id)
+        .filter(|v| v.unit_id != current_unit.id)
         .count();
     let bullets_score = if number_of_bullets > 0 {
         world.bullets().iter()
-            .filter(|v| v.unit_id != world.me().id && v.rect().has_collision(&tile_rect))
+            .filter(|v| v.unit_id != current_unit.id && v.rect().has_collision(&tile_rect))
             .count() as f64 / (number_of_bullets as f64)
     } else {
         0.0
@@ -222,11 +224,11 @@ pub fn get_tile_score_components(world: &World, location: Location, path_info: &
     } else {
         0.0
     };
-    let hit_teammates_score = if let (true, Some(weapon)) = (number_of_opponents > 0, world.me().weapon.as_ref()) {
+    let hit_teammates_score = if let (true, Some(weapon)) = (number_of_opponents > 0, current_unit.weapon.as_ref()) {
         if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
             world.units().iter()
-                .filter(|v| world.is_opponent(v))
-                .map(|v| get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
+                .filter(|v| world.is_opponent_unit(v))
+                .map(|v| get_hit_probabilities(current_unit.id, current_unit_center, &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
                 .map(|v| v.teammate_units as f64 / v.total as f64)
                 .sum::<f64>() / number_of_opponents as f64
         } else {
@@ -263,20 +265,20 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
     }
 }
 
-pub fn should_shoot(me: &Rect, opponent: &Unit, weapon: &Weapon, world: &World, use_current_spread: bool) -> bool {
+pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, use_current_spread: bool) -> bool {
     let spread = if use_current_spread {
         weapon.spread
     } else {
         weapon.params.min_spread
     };
 
-    let hit_probability_by_spread = get_hit_probability_by_spread(me.center(), &opponent.rect(), spread, weapon.params.bullet.size);
+    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(), spread, weapon.params.bullet.size);
 
     if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
         return false;
     }
 
-    let hit_probabilities = get_hit_probabilities(world.me().id, me.center(), &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
+    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
 
     if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
         if min_distance < explosion.radius + 2.0 {

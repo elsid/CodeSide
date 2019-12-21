@@ -3,7 +3,10 @@ mod helpers;
 use helpers::updated_world;
 
 use aicup2019::{
-    examples::example_world,
+    examples::{
+        EXAMPLE_MY_UNIT_ID,
+        example_world,
+    },
     my_strategy::{
         Location,
     }
@@ -12,8 +15,9 @@ use aicup2019::{
 #[test]
 fn test_find_tiles_path() {
     let world = updated_world(example_world());
+    let unit_index = world.get_unit_index(EXAMPLE_MY_UNIT_ID);
     assert_eq!(
-        world.find_reversed_tiles_path(Location::new(37, 1), Location::new(29, 5)),
+        world.find_reversed_tiles_path(unit_index, Location::new(37, 1), Location::new(29, 5)),
         vec![
             Location::new(29, 5), Location::new(30, 5), Location::new(31, 5), Location::new(32, 5),
             Location::new(33, 5), Location::new(34, 5), Location::new(35, 5), Location::new(36, 5),
@@ -25,20 +29,21 @@ fn test_find_tiles_path() {
 #[test]
 fn test_find_shortcut_tiles_path() {
     let world = updated_world(example_world());
+    let unit_index = world.get_unit_index(EXAMPLE_MY_UNIT_ID);
     assert_eq!(
-        world.find_shortcut_tiles_path(Location::new(37, 1), Location::new(29, 5)),
+        world.find_shortcut_tiles_path(unit_index, Location::new(37, 1), Location::new(29, 5)),
         vec![Location::new(31, 5), Location::new(29, 5)]
     );
     assert_eq!(
-        world.find_shortcut_tiles_path(Location::new(37, 1), Location::new(37, 5)),
+        world.find_shortcut_tiles_path(unit_index, Location::new(37, 1), Location::new(37, 5)),
         vec![Location::new(37, 5)]
     );
     assert_eq!(
-        world.find_shortcut_tiles_path(Location::new(37, 1), Location::new(37, 2)),
+        world.find_shortcut_tiles_path(unit_index, Location::new(37, 1), Location::new(37, 2)),
         vec![Location::new(37, 2)]
     );
     assert_eq!(
-        world.find_shortcut_tiles_path(Location::new(37, 1), Location::new(37, 1)),
+        world.find_shortcut_tiles_path(unit_index, Location::new(37, 1), Location::new(37, 1)),
         vec![]
     );
 }

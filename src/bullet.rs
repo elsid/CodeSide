@@ -15,6 +15,10 @@ impl Positionable for Bullet {
 impl Rectangular for Bullet {
     fn rect(&self) -> Rect {
         let half = self.size * 0.5;
-        Rect::new(Vec2::from_model(&self.position), Vec2::new(half, half))
+        Rect::new(self.center(), Vec2::new(half, half))
+    }
+
+    fn center(&self) -> Vec2 {
+        Vec2::from_model(&self.position)
     }
 }

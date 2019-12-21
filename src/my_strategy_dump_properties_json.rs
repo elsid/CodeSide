@@ -7,7 +7,7 @@ impl MyStrategyImpl {
         Self {}
     }
 
-    pub fn get_action(&mut self, me: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
+    pub fn get_action(&mut self, unit: &model::Unit, game: &model::Game, debug: &mut Debug) -> model::UnitAction {
         if game.current_tick == 0 {
             println!("{}", rustc_serialize::json::encode(&game.properties).unwrap());
             std::process::exit(0);

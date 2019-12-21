@@ -17,10 +17,10 @@ impl MyStrategyImpl {
         }
     }
 
-    pub fn get_action(&mut self, me: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
+    pub fn get_action(&mut self, unit: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
         if self.last_tick != game.current_tick {
             self.last_tick = game.current_tick;
-            let opponent = game.units.iter().find(|v| v.player_id != me.player_id).unwrap();
+            let opponent = game.units.iter().find(|v| v.player_id != unit.player_id).unwrap();
             println!("[{}] opponent: {:?}", game.current_tick, opponent);
         }
         UnitAction {

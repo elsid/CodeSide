@@ -22,6 +22,10 @@ impl Rectangular for Mine {
         } else {
             Vec2::from_model(&self.size) / 2.0
         };
-        Rect::new(Vec2::from_model(&self.position) + Vec2::only_y(self.size.y / 2.0), size)
+        Rect::new(self.center(), size)
+    }
+
+    fn center(&self) -> Vec2 {
+        Vec2::from_model(&self.position) + Vec2::only_y(self.size.y / 2.0)
     }
 }

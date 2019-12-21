@@ -69,8 +69,8 @@ pub struct MyStrategyImpl {
 }
 
 impl MyStrategyImpl {
-    pub fn new(config: Config, me: Unit, game: Game) -> Self {
-        let world = World::new(config.clone(), me, game);
+    pub fn new(config: Config, current_unit: Unit, game: Game) -> Self {
+        let world = World::new(config.clone(), current_unit.player_id, game);
         #[cfg(feature = "dump_level")]
         println!("{}", dump_level(world.level()));
         Self {
@@ -88,7 +88,7 @@ impl MyStrategyImpl {
             max_cpu_time_spent: Duration::default(),
             max_time_budget_spent: 0.0,
             max_cpu_time_budget_spent: 0.0,
-            optimal_tiles: std::iter::repeat(None).take(world.properties().team_size as usize).collect(),
+            optimal_tiles: std::iter::repeat(None).take(world.units().len()).collect(),
             world,
             calls_per_tick: 0,
             last_tick: -1,
@@ -96,15 +96,15 @@ impl MyStrategyImpl {
         }
     }
 
-    pub fn get_action(&mut self, me: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
+    pub fn get_action(&mut self, unit: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
         self.on_start();
-        let result = self.get_action_measured(me, game, debug);
+        let result = self.get_action_measured(unit, game, debug);
         self.on_finish();
         result
     }
 
     #[inline(never)]
-    pub fn get_action_measured(&mut self, me: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
+    pub fn get_action_measured(&mut self, current_unit: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
         fn distance_sqr(a: &Vec2F64, b: &Vec2F64) -> f64 {
             (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
         }
@@ -112,12 +112,11 @@ impl MyStrategyImpl {
             self.last_tick = game.current_tick;
             self.world.update(game);
         }
-        self.world.update_me(me);
         #[cfg(feature = "enable_debug")]
         {
             debug.draw(CustomData::PlacedText {
-                text: format!("{}", me.id),
-                pos: (me.position() + Vec2::only_y(me.size.y)).as_model_f32(),
+                text: format!("{}", current_unit.id),
+                pos: (current_unit.position() + Vec2::only_y(current_unit.size.y)).as_model_f32(),
                 alignment: TextAlignment::Center,
                 size: 40.0,
                 color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
@@ -125,7 +124,7 @@ impl MyStrategyImpl {
         }
         #[cfg(feature = "enable_debug")]
         {
-            let backtrack = self.world.backtrack();
+            let backtrack = self.world.backtrack(self.world.get_unit_index(current_unit.id));
             for i in 0 .. backtrack.len() {
                 if backtrack[i] == i {
                     continue;
@@ -141,18 +140,18 @@ impl MyStrategyImpl {
             }
         }
         let nearest_opponent = self.world.units().iter()
-            .filter(|unit| self.world.is_opponent(unit))
+            .filter(|unit| self.world.is_opponent_unit(unit))
             .filter(|unit| {
-                if let Some(weapon) = self.world.me().weapon.as_ref() {
-                    should_shoot(&self.world.me().rect(), &unit, weapon, &self.world, true)
+                if let Some(weapon) = current_unit.weapon.as_ref() {
+                    should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &self.world, true)
                 } else {
                     false
                 }
             })
             .min_by(|a, b| {
                 std::cmp::PartialOrd::partial_cmp(
-                    &distance_sqr(&a.position, &me.position),
-                    &distance_sqr(&b.position, &me.position),
+                    &distance_sqr(&a.position, &current_unit.position),
+                    &distance_sqr(&b.position, &current_unit.position),
                 )
                 .unwrap()
             });
@@ -166,8 +165,8 @@ impl MyStrategyImpl {
             })
             .min_by(|a, b| {
                 std::cmp::PartialOrd::partial_cmp(
-                    &distance_sqr(&a.position, &me.position),
-                    &distance_sqr(&b.position, &me.position),
+                    &distance_sqr(&a.position, &current_unit.position),
+                    &distance_sqr(&b.position, &current_unit.position),
                 )
                 .unwrap()
             });
@@ -181,13 +180,13 @@ impl MyStrategyImpl {
             })
             .min_by(|a, b| {
                 std::cmp::PartialOrd::partial_cmp(
-                    &distance_sqr(&a.position, &me.position),
-                    &distance_sqr(&b.position, &me.position),
+                    &distance_sqr(&a.position, &current_unit.position),
+                    &distance_sqr(&b.position, &current_unit.position),
                 )
                 .unwrap()
             });
         let optimal_tile_target = if !self.slow_down {
-            if let Some((score, location)) = get_optimal_tile(&self.world, &self.optimal_tiles, debug) {
+            if let Some((score, location)) = get_optimal_tile(current_unit, &self.world, &self.optimal_tiles, debug) {
                 #[cfg(feature = "enable_debug")]
                 debug.draw(CustomData::Rect {
                     pos: (location.center() - Vec2::new(0.25, 0.25)).as_model_f32(),
@@ -196,18 +195,18 @@ impl MyStrategyImpl {
                 });
                 #[cfg(feature = "enable_debug")]
                 debug.draw(CustomData::Line {
-                    p1: self.world.me().rect().center().as_model_f32(),
+                    p1: current_unit.rect().center().as_model_f32(),
                     p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
                     width: 0.1,
                     color: ColorF32 { a: 0.66, r: 0.0, g: 0.66, b: 0.0 },
                 });
-                self.optimal_tiles[self.world.me_index()] = Some((score, location));
+                self.optimal_tiles[self.world.get_unit_index(current_unit.id)] = Some((score, location));
                 Some(Vec2::new(location.x() as f64 + 0.5, location.y() as f64))
             } else {
                 None
             }
         } else {
-            if let Some((_, location)) = self.optimal_tiles[self.world.me_index()] {
+            if let Some((_, location)) = self.optimal_tiles[self.world.get_unit_index(current_unit.id)] {
                 Some(Vec2::new(location.x() as f64 + 0.5, location.y() as f64))
             } else {
                 None
@@ -216,19 +215,19 @@ impl MyStrategyImpl {
         let global_target = if let Some(v) = optimal_tile_target {
             v
         } else {
-            if let (&None, Some(weapon)) = (&me.weapon, nearest_weapon) {
+            if let (&None, Some(weapon)) = (&current_unit.weapon, nearest_weapon) {
                 weapon.position()
-            } else if let (true, Some(health_pack)) = (me.health < self.world.properties().unit_max_health, nearest_health_pack) {
+            } else if let (true, Some(health_pack)) = (current_unit.health < self.world.properties().unit_max_health, nearest_health_pack) {
                 health_pack.position()
             } else {
-                me.position()
+                current_unit.position()
             }
         };
         let (shoot, aim) = if let Some(opponent) = nearest_opponent {
             #[cfg(feature = "enable_debug")]
             {
                 let mut s = Vec::new();
-                for position in WalkGrid::new(me.rect().center(), opponent.rect().center()) {
+                for position in WalkGrid::new(current_unit.rect().center(), opponent.rect().center()) {
                     s.push(position);
                     debug.draw(CustomData::Rect {
                         pos: position.as_location().as_model_f32(),
@@ -236,8 +235,8 @@ impl MyStrategyImpl {
                         color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.66 },
                     });
                 }
-                if let Some(weapon) = me.weapon.as_ref() {
-                    let source = me.rect().center();
+                if let Some(weapon) = current_unit.weapon.as_ref() {
+                    let source = current_unit.rect().center();
                     let direction = (opponent.rect().center() - source).normalized();
                     let to_target = direction * self.world.max_distance();
                     let left = direction.left() * weapon.params.bullet.size;
@@ -254,7 +253,7 @@ impl MyStrategyImpl {
                         } else {
                             (source, destination)
                         };
-                        if let Some(hit) = get_nearest_hit(me.id, src, dst, &Target::from_unit(opponent), &self.world) {
+                        if let Some(hit) = get_nearest_hit(current_unit.id, src, dst, &Target::from_unit(opponent), &self.world) {
                             let color = match hit.object_type {
                                 ObjectType::Wall => ColorF32 { a: 0.5, r: 0.66, g: 0.66, b: 0.66 },
                                 ObjectType::Unit => if hit.is_teammate {
@@ -282,19 +281,19 @@ impl MyStrategyImpl {
             (
                 true,
                 Vec2F64 {
-                    x: opponent.position.x - me.position.x,
-                    y: opponent.position.y - me.position.y,
+                    x: opponent.position.x - current_unit.position.x,
+                    y: opponent.position.y - current_unit.position.y,
                 }
             )
         } else {
             (false, model::Vec2F64 { x: 0.0, y: 0.0 })
         };
-        let tiles_path = self.world.find_shortcut_tiles_path(self.world.me().location(), global_target.as_location());
+        let tiles_path = self.world.find_shortcut_tiles_path(self.world.get_unit_index(current_unit.id), current_unit.location(), global_target.as_location());
         let local_target = if !tiles_path.is_empty() {
             #[cfg(feature = "enable_debug")]
             {
                 debug.draw(CustomData::Line {
-                    p1: self.world.me().rect().center().as_model_f32(),
+                    p1: current_unit.rect().center().as_model_f32(),
                     p2: tiles_path[0].center().as_model_f32(),
                     width: 0.1,
                     color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.0 },
@@ -316,7 +315,7 @@ impl MyStrategyImpl {
         #[cfg(feature = "enable_debug")]
         debug.draw(CustomData::Log { text: format!("global_target: {:?} local_target: {:?}", global_target, local_target) });
 
-        let simulator = Simulator::new(&self.world, me.id);
+        let simulator = Simulator::new(&self.world, current_unit.id);
         let planner = Planner::new(local_target, &self.config, simulator, self.world.max_distance());
         let plan = planner.make(game.current_tick, &mut self.rng, debug);
         if !plan.transitions.is_empty() {
@@ -327,33 +326,33 @@ impl MyStrategyImpl {
             let mut action = plan.transitions[0].action.clone();
             action.shoot = shoot;
             action.aim = aim;
-            action.swap_weapon = self.should_swap_weapon(shoot);
-            action.plant_mine = self.should_plant_mine();
+            action.swap_weapon = self.should_swap_weapon(current_unit, shoot);
+            action.plant_mine = self.should_plant_mine(current_unit);
             #[cfg(feature = "enable_debug")]
             debug.draw(CustomData::Log { text: format!("action: {:?}", action) });
             return action;
         }
-        let mut jump = local_target.y() > me.position.y;
-        if local_target.x() > me.position.x
-            && self.world.tile(Location::new((me.position.x + 1.0) as usize, (me.position.y) as usize))
+        let mut jump = local_target.y() > current_unit.position.y;
+        if local_target.x() > current_unit.position.x
+            && self.world.tile(Location::new((current_unit.position.x + 1.0) as usize, (current_unit.position.y) as usize))
                 == Tile::Wall
         {
             jump = true
         }
-        if local_target.x() < me.position.x
-            && self.world.tile(Location::new((me.position.x - 1.0) as usize, (me.position.y) as usize))
+        if local_target.x() < current_unit.position.x
+            && self.world.tile(Location::new((current_unit.position.x - 1.0) as usize, (current_unit.position.y) as usize))
                 == Tile::Wall
         {
             jump = true
         }
         UnitAction {
-            velocity: local_target.x() - me.position.x,
+            velocity: local_target.x() - current_unit.position.x,
             jump,
-            jump_down: local_target.y() < me.position.y,
+            jump_down: local_target.y() < current_unit.position.y,
             shoot,
             aim,
             reload: false,
-            swap_weapon: self.should_swap_weapon(shoot),
+            swap_weapon: self.should_swap_weapon(current_unit, shoot),
             plant_mine: false,
         }
     }
@@ -396,12 +395,12 @@ impl MyStrategyImpl {
         }
     }
 
-    fn should_swap_weapon(&self, should_shoot: bool) -> bool {
-        if let Some(weapon) = self.world.me().weapon.as_ref() {
+    fn should_swap_weapon(&self, current_unit: &Unit, should_shoot: bool) -> bool {
+        if let Some(weapon) = current_unit.weapon.as_ref() {
             if should_shoot && weapon.magazine > 0 {
                 return false;
             }
-            match self.world.tile_item(self.world.me().location()) {
+            match self.world.tile_item(current_unit.location()) {
                 Some(&Item::Weapon { ref weapon_type }) => {
                     get_weapon_score(&weapon.typ) < get_weapon_score(weapon_type)
                 }
@@ -412,20 +411,20 @@ impl MyStrategyImpl {
         }
     }
 
-    fn should_plant_mine(&self) -> bool {
-        if !self.world.me().on_ground || self.world.me().on_ladder || self.world.me().mines == 0 {
+    fn should_plant_mine(&self, current_unit: &Unit) -> bool {
+        if !current_unit.on_ground || current_unit.on_ladder || current_unit.mines == 0 {
             return false;
         }
         if self.world.number_of_teammates() > 0 {
             let will_explode_teammate = self.world.units().iter()
-                .find(|v| self.world.is_teammate(v) && v.rect().center().distance(self.world.me().position()) < 2.0 * self.world.properties().mine_explosion_params.radius)
+                .find(|v| self.world.is_teammate_unit(v) && v.rect().center().distance(current_unit.position()) < 2.0 * self.world.properties().mine_explosion_params.radius)
                 .is_some();
             if will_explode_teammate {
                 return false;
             }
         }
         let number_of_exploded_opponents = self.world.units().iter()
-            .filter(|v| self.world.is_opponent(v) && v.rect().center().distance(self.world.me().position()) < self.world.properties().mine_explosion_params.radius)
+            .filter(|v| self.world.is_opponent_unit(v) && v.rect().center().distance(current_unit.position()) < self.world.properties().mine_explosion_params.radius)
             .count();
         number_of_exploded_opponents >= 2
     }

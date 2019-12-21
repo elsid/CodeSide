@@ -193,7 +193,7 @@ impl MyStrategy {
 
     pub fn get_action(
         &mut self,
-        me: &model::Unit,
+        unit: &model::Unit,
         game: &model::Game,
         debug: &mut crate::Debug,
     ) -> model::UnitAction {
@@ -201,14 +201,14 @@ impl MyStrategy {
             let config = get_config();
             #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"))))]
             {
-                self.strategy_impl = Some(MyStrategyImpl::new(config, me.clone(), game.clone()));
+                self.strategy_impl = Some(MyStrategyImpl::new(config, unit.clone(), game.clone()));
             }
             #[cfg(any(feature = "dump_examples", feature = "dump_opponent", feature = "dump_properties_json"))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new());
             }
         }
-        self.strategy_impl.as_mut().unwrap().get_action(me, game, debug)
+        self.strategy_impl.as_mut().unwrap().get_action(unit, game, debug)
     }
 }
 

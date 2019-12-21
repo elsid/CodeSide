@@ -12,12 +12,17 @@ use model::{
     WeaponType,
 };
 
-use aicup2019::my_strategy::{
-    Rect,
-    UnitExt,
-    Vec2,
-    World,
-    make_weapon,
+use aicup2019::{
+    examples::{
+        EXAMPLE_MY_UNIT_ID,
+    },
+    my_strategy::{
+        Rect,
+        UnitExt,
+        Vec2,
+        World,
+        make_weapon,
+    }
 };
 
 #[derive(Debug)]
@@ -91,32 +96,30 @@ pub fn make_unit_rect(position: Vec2, properties: &Properties) -> Rect {
 
 pub fn updated_world(mut world: World) -> World {
     let game = world.game().clone();
-    let me = world.me().clone();
     world.update(&game);
-    world.update_me(&me);
     world
 }
 
-pub fn me_with_weapon(world: World, weapon_type: WeaponType) -> World {
+pub fn with_my_unit_with_weapon(world: World, weapon_type: WeaponType) -> World {
     let mut game = world.game().clone();
-    let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
+    let me_index = game.units.iter().position(|v| v.id == EXAMPLE_MY_UNIT_ID).unwrap();
     game.units[me_index].weapon = Some(make_weapon(weapon_type.clone(), world.properties()));
-    World::new(world.config().clone(), game.units[me_index].clone(), game)
+    World::new(world.config().clone(), world.player_id(), game)
 }
 
-pub fn opponent_with_weapon(world: World, weapon_type: WeaponType) -> World {
+pub fn with_opponent_unit_with_weapon(world: World, weapon_type: WeaponType) -> World {
     let mut game = world.game().clone();
-    let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
-    let unit_index = game.units.iter().position(|v| v.player_id != world.me().player_id).unwrap();
+    let me_index = game.units.iter().position(|v| v.id == EXAMPLE_MY_UNIT_ID).unwrap();
+    let unit_index = game.units.iter().position(|v| v.player_id != world.player_id()).unwrap();
     game.units[unit_index].weapon = Some(make_weapon(weapon_type.clone(), world.properties()));
-    World::new(world.config().clone(), game.units[me_index].clone(), game)
+    World::new(world.config().clone(), world.player_id(), game)
 }
 
 pub fn with_my_position(world: World, position: Vec2) -> World {
     let mut game = world.game().clone();
-    let me_index = game.units.iter().position(|v| v.id == world.me().id).unwrap();
+    let me_index = game.units.iter().position(|v| v.id == EXAMPLE_MY_UNIT_ID).unwrap();
     game.units[me_index].position = position.as_model();
-    World::new(world.config().clone(), game.units[me_index].clone(), game)
+    World::new(world.config().clone(), world.player_id(), game)
 }
 
 pub fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2, unit_id: i32) -> World {
@@ -125,36 +128,20 @@ pub fn with_bullet(world: World, weapon_type: WeaponType, position: Vec2, direct
     game.bullets.push(Bullet {
         weapon_type: weapon_type,
         unit_id: unit_id,
-        player_id: 1,
+        player_id: world.get_unit(unit_id).player_id,
         position: position.as_model(),
         velocity: (direction.normalized() * params.bullet.speed).as_model(),
         damage: params.bullet.damage,
         size: params.bullet.size,
         explosion_params: params.explosion.clone(),
     });
-    World::new(world.config().clone(), world.me().clone(), game)
+    World::new(world.config().clone(), world.player_id(), game)
 }
 
-pub fn with_my_bullet(world: World, weapon_type: WeaponType, position: Vec2, direction: Vec2, unit_id: i32) -> World {
-    let mut game = world.game().clone();
-    let params = &world.properties().weapon_params.get(&weapon_type).unwrap();
-    game.bullets.push(Bullet {
-        weapon_type: weapon_type,
-        unit_id: unit_id,
-        player_id: 3,
-        position: position.as_model(),
-        velocity: (direction.normalized() * params.bullet.speed).as_model(),
-        damage: params.bullet.damage,
-        size: params.bullet.size,
-        explosion_params: params.explosion.clone(),
-    });
-    World::new(world.config().clone(), world.me().clone(), game)
-}
-
-pub fn with_mine(world: World, position: Vec2) -> World {
+pub fn with_mine(world: World, position: Vec2, player_id: i32) -> World {
     let mut game = world.game().clone();
     game.mines.push(Mine {
-        player_id: 1,
+        player_id,
         position: position.as_model(),
         size: world.properties().mine_size.clone(),
         state: MineState::Preparing,
@@ -162,7 +149,7 @@ pub fn with_mine(world: World, position: Vec2) -> World {
         trigger_radius: world.properties().mine_trigger_radius,
         explosion_params: world.properties().mine_explosion_params.clone(),
     });
-    World::new(world.config().clone(), world.me().clone(), game)
+    World::new(world.config().clone(), world.player_id(), game)
 }
 
 pub fn with_loot_box(world: World, item: Item, position: Vec2) -> World {
@@ -172,14 +159,14 @@ pub fn with_loot_box(world: World, item: Item, position: Vec2) -> World {
         size: world.properties().loot_box_size.clone(),
         item: item,
     });
-    World::new(world.config().clone(), world.me().clone(), game)
+    World::new(world.config().clone(), world.player_id(), game)
 }
 
 pub fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {
     let base = Unit {
-        player_id: 1,
-        id: 1,
-        health: 100,
+        player_id: 0,
+        id: 0,
+        health: properties.unit_max_health,
         position: position.as_model(),
         size: properties.unit_size.clone(),
         jump_state: JumpState {

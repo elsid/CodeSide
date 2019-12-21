@@ -45,7 +45,7 @@ impl Target {
 }
 
 #[inline(never)]
-pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: f64, bullet_size: f64, world: &World) -> HitProbabilities {
+pub fn get_hit_probabilities(unit_id: i32, source: Vec2, target: &Target, spread: f64, bullet_size: f64, world: &World) -> HitProbabilities {
     let direction = (target.rect.center() - source).normalized();
     let to_target = direction * world.max_distance();
     let left = direction.left() * bullet_size;
@@ -70,7 +70,7 @@ pub fn get_hit_probabilities(my_id: i32, source: Vec2, target: &Target, spread: 
         } else {
             (source, destination)
         };
-        if let Some(hit) = get_nearest_hit(my_id, src, dst, target, world) {
+        if let Some(hit) = get_nearest_hit(unit_id, src, dst, target, world) {
             hit_opponent_units += !hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
             hit_teammate_units += hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
             hit_opponent_mines += !hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
@@ -112,7 +112,7 @@ pub enum ObjectType {
 }
 
 #[inline(never)]
-pub fn get_nearest_hit(my_id: i32, source: Vec2, mut destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
+pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
     let to_destination = destination - source;
     let mut max_distance = to_destination.norm();
     let direction = to_destination / max_distance;
@@ -129,7 +129,7 @@ pub fn get_nearest_hit(my_id: i32, source: Vec2, mut destination: Vec2, target: 
         None
     };
 
-    if let Some(unit_hit) = get_distance_to_nearest_hit_unit_by_line(my_id, target.id, source, destination, world) {
+    if let Some(unit_hit) = get_distance_to_nearest_hit_unit_by_line(unit_id, target.id, source, destination, world) {
         if max_distance > unit_hit.distance {
             max_distance = unit_hit.distance;
             destination = source + direction * unit_hit.distance;
@@ -247,12 +247,12 @@ pub struct UnitHit {
     is_teammate: bool,
 }
 
-pub fn get_distance_to_nearest_hit_unit_by_line(my_id: i32, target_id: i32, source: Vec2, target: Vec2, world: &World) -> Option<UnitHit> {
+pub fn get_distance_to_nearest_hit_unit_by_line(unit_id: i32, target_id: i32, source: Vec2, target: Vec2, world: &World) -> Option<UnitHit> {
     world.units().iter()
-        .filter(|unit| unit.id != my_id && unit.id != target_id)
+        .filter(|unit| unit.id != unit_id && unit.id != target_id)
         .filter_map(|unit| {
             unit.rect().get_intersection_with_line(source, target)
-                .map(|v| (unit.id, v, world.is_teammate(unit)))
+                .map(|v| (unit.id, v, world.is_teammate_unit(unit)))
         })
         .min_by_key(|&(_, distance, _)| as_score(distance))
         .map(|(id, distance, is_teammate)| UnitHit { id, distance, is_teammate })
