@@ -1,4 +1,6 @@
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "read_config", derive(RustcDecodable))]
+#[cfg_attr(feature = "dump_config", derive(RustcEncodable))]
 pub struct Config {
     pub plan_max_iterations: usize,
     pub plan_min_ticks_per_transition: usize,
@@ -36,7 +38,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(team_size: i32) -> Self {
+    pub fn new() -> Self {
         Self {
             plan_max_iterations: 60,
             plan_min_ticks_per_transition: 1,
@@ -51,11 +53,11 @@ impl Config {
             plan_time_interval_factor: 3.0,
             optimal_tile_distance_to_position_score_weight: -0.25,
             optimal_tile_distance_to_opponent_score_weight: 0.5,
-            optimal_tile_health_pack_score_weight: 1.5 * (team_size * team_size) as f64,
+            optimal_tile_health_pack_score_weight: 1.5,
             optimal_tile_first_weapon_score_weight: 3.0,
             optimal_tile_swap_weapon_score_weight: 1.0,
             optimal_tile_hit_by_opponent_score_weight: -1.0,
-            optimal_tile_opponent_obstacle_score_weight: -2.0 * team_size as f64,
+            optimal_tile_opponent_obstacle_score_weight: -2.0,
             optimal_tile_hit_nearest_opponent_score_weight: 2.0,
             optimal_tile_loot_box_mine_score_weight: 0.1,
             optimal_tile_height_score_weight: 0.1,
@@ -72,5 +74,11 @@ impl Config {
             min_target_hits_to_shoot: 1,
             hit_number_of_directions: 11,
         }
+    }
+
+    pub fn adjusted(mut self, team_size: i32) -> Self {
+        self.optimal_tile_health_pack_score_weight *= (team_size * team_size) as f64;
+        self.optimal_tile_opponent_obstacle_score_weight *= team_size as f64;
+        self
     }
 }

@@ -33,7 +33,7 @@ pub fn example_world() -> World {
     let my_player = example_my_player();
     let opponent = example_opponent();
     let player_id = my_player.id;
-    let config = Config::new(properties.team_size);
+    let config = Config::new().adjusted(properties.team_size);
     let game = example_game(my_player, opponent, properties);
     World::new(config, player_id, game)
 }

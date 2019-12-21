@@ -215,7 +215,9 @@ impl MyStrategy {
             self.debug_next_y = 0.0;
         }
         if self.strategy_impl.is_none() {
-            let config = get_config(game.properties.team_size);
+            let config = get_config().adjusted(game.properties.team_size);
+            #[cfg(feature = "dump_config")]
+            println!("{}", rustc_serialize::json::encode(&config).expect("Can't serialize config"));
             #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"))))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, unit.clone(), game.clone()));
@@ -233,13 +235,13 @@ impl MyStrategy {
 }
 
 #[cfg(not(feature = "read_config"))]
-fn get_config(team_size: i32) -> Config {
-    Config::new(team_size)
+fn get_config() -> Config {
+    Config::new()
 }
 
 #[cfg(feature = "read_config")]
 fn get_config() -> Config {
-    serde_json::from_str(
+    rustc_serialize::json::decode(
         std::fs::read_to_string(
             std::env::var("CONFIG").expect("CONFIG env is not found")
         ).expect("Can't read config file").as_str()

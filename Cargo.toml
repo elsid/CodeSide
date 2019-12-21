@@ -15,13 +15,14 @@ debug = true
 [features]
 dump_examples = []
 dump_opponent = []
-go_to_target = []
 enable_debug = []
 disable_output = []
 dump_level = []
 verify_collisions = []
 enable_log = []
 dump_properties_json = []
+read_config = []
+dump_config = []
 
 [[bench]]
 name = "simulator"

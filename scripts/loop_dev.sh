@@ -1,6 +1,7 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 PORT=${1}
+CONFIG=${2}
 VERSION=$(date +%Y-%m-%d_%H-%M-%S)-$(git rev-parse --short HEAD)
 BIN=bin/${VERSION}
 
@@ -8,7 +9,12 @@ if ! [[ "${PORT}" ]]; then
     PORT=31002
 fi
 
-cargo build --release
+if [[ "${CONFIG}" ]] && [[ "${CONFIG}" != 'etc/_' ]]; then
+    cargo build --release --features=read_config,dump_config
+else
+    cargo build --release --features=dump_config
+fi
+
 cp target/release/aicup2019 ${BIN}
 
 {
@@ -16,7 +22,7 @@ cp target/release/aicup2019 ${BIN}
     try=0
     while [[ ${try} -lt 10 ]]; do
         echo "date $(date) ${number}"
-        ${BIN} 127.0.0.1 ${PORT} && {
+        env CONFIG=${CONFIG} ${BIN} 127.0.0.1 ${PORT} && {
             try=0
         } || {
             try=$(( try + 1 ))

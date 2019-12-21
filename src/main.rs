@@ -1,4 +1,4 @@
-#[cfg(feature = "dump_properties_json")]
+#[cfg(any(feature = "dump_properties_json", feature = "read_config"))]
 extern crate rustc_serialize;
 
 mod my_strategy;
