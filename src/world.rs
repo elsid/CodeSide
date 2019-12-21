@@ -42,10 +42,9 @@ pub struct World {
     loot_boxes: Vec<LootBox>,
     size: Vec2,
     items_by_tile: BTreeMap<Location, Item>,
-    paths: Vec<BTreeMap<(Location, Location), TilePathInfo>>,
-    backtracks: Vec<Vec<usize>>,
+    paths: Vec<(i32, BTreeMap<(Location, Location), TilePathInfo>)>,
+    backtracks: Vec<(i32, Vec<usize>)>,
     unit_index: Vec<i32>,
-    changed_locations: bool,
     max_distance: f64,
     number_of_teammates: usize,
 }
@@ -65,10 +64,10 @@ impl World {
             items_by_tile: game.loot_boxes.iter()
                 .map(|v| (v.location(), v.item.clone()))
                 .collect(),
-            paths: (0 .. unit_index.len()).map(|_| BTreeMap::new()).collect(),
-            backtracks: (0 .. unit_index.len()).map(|_| std::iter::repeat(0).take(level_size_x * level_size_y).collect::<Vec<_>>()).collect(),
-            number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
+            paths: game.units.iter().map(|v| (v.id, BTreeMap::new())).collect(),
+            backtracks: game.units.iter().map(|v| (v.id, std::iter::repeat(0).take(level_size_x * level_size_y).collect::<Vec<_>>())).collect(),
             unit_index,
+            number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
             config,
             current_tick: game.current_tick,
             properties: game.properties.clone(),
@@ -78,7 +77,6 @@ impl World {
             bullets: game.bullets.clone(),
             mines: game.mines.clone(),
             loot_boxes: game.loot_boxes.clone(),
-            changed_locations: true,
             max_distance: size.norm(),
         }
     }
@@ -96,15 +94,19 @@ impl World {
             .collect();
         let new_units_locations = get_units_locations(&self.units);
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count();
-        if self.paths.iter().find(|v| v.is_empty()).is_some() || old_units_locations != new_units_locations {
-            for i in 0 .. self.units.len() {
-                if self.is_teammate_unit(&self.units[i]) {
-                    let index = self.get_unit_index(self.units[i].id);
-                    let source = self.units[i].location();
-                    let infos = get_tile_path_infos(index, source, self);
-                    for (destination, info) in infos.into_iter() {
-                        self.paths[index].insert((source, destination), info);
-                    }
+
+        if self.unit_index.len() > self.units.len() {
+            self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
+            self.paths.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.backtracks.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+        }
+
+        if self.paths.iter().find(|v| v.1.is_empty()).is_some() || old_units_locations != new_units_locations {
+            for i in 0 .. self.paths.len() {
+                let unit = self.get_unit(self.paths[i].0);
+                if self.is_teammate_unit(unit) {
+                    let location = unit.location();
+                    self.update_tile_path_infos(i, self.paths[i].0, location);
                 }
             }
         }
@@ -187,15 +189,15 @@ impl World {
         get_tile_by_vec2(&self.level, position)
     }
 
-    pub fn get_unit_index(&self, id: i32) -> usize {
-        self.unit_index.iter()
-            .position(|&v| v == id)
-            .unwrap()
-    }
-
     pub fn get_unit(&self, id: i32) -> &Unit {
         self.units.iter()
             .find(|v| v.id == id)
+            .unwrap()
+    }
+
+    pub fn get_unit_index(&self, id: i32) -> usize {
+        self.unit_index.iter()
+            .position(|&v| v == id)
             .unwrap()
     }
 
@@ -203,8 +205,8 @@ impl World {
         self.items_by_tile.get(&location)
     }
 
-    pub fn path_info(&self, unit_index: usize, source: Location, destination: Location) -> Option<&TilePathInfo> {
-        self.paths[unit_index].get(&(source, destination))
+    pub fn get_path_info(&self, unit_index: usize, source: Location, destination: Location) -> Option<&TilePathInfo> {
+        self.paths[unit_index].1.get(&(source, destination))
     }
 
     pub fn has_opponent_unit(&self, location: Location) -> bool {
@@ -223,12 +225,15 @@ impl World {
             .is_some()
     }
 
-    pub fn backtrack(&self, unit_index: usize) -> &Vec<usize> {
-        &self.backtracks[unit_index]
+    pub fn get_backtrack(&self, unit_id: i32) -> &Vec<usize> {
+        &self.backtracks.iter()
+            .find(|(id, _)| *id == unit_id)
+            .map(|(_, v)| v)
+            .unwrap()
     }
 
-    pub fn find_shortcut_tiles_path(&self, unit_index: usize, source: Location, destination: Location) -> Vec<Location> {
-        let tiles_path = self.find_reversed_tiles_path(unit_index, source, destination);
+    pub fn find_shortcut_tiles_path(&self, unit_id: i32, source: Location, destination: Location) -> Vec<Location> {
+        let tiles_path = self.find_reversed_tiles_path(unit_id, source, destination);
 
         let mut result = Vec::new();
         let mut end = tiles_path.len();
@@ -254,12 +259,14 @@ impl World {
         result
     }
 
-    pub fn find_reversed_tiles_path(&self, unit_index: usize, source: Location, destination: Location) -> Vec<Location> {
+    pub fn find_reversed_tiles_path(&self, unit_id: i32, source: Location, destination: Location) -> Vec<Location> {
         let mut result = Vec::new();
         let mut index = get_tile_index(&self.level, destination);
 
+        let backtrack = self.get_backtrack(unit_id);
+
         loop {
-            let prev = self.backtracks[unit_index][index];
+            let prev = backtrack[index];
             if prev == index {
                 return Vec::new()
             }
@@ -296,6 +303,79 @@ impl World {
             .find(|v| v.id != self.player_id)
             .unwrap()
     }
+
+    fn update_tile_path_infos(&mut self, index: usize, unit_id: i32, source: Location) {
+        use std::collections::{BTreeSet, BinaryHeap};
+
+        let size_x = get_level_size_x(&self.level);
+        let size_y = get_level_size_y(&self.level);
+
+        let mut distances: Vec<f64> = std::iter::repeat(std::f64::MAX).take(size_x * size_y).collect();
+        distances[get_tile_index(&self.level, source)] = 0.0;
+
+        let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
+
+        let mut has_mine: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
+
+        for i in 0 .. self.backtracks[index].1.len() {
+            self.backtracks[index].1[i] = i;
+        }
+
+        let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
+        ordered.push((0, source));
+
+        let mut destinations: BTreeSet<Location> = BTreeSet::new();
+        destinations.insert(source);
+
+        const EDGES: &[(Vec2i, f64)] = &[
+            (Vec2i::new(-1, -1), std::f64::consts::SQRT_2),
+            (Vec2i::new(-1, 0), 1.0),
+            // (Vec2i::new(-1, 1), std::f64::consts::SQRT_2),
+            (Vec2i::new(0, -1), 1.0),
+            (Vec2i::new(0, 1), 1.0),
+            (Vec2i::new(1, -1), std::f64::consts::SQRT_2),
+            (Vec2i::new(1, 0), 1.0),
+            // (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
+        ];
+
+        while let Some((_, node_location)) = ordered.pop() {
+            destinations.remove(&node_location);
+            for &(shift, distance) in EDGES.iter() {
+                let neighbor_location = node_location + shift;
+                if neighbor_location.x() >= size_x || neighbor_location.y() >= size_y
+                    || !is_tile_reachable_from(node_location, neighbor_location, &self.level, self.properties()) {
+                    continue;
+                }
+                let node_index = get_tile_index(&self.level, node_location);
+                let neighbor_index = get_tile_index(&self.level, neighbor_location);
+                let new_distance = distances[node_index] + distance;
+                if new_distance < distances[neighbor_index] {
+                    distances[neighbor_index] = new_distance;
+                    has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || self.has_opponent_unit(neighbor_location);
+                    has_mine[neighbor_index] = has_mine[node_index] || self.has_mine(neighbor_location);
+                    self.backtracks[index].1[neighbor_index] = node_index;
+                    if destinations.insert(neighbor_location) {
+                        ordered.push((as_score(distance), neighbor_location));
+                    }
+                }
+            }
+        }
+
+        for x in 0 .. size_x {
+            for y in 0 .. size_y {
+                let destination = Location::new(x, y);
+                let tile_index = get_tile_index(&self.level, destination);
+                let distance = distances[tile_index];
+                if distance != std::f64::MAX {
+                    self.paths[index].1.insert((source, destination), TilePathInfo {
+                        distance,
+                        has_opponent_unit: has_opponent_unit[tile_index],
+                        has_mine: has_mine[tile_index],
+                    });
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -320,83 +400,6 @@ impl TilePathInfo {
     pub fn distance(&self) -> f64 {
         self.distance
     }
-}
-
-pub fn get_tile_path_infos(unit_index: usize, from: Location, world: &mut World) -> Vec<(Location, TilePathInfo)> {
-    use std::collections::{BTreeSet, BinaryHeap};
-
-    let size_x = get_level_size_x(world.level());
-    let size_y = get_level_size_y(world.level());
-
-    let mut distances: Vec<f64> = std::iter::repeat(std::f64::MAX).take(size_x * size_y).collect();
-    distances[get_tile_index(world.level(), from)] = 0.0;
-
-    let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
-
-    let mut has_mine: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
-
-    for i in 0 .. world.backtracks[unit_index].len() {
-        world.backtracks[unit_index][i] = i;
-    }
-
-    let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
-    ordered.push((0, from));
-
-    let mut destinations: BTreeSet<Location> = BTreeSet::new();
-    destinations.insert(from);
-
-    const EDGES: &[(Vec2i, f64)] = &[
-        (Vec2i::new(-1, -1), std::f64::consts::SQRT_2),
-        (Vec2i::new(-1, 0), 1.0),
-        // (Vec2i::new(-1, 1), std::f64::consts::SQRT_2),
-        (Vec2i::new(0, -1), 1.0),
-        (Vec2i::new(0, 1), 1.0),
-        (Vec2i::new(1, -1), std::f64::consts::SQRT_2),
-        (Vec2i::new(1, 0), 1.0),
-        // (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
-    ];
-
-    while let Some((_, node_location)) = ordered.pop() {
-        destinations.remove(&node_location);
-        for &(shift, distance) in EDGES.iter() {
-            let neighbor_location = node_location + shift;
-            if neighbor_location.x() >= size_x || neighbor_location.y() >= size_y
-                || !is_tile_reachable_from(node_location, neighbor_location, world.level(), world.properties()) {
-                continue;
-            }
-            let node_index = get_tile_index(world.level(), node_location);
-            let neighbor_index = get_tile_index(world.level(), neighbor_location);
-            let new_distance = distances[node_index] + distance;
-            if new_distance < distances[neighbor_index] {
-                distances[neighbor_index] = new_distance;
-                has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || world.has_opponent_unit(neighbor_location);
-                has_mine[neighbor_index] = has_mine[node_index] || world.has_mine(neighbor_location);
-                world.backtracks[unit_index][neighbor_index] = node_index;
-                if destinations.insert(neighbor_location) {
-                    ordered.push((as_score(distance), neighbor_location));
-                }
-            }
-        }
-    }
-
-    let mut result = Vec::new();
-
-    for x in 0 .. size_x {
-        for y in 0 .. size_y {
-            let location = Location::new(x, y);
-            let index = get_tile_index(world.level(), location);
-            let distance = distances[index];
-            if distance != std::f64::MAX {
-                result.push((location, TilePathInfo {
-                    distance,
-                    has_opponent_unit: has_opponent_unit[index],
-                    has_mine: has_mine[index],
-                }));
-            }
-        }
-    }
-
-    result
 }
 
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {

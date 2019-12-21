@@ -37,22 +37,26 @@ use crate::my_strategy::{
     get_level_size_y,
 };
 
-pub fn get_optimal_tile(unit: &Unit, world: &World, optimal_tiles: &Vec<Option<(f64, Location)>>, debug: &mut Debug) -> Option<(f64, Location)> {
+#[inline(never)]
+pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(f64, Location)> {
     let mut optimal: Option<(f64, Location)> = None;
+
     #[cfg(feature = "enable_debug")]
     let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
         .take(get_level_size_x(world.level()) * get_level_size_y(world.level()))
         .collect();
+
     let unit_index = world.get_unit_index(unit.id);
+
     for x in 1 .. get_level_size_x(world.level()) - 1 {
         for y in 1 .. get_level_size_y(world.level()) - 2 {
             let location = Location::new(x, y);
             let tile = world.tile(location);
-            if tile == Tile::Wall || is_busy_by_other(location, unit.id, unit_index, optimal_tiles, world) {
+            if tile == Tile::Wall || is_busy_by_other(location, unit.id, optimal_locations, world) {
                 continue;
             }
-            if let Some(path_info) = world.path_info(unit_index, unit.location(), location) {
-                let candidate_score = get_tile_score(location, unit, world, path_info);
+            if let Some(path_info) = world.get_path_info(unit_index, unit.location(), location) {
+                let candidate_score = get_location_score(location, unit, world, path_info);
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
@@ -63,6 +67,7 @@ pub fn get_optimal_tile(unit: &Unit, world: &World, optimal_tiles: &Vec<Option<(
             }
         }
     }
+
     #[cfg(feature = "enable_debug")]
     {
         let min = tiles.iter().filter_map(|&v| v).min_by_key(|&v| as_score(v)).unwrap();
@@ -80,20 +85,21 @@ pub fn get_optimal_tile(unit: &Unit, world: &World, optimal_tiles: &Vec<Option<(
             }
         }
         if let Some((score, location)) = optimal {
-            let path_info = world.path_info(unit_index, unit.location(), location).unwrap();
-            debug.log(format!("[{}] optimal_tile: {:?} {:?} {:?}", unit.id, location, score, get_tile_score_components(location, unit, world, path_info)));
+            let path_info = world.get_path_info(unit_index, unit.location(), location).unwrap();
+            debug.log(format!("[{}] optimal_tile: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, path_info)));
         }
     }
+
     optimal
 }
 
-pub fn is_busy_by_other(location: Location, unit_id: i32, unit_index: usize, optimal_tiles: &Vec<Option<(f64, Location)>>, world: &World) -> bool {
+fn is_busy_by_other(location: Location, unit_id: i32, optimal_tiles: &Vec<(i32, Option<Location>)>, world: &World) -> bool {
     for i in 0 .. optimal_tiles.len() {
-        if i == unit_index {
+        if optimal_tiles[i].0 == unit_id {
             continue;
         }
-        if let Some((_, v)) = optimal_tiles[i].as_ref() {
-            if *v == location {
+        if let Some(v) = optimal_tiles[i].1 {
+            if v == location {
                 return true;
             }
         }
@@ -113,11 +119,11 @@ pub fn is_busy_by_other(location: Location, unit_id: i32, unit_index: usize, opt
         .is_some()
 }
 
-pub fn get_tile_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
-    get_tile_score_components(location, current_unit, world, path_info).iter().sum()
+pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
+    get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_tile_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
+fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);

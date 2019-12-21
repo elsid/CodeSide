@@ -143,11 +143,23 @@ pub mod plan;
 #[allow(unused_imports)]
 pub use plan::*;
 
-#[path = "optimal_tile.rs"]
-pub mod optimal_tile;
+#[path = "optimal_location.rs"]
+pub mod optimal_location;
 
 #[allow(unused_imports)]
-pub use optimal_tile::*;
+pub use optimal_location::*;
+
+#[path = "optimal_destination.rs"]
+pub mod optimal_destination;
+
+#[allow(unused_imports)]
+pub use optimal_destination::*;
+
+#[path = "optimal_action.rs"]
+pub mod optimal_action;
+
+#[allow(unused_imports)]
+pub use optimal_action::*;
 
 #[cfg(feature = "dump_examples")]
 #[path = "my_strategy_dump_examples.rs"]
