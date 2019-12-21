@@ -10,11 +10,10 @@ use model::{
     CustomData,
 };
 
-use crate::Debug;
-
 use crate::my_strategy::{
     Clamp1,
     Config,
+    Debug,
     IdGenerator,
     Identifiable,
     Search,
@@ -124,16 +123,16 @@ impl<'c, 's> Planner<'c, 's> {
     }
 }
 
-pub struct VisitorImpl<'r, 'd> {
+pub struct VisitorImpl<'r, 'd1, 'd2> {
     current_tick: i32,
     rng: &'r mut XorShiftRng,
-    debug: &'r mut Debug<'d>,
+    debug: &'r mut Debug<'d1, 'd2>,
     state_id_generator: IdGenerator,
     transition_id_generator: IdGenerator,
 }
 
-impl<'r, 'd> VisitorImpl<'r, 'd> {
-    pub fn new(current_tick: i32, rng: &'r mut XorShiftRng, debug: &'r mut Debug<'d>) -> Self {
+impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
+    pub fn new(current_tick: i32, rng: &'r mut XorShiftRng, debug: &'r mut Debug<'d1, 'd2>) -> Self {
         VisitorImpl {
             current_tick,
             rng,
@@ -148,7 +147,7 @@ impl<'r, 'd> VisitorImpl<'r, 'd> {
     }
 }
 
-impl<'r, 'c, 'd, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd> {
+impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd1, 'd2> {
     fn is_final(&self, state: &State) -> bool {
         state.depth >= state.planner.config.plan_min_state_depth
     }

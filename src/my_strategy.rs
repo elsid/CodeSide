@@ -29,11 +29,10 @@ pub mod common;
 #[allow(unused_imports)]
 pub use common::*;
 
-#[cfg(feature = "enable_debug")]
 #[path = "debug.rs"]
 pub mod debug;
 
-#[cfg(feature = "enable_debug")]
+#[allow(unused_imports)]
 pub use debug::*;
 
 #[path = "location.rs"]
@@ -184,11 +183,13 @@ pub use self::my_strategy_impl::MyStrategyImpl;
 
 pub struct MyStrategy {
     strategy_impl: Option<MyStrategyImpl>,
+    last_tick: i32,
+    debug_next_y: f32,
 }
 
 impl MyStrategy {
     pub fn new() -> Self {
-        Self {strategy_impl: None}
+        Self { strategy_impl: None, last_tick: -1, debug_next_y: 0.0 }
     }
 
     pub fn get_action(
@@ -197,6 +198,10 @@ impl MyStrategy {
         game: &model::Game,
         debug: &mut crate::Debug,
     ) -> model::UnitAction {
+        if self.last_tick != game.current_tick {
+            self.last_tick = game.current_tick;
+            self.debug_next_y = 0.0;
+        }
         if self.strategy_impl.is_none() {
             let config = get_config();
             #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"))))]
@@ -208,7 +213,10 @@ impl MyStrategy {
                 self.strategy_impl = Some(MyStrategyImpl::new());
             }
         }
-        self.strategy_impl.as_mut().unwrap().get_action(unit, game, debug)
+        let mut d = Debug::with_next_y(self.debug_next_y, debug);
+        let action = self.strategy_impl.as_mut().unwrap().get_action(unit, game, &mut d);
+        self.debug_next_y = d.next_y();
+        action
     }
 }
 

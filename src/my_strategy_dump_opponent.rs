@@ -4,7 +4,10 @@ use model::{
     UnitAction,
     Vec2F64,
 };
-use crate::Debug;
+
+use crate::my_strategy::{
+    Debug,
+};
 
 pub struct MyStrategyImpl {
     last_tick: i32,

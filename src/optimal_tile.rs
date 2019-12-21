@@ -1,5 +1,3 @@
-use crate::Debug;
-
 #[cfg(feature = "enable_debug")]
 use model::{
     CustomData,
@@ -21,6 +19,7 @@ use crate::my_strategy::{
 };
 
 use crate::my_strategy::{
+    Debug,
     Location,
     Positionable,
     Rect,
@@ -82,9 +81,7 @@ pub fn get_optimal_tile(unit: &Unit, world: &World, optimal_tiles: &Vec<Option<(
         }
         if let Some((score, location)) = optimal {
             let path_info = world.path_info(unit_index, unit.location(), location).unwrap();
-            debug.draw(CustomData::Log {
-                text: format!("optimal_tile: {:?} {:?} {:?}", location, score, get_tile_score_components(location, unit, world, path_info)),
-            });
+            debug.log(format!("[{}] optimal_tile: {:?} {:?} {:?}", unit.id, location, score, get_tile_score_components(location, unit, world, path_info)));
         }
     }
     optimal

@@ -12,7 +12,6 @@ use helpers::{
     with_opponent_unit_with_weapon,
 };
 use aicup2019::{
-    Debug,
     examples::{
         EXAMPLE_MY_PLAYER_ID,
         EXAMPLE_MY_UNIT_ID,
@@ -20,6 +19,7 @@ use aicup2019::{
         example_world,
     },
     my_strategy::{
+        Debug,
         Location,
         Positionable,
         Vec2,
@@ -37,9 +37,10 @@ fn test_get_optimal_tile() {
     let mut stream = BufWriter::new(handle);
     let world = updated_world(example_world());
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let mut debug = aicup2019::Debug(&mut stream);
 
     assert_eq!(
-        get_optimal_tile(&unit, &world, &Vec::new(), &mut Debug(&mut stream)),
+        get_optimal_tile(&unit, &world, &Vec::new(), &mut Debug::new(&mut debug)),
         Some((2.5833333333333335, Location::new(29, 1)))
     );
 }

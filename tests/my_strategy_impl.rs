@@ -1,11 +1,11 @@
 use model::UnitAction;
 use aicup2019::{
-    Debug,
     examples::{
         EXAMPLE_MY_UNIT_ID,
         example_world
     },
     my_strategy::{
+        Debug,
         MyStrategyImpl,
         UnitActionWrapper,
     }
@@ -20,7 +20,8 @@ fn test_first_action() {
     let world = example_world();
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let mut my_strategy = MyStrategyImpl::new(world.config().clone(), unit.clone(), world.game().clone());
-    let result = my_strategy.get_action(&unit, &world.game(), &mut Debug(&mut stream));
+    let mut debug = aicup2019::Debug(&mut stream);
+    let result = my_strategy.get_action(&unit, &world.game(), &mut Debug::new(&mut debug));
     assert_eq!(UnitActionWrapper(&result), UnitActionWrapper(&UnitAction {
         velocity: -10.0,
         jump: false,

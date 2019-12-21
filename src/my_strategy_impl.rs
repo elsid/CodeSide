@@ -20,10 +20,9 @@ use model::{
     Vec2F32,
 };
 
-use crate::Debug;
-
 use crate::my_strategy::{
     Config,
+    Debug,
     Location,
     Planner,
     Positionable,
@@ -313,23 +312,21 @@ impl MyStrategyImpl {
         };
 
         #[cfg(feature = "enable_debug")]
-        debug.draw(CustomData::Log { text: format!("global_target: {:?} local_target: {:?}", global_target, local_target) });
+        debug.log(format!("[{}] global_target: {:?} local_target: {:?}", current_unit.id, global_target, local_target));
 
         let simulator = Simulator::new(&self.world, current_unit.id);
         let planner = Planner::new(local_target, &self.config, simulator, self.world.max_distance());
         let plan = planner.make(game.current_tick, &mut self.rng, debug);
         if !plan.transitions.is_empty() {
             #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log {
-                text: format!("plan_score={}, transitions: {:?}", plan.score, plan.transitions.iter().map(|v| (v.kind, v.id)).collect::<Vec<_>>())
-            });
+            debug.log(format!("[{}] plan_score={}, transitions: {:?}", current_unit.id, plan.score, plan.transitions.iter().map(|v| (v.kind, v.id)).collect::<Vec<_>>()));
             let mut action = plan.transitions[0].action.clone();
             action.shoot = shoot;
             action.aim = aim;
             action.swap_weapon = self.should_swap_weapon(current_unit, shoot);
             action.plant_mine = self.should_plant_mine(current_unit);
             #[cfg(feature = "enable_debug")]
-            debug.draw(CustomData::Log { text: format!("action: {:?}", action) });
+            debug.log(format!("[{}] action: {:?}", current_unit.id, action));
             return action;
         }
         let mut jump = local_target.y() > current_unit.position.y;
