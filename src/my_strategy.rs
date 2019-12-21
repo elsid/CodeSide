@@ -215,7 +215,7 @@ impl MyStrategy {
             self.debug_next_y = 0.0;
         }
         if self.strategy_impl.is_none() {
-            let config = get_config();
+            let config = get_config(game.properties.team_size);
             #[cfg(any(all(not(feature = "dump_examples"), not(feature = "dump_opponent"), not(feature = "dump_properties_json"))))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, unit.clone(), game.clone()));
@@ -233,8 +233,8 @@ impl MyStrategy {
 }
 
 #[cfg(not(feature = "read_config"))]
-fn get_config() -> Config {
-    Config::new()
+fn get_config(team_size: i32) -> Config {
+    Config::new(team_size)
 }
 
 #[cfg(feature = "read_config")]

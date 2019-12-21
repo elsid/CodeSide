@@ -35,7 +35,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Self {
+    pub fn new(team_size: i32) -> Self {
         Self {
             plan_max_iterations: 60,
             plan_min_ticks_per_transition: 3,
@@ -49,15 +49,15 @@ impl Config {
             plan_triggered_mines_by_me_score_weight: 1.0,
             optimal_tile_distance_to_position_score_weight: -0.25,
             optimal_tile_distance_to_opponent_score_weight: 0.5,
-            optimal_tile_health_pack_score_weight: 1.5,
+            optimal_tile_health_pack_score_weight: 1.5 * (team_size * team_size) as f64,
             optimal_tile_first_weapon_score_weight: 3.0,
             optimal_tile_swap_weapon_score_weight: 1.0,
             optimal_tile_hit_by_opponent_score_weight: -1.0,
-            optimal_tile_opponent_obstacle_score_weight: -1.0,
+            optimal_tile_opponent_obstacle_score_weight: -2.0 * team_size as f64,
             optimal_tile_hit_nearest_opponent_score_weight: 2.0,
             optimal_tile_loot_box_mine_score_weight: 0.1,
             optimal_tile_height_score_weight: 0.1,
-            optimal_tile_over_ground_score_weight: 0.1,
+            optimal_tile_over_ground_score_weight: 0.5,
             optimal_tile_bullets_score_weight: -0.5,
             optimal_tile_mines_score_weight: -3.0,
             optimal_tile_mine_obstacle_score_weight: -3.0,

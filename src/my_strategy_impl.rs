@@ -161,12 +161,12 @@ impl MyStrategyImpl {
             }
         }
 
-        let action = &self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1;
+        let action = self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1.clone();
 
         #[cfg(feature = "enable_debug")]
         debug.log(format!("[{}] action: {:?}", current_unit.id, action));
 
-        action.clone()
+        action
     }
 
     fn on_start(&mut self) {
@@ -228,8 +228,9 @@ fn time_bugdet_spent(current_tick: i32, time_spent: &Duration) -> f64 {
 
 #[cfg(feature = "enable_debug")]
 fn render_unit(unit: &Unit, debug: &mut Debug) {
+    let weapon = unit.weapon.as_ref().map(|v| v.fire_timer.map(|v| format!("{}", v)).unwrap_or(String::new())).unwrap_or(String::new());
     debug.draw(CustomData::PlacedText {
-        text: format!("{}", unit.id),
+        text: format!("{} {}", unit.id, weapon),
         pos: (unit.position() + Vec2::only_y(unit.size.y)).as_model_f32(),
         alignment: TextAlignment::Center,
         size: 40.0,

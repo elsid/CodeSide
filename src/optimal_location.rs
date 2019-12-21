@@ -123,7 +123,7 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
     get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -133,14 +133,14 @@ fn get_location_score_components(location: Location, current_unit: &Unit, world:
         Vec2::new(0.5, 0.5)
     );
     let distance_to_opponent_score = world.units().iter()
-        .filter(|unit| unit.player_id != current_unit.player_id)
+        .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
-            get_hit_probability_over_obstacles(&current_unit_rect, &unit.rect(), world.level()) * current_unit_center.distance(unit.position())
+            get_hit_probability_over_obstacles(&current_unit_rect, &unit.rect(), world.level()) * current_unit_center.distance(unit.center())
         })
-        .sum::<f64>() / (world.units().len() as f64 * max_distance);
+        .sum::<f64>() / max_distance;
     let distance_to_position_score = path_info.distance() / max_distance;
     let health_pack_score = match world.tile_item(location) {
-        Some(&Item::HealthPack { .. }) => 2.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
+        Some(&Item::HealthPack { .. }) => 1.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
         _ => 0.0,
     };
     let first_weapon_score = if current_unit.weapon.is_none() {
@@ -157,29 +157,23 @@ fn get_location_score_components(location: Location, current_unit: &Unit, world:
         },
         _ => false,
     }) as i32 as f64;
-    let number_of_opponents = world.units().iter()
+    let target = Target::new(current_unit.id, current_unit_rect.clone());
+    let hit_by_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
-        .count();
-    let hit_by_opponent_score = if number_of_opponents > 0 {
-        let target = Target::new(current_unit.id, current_unit_rect.clone());
-        world.units().iter()
-            .filter(|unit| world.is_opponent_unit(unit))
-            .map(|unit| {
-                if let Some(weapon) = unit.weapon.as_ref() {
-                    if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
-                        let hit_probabilities = get_hit_probabilities(unit.id, unit.rect().center(), &target, weapon.spread, weapon.params.bullet.size, world);
-                        (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
-                    } else {
-                        0.0
-                    }
+        .map(|unit| {
+            if let Some(weapon) = unit.weapon.as_ref() {
+                if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+                    let direction = (current_unit_center - unit.center()).normalized();
+                    let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction, &target, weapon.spread, weapon.params.bullet.size, world);
+                    (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
                     0.0
                 }
-            })
-            .sum::<f64>() / (number_of_opponents as f64)
-    } else {
-        0.0
-    };
+            } else {
+                0.0
+            }
+        })
+        .sum::<f64>();
     let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
     let mine_obstacle_score = path_info.has_mine() as i32 as f64;
     let loot_box_mine_score = (match world.tile_item(location) {
@@ -199,7 +193,8 @@ fn get_location_score_components(location: Location, current_unit: &Unit, world:
             0.0
         } else {
             if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
-                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
+                let direction = (unit.center() - current_unit_center).normalized();
+                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
                 by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
             } else {
                 0.0
@@ -216,24 +211,27 @@ fn get_location_score_components(location: Location, current_unit: &Unit, world:
     let bullets_score = if number_of_bullets > 0 {
         world.bullets().iter()
             .filter(|v| v.unit_id != current_unit.id && v.rect().has_collision(&tile_rect))
-            .count() as f64 / (number_of_bullets as f64)
+            .count() as f64
     } else {
         0.0
     };
     let mines_score = if world.mines().len() > 0 {
         world.mines().iter()
             .filter(|v| v.rect().center().distance(tile_rect.center()) <= 2.0 * world.properties().mine_trigger_radius)
-            .count() as f64 / (world.mines().len() as f64)
+            .count() as f64
     } else {
         0.0
     };
-    let hit_teammates_score = if let (true, Some(weapon)) = (number_of_opponents > 0, current_unit.weapon.as_ref()) {
+    let hit_teammates_score = if let Some(weapon) = current_unit.weapon.as_ref() {
         if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
             world.units().iter()
                 .filter(|v| world.is_opponent_unit(v))
-                .map(|v| get_hit_probabilities(current_unit.id, current_unit_center, &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world))
+                .map(|v| {
+                    let direction = (v.center() - current_unit_center).normalized();
+                    get_hit_probabilities(current_unit.id, current_unit_center, direction, &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world)
+                })
                 .map(|v| v.teammate_units as f64 / v.total as f64)
-                .sum::<f64>() / number_of_opponents as f64
+                .sum::<f64>()
         } else {
             0.0
         }
@@ -281,7 +279,8 @@ pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &
         return false;
     }
 
-    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
+    let direction = (opponent.center() - current_unit_center).normalized();
+    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction, &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
 
     if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
         if min_distance < explosion.radius + 2.0 {
