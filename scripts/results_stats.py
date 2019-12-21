@@ -9,7 +9,8 @@ import sys
 def main():
     import matplotlib.pyplot
 
-    games = list(collect_data(sorted(sys.argv[1:])))
+    paths = sorted(sys.argv[1:], key=lambda v: int(v.split('.')[-3]) * 1e6 + int(v.split('.')[-2]))
+    games = list(collect_data(paths))
     players = dict(
         first=dict(places=[], scores=[], score_diffs=[]),
         second=dict(places=[], scores=[], score_diffs=[]),
