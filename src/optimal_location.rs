@@ -123,7 +123,7 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
     get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -238,6 +238,25 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         0.0
     };
+    let direct_hit_by_opponent_score = world.units().iter()
+        .filter(|unit| world.is_opponent_unit(unit))
+        .map(|unit| {
+            if let Some(weapon) = unit.weapon.as_ref() {
+                if let Some(angle) = weapon.last_angle {
+                    if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+                        let hit_probabilities = get_hit_probabilities(unit.id, unit.rect().center(), Vec2::i().rotated(angle), &target, weapon.spread, weapon.params.bullet.size, world);
+                        (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            }
+        })
+        .sum::<f64>();
 
     [
         distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight,
@@ -255,6 +274,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         bullets_score * world.config().optimal_tile_bullets_score_weight,
         mine_obstacle_score * world.config().optimal_tile_mine_obstacle_score_weight,
         hit_teammates_score * world.config().optimal_tile_hit_teammates_score_weight,
+        direct_hit_by_opponent_score * world.config().optimal_tile_direct_hit_by_opponent_score_weight,
     ]
 }
 
