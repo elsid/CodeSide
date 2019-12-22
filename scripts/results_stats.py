@@ -2,6 +2,7 @@
 
 import json
 import numpy
+import os.path
 import statistics
 import sys
 
@@ -9,7 +10,7 @@ import sys
 def main():
     import matplotlib.pyplot
 
-    paths = sorted(sys.argv[1:], key=lambda v: int(v.split('.')[-3]) * 1e6 + int(v.split('.')[-2]))
+    paths = sorted(sys.argv[1:], key=get_time)
     games = list(collect_data(paths))
     players = dict(
         first=dict(places=[], scores=[], score_diffs=[]),
@@ -111,6 +112,14 @@ def main():
     ax.plot(numpy.arange(0, len(games), 1), place_1_partial_sums_ratio)
     ax.grid(True)
     matplotlib.pyplot.show()
+
+
+def get_time(path):
+    components = os.path.basename(path).split('.')
+    if len(components) == 6:
+        return int(components[-3]) * 1e6 + int(components[-2])
+    else:
+        return int(components[-2]) * 1e6
 
 
 def ratio(values):
