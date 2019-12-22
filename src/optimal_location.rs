@@ -182,8 +182,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         world.units().iter()
             .filter(|unit| {
                 world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit_center, &unit, weapon,
-                    world, false, world.config().optimal_location_number_of_directions)
+                && may_shoot(current_unit.id, current_unit_center, &unit, weapon, world,
+                    world.config().optimal_location_number_of_directions)
             })
             .min_by_key(|unit| as_score(current_unit_position.distance(unit.position())))
     } else {
@@ -272,23 +272,23 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
     }
 }
 
-pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon,
-        world: &World, use_current_spread: bool, number_of_directions: usize) -> bool {
-    let spread = if use_current_spread {
-        weapon.spread
-    } else {
-        weapon.params.min_spread
-    };
+fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon,
+        world: &World, number_of_directions: usize) -> bool {
+    let opponent_rect = opponent.rect();
 
-    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(), spread, weapon.params.bullet.size);
+    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent_rect, weapon.params.min_spread, weapon.params.bullet.size);
 
     if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
         return false;
     }
 
-    let direction = (opponent.center() - current_unit_center).normalized();
+    let direction = (opponent_rect.center() - current_unit_center).normalized();
     let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        &Target::from_unit(opponent), spread, weapon.params.bullet.size, world, number_of_directions);
+        &Target::from_unit(opponent), weapon.params.min_spread, weapon.params.bullet.size, world, number_of_directions);
+
+    if hit_probabilities.teammate_units > world.config().max_teammates_hits_to_shoot {
+        return false;
+    }
 
     if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
         if min_distance < explosion.radius + 2.0 {
@@ -296,6 +296,5 @@ pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &
         }
     }
 
-    hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
-    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
+    hit_probabilities.target + hit_probabilities.opponent_units >= world.config().min_target_hits_to_shoot
 }

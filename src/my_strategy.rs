@@ -107,6 +107,12 @@ pub mod properties;
 #[allow(unused_imports)]
 pub use properties::*;
 
+#[path = "optimization.rs"]
+pub mod optimization;
+
+#[allow(unused_imports)]
+pub use optimization::*;
+
 #[path = "hit.rs"]
 pub mod hit;
 

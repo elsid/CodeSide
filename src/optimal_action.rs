@@ -3,6 +3,8 @@ use model::{
     Tile,
     Unit,
     UnitAction,
+    Weapon,
+    WeaponParams,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -17,20 +19,23 @@ use crate::my_strategy::{
     Location,
     Planner,
     Positionable,
+    Rect,
     Rectangular,
     Simulator,
+    Target,
     Vec2,
     World,
     XorShiftRng,
     as_score,
+    get_hit_probabilities,
+    get_hit_probability_by_spread,
     get_weapon_score,
-    should_shoot,
+    minimize1d,
 };
 
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
     ObjectType,
-    Target,
     WalkGrid,
     get_nearest_hit,
     normalize_angle,
@@ -42,8 +47,8 @@ pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, world: 
         .filter(|unit| world.is_opponent_unit(unit))
         .filter(|unit| {
             if let Some(weapon) = current_unit.weapon.as_ref() {
-                should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, true,
-                    world.config().optimal_action_number_of_directions)
+                should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world,
+                    world.config().optimal_action_number_of_directions, debug)
             } else {
                 false
             }
@@ -150,6 +155,67 @@ fn should_plant_mine(current_unit: &Unit, world: &World) -> bool {
         .filter(|v| world.is_opponent_unit(v) && v.rect().center().distance(current_unit.position()) < world.properties().mine_explosion_params.radius)
         .count();
     number_of_exploded_opponents >= 2
+}
+
+fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon,
+        world: &World, number_of_directions: usize, debug: &mut Debug) -> bool {
+    let opponent_rect = opponent.rect();
+
+    let possible_optimal_spread = minimize1d(
+        weapon.params.min_spread,
+        weapon.params.max_spread,
+        10,
+        |spread| -get_possible_hit_rate(spread, current_unit_center, &opponent_rect, &weapon.params)
+    );
+
+    if weapon.spread > possible_optimal_spread {
+        return false;
+    }
+
+    let direction = (opponent_rect.center() - current_unit_center).normalized();
+    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
+        &Target::from_unit(opponent), weapon.spread, weapon.params.bullet.size, world, number_of_directions);
+
+    if hit_probabilities.teammate_units > world.config().max_teammates_hits_to_shoot {
+        return false;
+    }
+
+    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
+        if min_distance < explosion.radius + 2.0 {
+            return false;
+        }
+    }
+
+    let hit_probability = (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64;
+
+    if hit_probability == 1.0 {
+        return true;
+    }
+
+    let optimal_spread = minimize1d(
+        weapon.params.min_spread,
+        weapon.params.max_spread,
+        10,
+        |spread| -get_hit_rate(spread, hit_probability, &weapon.params)
+    );
+
+    #[cfg(feature = "enable_debug")]
+    debug.log(format!(
+        "[{}] {:?} opponent={} weapon.spread={}, optimal_spread={} hit_rate={}",
+        current_unit_id, weapon.typ, opponent.id, weapon.spread, optimal_spread, get_hit_rate(weapon.spread, hit_probability, &weapon.params)
+    ));
+
+    weapon.spread <= optimal_spread
+}
+
+fn get_possible_hit_rate(spread: f64, source: Vec2, target: &Rect, weapon_params: &WeaponParams) -> f64 {
+    let hit_probability = get_hit_probability_by_spread(source, target, spread, weapon_params.bullet.size);
+    get_hit_rate(spread, hit_probability, weapon_params)
+}
+
+fn get_hit_rate(spread: f64, hit_probability: f64, weapon_params: &WeaponParams) -> f64 {
+    let aim_time = (spread - weapon_params.min_spread) / weapon_params.aim_speed;
+    hit_probability * (weapon_params.fire_rate + aim_time + weapon_params.reload_time / weapon_params.magazine_size as f64)
 }
 
 #[cfg(feature = "enable_debug")]
