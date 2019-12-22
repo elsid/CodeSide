@@ -100,7 +100,7 @@ impl MyStrategyImpl {
                 let unit_id = self.optimal_destinations[i].0;
                 let unit = self.world.get_unit(unit_id);
                 if self.world.is_teammate_unit(unit) {
-                    self.optimal_destinations[i] = (unit_id, get_optimal_destination(current_unit, &self.optimal_locations[i].1, &self.world));
+                    self.optimal_destinations[i] = (unit_id, get_optimal_destination(unit, &self.optimal_locations[i].1, &self.world));
                 }
             }
 
