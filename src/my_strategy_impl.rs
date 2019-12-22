@@ -1,8 +1,3 @@
-use std::time::{
-    Instant,
-    Duration,
-};
-
 use model::{
     Game,
     Unit,
@@ -45,17 +40,9 @@ use crate::my_strategy::dump_level;
 pub struct MyStrategyImpl {
     world: World,
     rng: XorShiftRng,
-    start_time: Instant,
-    tick_start_time: Instant,
-    time_spent: Duration,
-    cpu_time_spent: Duration,
-    max_cpu_time_spent: Duration,
-    max_time_budget_spent: f64,
-    max_cpu_time_budget_spent: f64,
     optimal_locations: Vec<(i32, Option<Location>)>,
     optimal_destinations: Vec<(i32, Vec2)>,
     optimal_actions: Vec<(i32, UnitAction)>,
-    calls_per_tick: usize,
     last_tick: i32,
 }
 
@@ -81,31 +68,16 @@ impl MyStrategyImpl {
                 1841971383,
                 1904458926,
             ]),
-            start_time: Instant::now(),
-            tick_start_time: Instant::now(),
-            time_spent: Duration::default(),
-            cpu_time_spent: Duration::default(),
-            max_cpu_time_spent: Duration::default(),
-            max_time_budget_spent: 0.0,
-            max_cpu_time_budget_spent: 0.0,
             optimal_locations: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_destinations: world.units().iter().map(|v| (v.id, v.position())).collect(),
             optimal_actions: world.units().iter().map(|v| (v.id, default_action.clone())).collect(),
             world,
-            calls_per_tick: 0,
             last_tick: -1,
         }
     }
 
-    pub fn get_action(&mut self, unit: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
-        self.on_start();
-        let result = self.get_action_measured(unit, game, debug);
-        self.on_finish();
-        result
-    }
-
     #[inline(never)]
-    pub fn get_action_measured(&mut self, current_unit: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
+    pub fn get_action(&mut self, current_unit: &Unit, game: &Game, debug: &mut Debug) -> UnitAction {
         if self.last_tick != game.current_tick {
             self.last_tick = game.current_tick;
 
@@ -164,59 +136,16 @@ impl MyStrategyImpl {
 
         action
     }
-
-    fn on_start(&mut self) {
-        if self.calls_per_tick == 0 {
-            self.tick_start_time = Instant::now();
-        }
-        self.calls_per_tick += 1;
-    }
-
-    fn on_finish(&mut self) {
-        if self.calls_per_tick < self.world.number_of_teammates() + 1 {
-            return;
-        }
-
-        let finish = Instant::now();
-        let cpu_time_spent = finish - self.tick_start_time;
-        self.max_cpu_time_spent = self.max_cpu_time_spent.max(cpu_time_spent);
-        self.cpu_time_spent += cpu_time_spent;
-        self.time_spent = finish - self.start_time;
-        let cpu_time_budget_spent = time_bugdet_spent(self.world.current_tick(), &self.cpu_time_spent);
-        let time_budget_spent = time_bugdet_spent(self.world.current_tick(), &self.time_spent);
-        self.max_cpu_time_budget_spent = self.max_cpu_time_budget_spent.max(cpu_time_budget_spent);
-        self.max_time_budget_spent = self.max_time_budget_spent.max(time_budget_spent);
-        self.calls_per_tick = 0;
-
-        if cpu_time_budget_spent > 90.0 {
-            #[cfg(not(feature = "disable_output"))]
-            {
-                eprintln!(
-                    "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-                    self.world.current_tick(), self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
-                    cpu_time_budget_spent, time_budget_spent, self.max_cpu_time_budget_spent, self.max_time_budget_spent
-                );
-            }
-        }
-    }
 }
 
 impl Drop for MyStrategyImpl {
     fn drop(&mut self) {
         #[cfg(not(feature = "disable_output"))]
         eprintln!(
-            "{} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
-            self.world.current_tick(), self.time_spent, self.cpu_time_spent, self.max_cpu_time_spent,
-            time_bugdet_spent(self.world.current_tick(), &self.cpu_time_spent),
-            time_bugdet_spent(self.world.current_tick(), &self.time_spent),
-            self.max_time_budget_spent,
-            self.max_cpu_time_budget_spent
+            "{}",
+            self.world.current_tick()
         );
     }
-}
-
-fn time_bugdet_spent(current_tick: i32, time_spent: &Duration) -> f64 {
-    time_spent.as_secs_f64() / ((current_tick * 20 + 20000) as f64 / 1000.0) * 100.0
 }
 
 #[cfg(feature = "enable_debug")]
