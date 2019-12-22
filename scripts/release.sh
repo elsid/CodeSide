@@ -22,6 +22,7 @@ cp src/my_strategy_impl.rs ${DIR}/src
 cp src/optimal_action.rs ${DIR}/src
 cp src/optimal_destination.rs ${DIR}/src
 cp src/optimal_location.rs ${DIR}/src
+cp src/optimal_target.rs ${DIR}/src
 cp src/plan.rs ${DIR}/src
 cp src/positionable.rs ${DIR}/src
 cp src/properties.rs ${DIR}/src
