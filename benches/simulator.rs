@@ -1,12 +1,17 @@
 extern crate aicup2019;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use aicup2019::examples::{
-    EXAMPLE_MY_UNIT_ID,
-    example_rng,
-    example_world,
+
+use aicup2019::{
+    examples::{
+        EXAMPLE_MY_UNIT_ID,
+        example_rng,
+        example_world,
+    },
+    my_strategy::{
+        Simulator,
+    },
 };
-use aicup2019::my_strategy::simulator::Simulator;
 
 fn simulator_tick(c: &mut Criterion) {
     c.bench_function("simulator_tick", |b| {

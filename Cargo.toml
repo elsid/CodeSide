@@ -27,3 +27,7 @@ dump_config = []
 [[bench]]
 name = "simulator"
 harness = false
+
+[[bench]]
+name = "walk_grid"
+harness = false
