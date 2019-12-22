@@ -23,8 +23,9 @@ use crate::my_strategy::{
     World,
     XorShiftRng,
     get_optimal_action,
-    get_optimal_location,
     get_optimal_destination,
+    get_optimal_location,
+    get_optimal_target,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -41,6 +42,7 @@ pub struct MyStrategyImpl {
     rng: XorShiftRng,
     optimal_locations: Vec<(i32, Option<Location>)>,
     optimal_destinations: Vec<(i32, Vec2)>,
+    optimal_targets: Vec<(i32, Option<i32>)>,
     optimal_actions: Vec<(i32, UnitAction)>,
     last_tick: i32,
 }
@@ -69,6 +71,7 @@ impl MyStrategyImpl {
             ]),
             optimal_locations: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_destinations: world.units().iter().map(|v| (v.id, v.position())).collect(),
+            optimal_targets: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_actions: world.units().iter().map(|v| (v.id, default_action.clone())).collect(),
             world,
             last_tick: -1,
@@ -83,6 +86,7 @@ impl MyStrategyImpl {
             if self.optimal_locations.len() > game.units.len() {
                 self.optimal_locations.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_destinations.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+                self.optimal_targets.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_actions.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             }
 
@@ -104,11 +108,21 @@ impl MyStrategyImpl {
                 }
             }
 
+            for i in 0 .. self.optimal_targets.len() {
+                let unit_id = self.optimal_targets[i].0;
+                let unit = self.world.get_unit(unit_id);
+                if self.world.is_teammate_unit(unit) {
+                    self.optimal_targets[i] = (unit_id, get_optimal_target(unit, &self.world));
+                }
+            }
+
             for i in 0 .. self.optimal_actions.len() {
                 let unit_id = self.optimal_actions[i].0;
                 let unit = self.world.get_unit(unit_id);
                 if self.world.is_teammate_unit(unit) {
-                    self.optimal_actions[i] = (unit_id, get_optimal_action(unit, self.optimal_destinations[i].1, &self.world, &mut self.rng, debug));
+                    let destination = self.optimal_destinations[i].1;
+                    let target = self.optimal_targets[i].1;
+                    self.optimal_actions[i] = (unit_id, get_optimal_action(unit, destination, target, &self.world, &mut self.rng, debug));
                 }
             }
 
