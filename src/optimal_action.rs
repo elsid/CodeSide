@@ -94,13 +94,13 @@ pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, world: 
 fn get_quickstart_action(current_unit: &Unit, target: Vec2, aim: Vec2, shoot: bool, world: &World) -> UnitAction {
     let mut jump = target.y() > current_unit.position.y;
     if target.x() > current_unit.position.x
-        && world.tile(Location::new((current_unit.position.x + 1.0) as usize, (current_unit.position.y) as usize))
+        && world.get_tile(Location::new((current_unit.position.x + 1.0) as usize, (current_unit.position.y) as usize))
             == Tile::Wall
     {
         jump = true
     }
     if target.x() < current_unit.position.x
-        && world.tile(Location::new((current_unit.position.x - 1.0) as usize, (current_unit.position.y) as usize))
+        && world.get_tile(Location::new((current_unit.position.x - 1.0) as usize, (current_unit.position.y) as usize))
             == Tile::Wall
     {
         jump = true

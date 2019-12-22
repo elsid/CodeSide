@@ -15,7 +15,6 @@ use model::{
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
     color_from_heat,
-    get_tile_index,
 };
 
 use crate::my_strategy::{
@@ -33,8 +32,6 @@ use crate::my_strategy::{
     get_hit_probabilities,
     get_hit_probability_by_spread,
     get_hit_probability_over_obstacles,
-    get_level_size_x,
-    get_level_size_y,
 };
 
 #[inline(never)]
@@ -43,15 +40,15 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
 
     #[cfg(feature = "enable_debug")]
     let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
-        .take(get_level_size_x(world.level()) * get_level_size_y(world.level()))
+        .take(world.level().size())
         .collect();
 
     let unit_index = world.get_unit_index(unit.id);
 
-    for x in 1 .. get_level_size_x(world.level()) - 1 {
-        for y in 1 .. get_level_size_y(world.level()) - 2 {
+    for x in 1 .. world.level().size_x() - 1 {
+        for y in 1 .. world.level().size_y() - 2 {
             let location = Location::new(x, y);
-            let tile = world.tile(location);
+            let tile = world.get_tile(location);
             if tile == Tile::Wall || is_busy_by_other(location, unit.id, optimal_locations, world) {
                 continue;
             }
@@ -62,7 +59,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 }
                 #[cfg(feature = "enable_debug")]
                 {
-                    tiles[get_tile_index(world.level(), location)] = Some(candidate_score);
+                    tiles[world.level().get_tile_index(location)] = Some(candidate_score);
                 }
             }
         }
@@ -72,10 +69,10 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
     {
         let min = tiles.iter().filter_map(|&v| v).min_by_key(|&v| as_score(v)).unwrap();
         let max = tiles.iter().filter_map(|&v| v).max_by_key(|&v| as_score(v)).unwrap();
-        for x in 1 .. get_level_size_x(world.level()) - 1 {
-            for y in 1 .. get_level_size_y(world.level()) - 2 {
+        for x in 1 .. world.level().size_x() - 1 {
+            for y in 1 .. world.level().size_y() - 2 {
                 let location = Location::new(x, y);
-                if let Some(score) = tiles[get_tile_index(world.level(), location)] {
+                if let Some(score) = tiles[world.level().get_tile_index(location)] {
                     debug.draw(CustomData::Rect {
                         pos: location.as_model_f32(),
                         size: Vec2F32 { x: 1.0, y: 1.0 },
@@ -204,7 +201,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         0.0
     };
     let height_score = location.y() as f64 / world.size().y();
-    let over_ground_score = (world.tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
+    let over_ground_score = (world.get_tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
     let number_of_bullets = world.bullets().iter()
         .filter(|v| v.unit_id != current_unit.id)
         .count();

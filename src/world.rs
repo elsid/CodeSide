@@ -20,12 +20,6 @@ use crate::my_strategy::{
     Vec2,
     Vec2i,
     as_score,
-    get_level_size_x,
-    get_level_size_y,
-    get_tile,
-    get_tile_by_vec2,
-    get_tile_index,
-    get_tile_location,
     will_hit_by_line,
 };
 
@@ -56,8 +50,8 @@ impl World {
             .map(|v| v.id)
             .collect();
         let level = Level::from_model(&game.level);
-        let level_size_x = get_level_size_x(&level);
-        let level_size_y = get_level_size_y(&level);
+        let level_size_x = level.size_x();
+        let level_size_y = level.size_y();
         let size = Vec2::new(level_size_x as f64, level_size_y as f64);
         Self {
             player_id,
@@ -182,12 +176,8 @@ impl World {
         1.0 / self.properties.ticks_per_second as f64
     }
 
-    pub fn tile(&self, location: Location) -> Tile {
-        get_tile(&self.level, location)
-    }
-
-    pub fn tile_by_position(&self, position: Vec2) -> Tile {
-        get_tile_by_vec2(&self.level, position)
+    pub fn get_tile(&self, location: Location) -> Tile {
+        self.level.get_tile(location)
     }
 
     pub fn get_unit(&self, id: i32) -> &Unit {
@@ -259,7 +249,7 @@ impl World {
 
     pub fn find_reversed_tiles_path(&self, unit_id: i32, source: Location, destination: Location) -> Vec<Location> {
         let mut result = Vec::new();
-        let mut index = get_tile_index(&self.level, destination);
+        let mut index = self.level.get_tile_index(destination);
 
         let backtrack = self.get_backtrack(unit_id);
 
@@ -268,8 +258,8 @@ impl World {
             if prev == index {
                 return Vec::new()
             }
-            result.push(get_tile_location(&self.level, index));
-            if prev == get_tile_index(&self.level, source) {
+            result.push(self.level.get_tile_location(index));
+            if prev == self.level.get_tile_index(source) {
                 break;
             }
             index = prev;
@@ -305,11 +295,11 @@ impl World {
     fn update_tile_path_infos(&mut self, index: usize, unit_id: i32, source: Location) {
         use std::collections::{BTreeSet, BinaryHeap};
 
-        let size_x = get_level_size_x(&self.level);
-        let size_y = get_level_size_y(&self.level);
+        let size_x = self.level.size_x();
+        let size_y = self.level.size_y();
 
         let mut distances: Vec<f64> = std::iter::repeat(std::f64::MAX).take(size_x * size_y).collect();
-        distances[get_tile_index(&self.level, source)] = 0.0;
+        distances[self.level.get_tile_index(source)] = 0.0;
 
         let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
 
@@ -344,8 +334,8 @@ impl World {
                     || !is_tile_reachable_from(node_location, neighbor_location, &self.level, self.properties()) {
                     continue;
                 }
-                let node_index = get_tile_index(&self.level, node_location);
-                let neighbor_index = get_tile_index(&self.level, neighbor_location);
+                let node_index = self.level.get_tile_index(node_location);
+                let neighbor_index = self.level.get_tile_index(neighbor_location);
                 let new_distance = distances[node_index] + distance;
                 if new_distance < distances[neighbor_index] {
                     distances[neighbor_index] = new_distance;
@@ -362,7 +352,7 @@ impl World {
         for x in 0 .. size_x {
             for y in 0 .. size_y {
                 let destination = Location::new(x, y);
-                let tile_index = get_tile_index(&self.level, destination);
+                let tile_index = self.level.get_tile_index(destination);
                 let distance = distances[tile_index];
                 if distance != std::f64::MAX {
                     self.paths[index].1.insert((source, destination), TilePathInfo {
@@ -401,13 +391,13 @@ impl TilePathInfo {
 }
 
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
-    match get_tile(level, destination) {
+    match level.get_tile(destination) {
         Tile::Wall => false,
         Tile::Ladder => true,
         Tile::Platform => true,
         Tile::JumpPad => true,
         Tile::Empty => {
-            match get_tile(level, source) {
+            match level.get_tile(source) {
                 Tile::Wall => false,
                 Tile::Ladder => true,
                 Tile::Platform => true,
@@ -415,16 +405,16 @@ pub fn is_tile_reachable_from(source: Location, destination: Location, level: &L
                 Tile::Empty => source.y() > destination.y()
                     || (source.y() > 0
                         && (
-                            is_walkable(get_tile(level, source + Vec2i::new(0, -1)))
-                            || is_walkable(get_tile(level, destination + Vec2i::new(0, -1)))
+                            is_walkable(level.get_tile(source + Vec2i::new(0, -1)))
+                            || is_walkable(level.get_tile(destination + Vec2i::new(0, -1)))
                             || (2 .. source.y() as isize + 1).find(|&dy| {
-                                can_jump_up_from(get_tile(level, source + Vec2i::new(0, -dy)), dy as f64 + 0.5, properties)
+                                can_jump_up_from(level.get_tile(source + Vec2i::new(0, -dy)), dy as f64 + 0.5, properties)
                             }).is_some()
                             || (1 .. destination.x() as isize).find(|&dx| {
-                                can_fly_from(get_tile(level, destination + Vec2i::new(-dx, 0)), dx as f64 + 0.5, properties)
+                                can_fly_from(level.get_tile(destination + Vec2i::new(-dx, 0)), dx as f64 + 0.5, properties)
                             }).is_some()
-                            || (destination.x() + 1 .. get_level_size_x(level) - 1).find(|&x| {
-                                can_fly_from(get_tile(level, Location::new(x, destination.y())), (x - destination.x()) as f64 + 0.5, properties)
+                            || (destination.x() + 1 .. level.size_x() - 1).find(|&x| {
+                                can_fly_from(level.get_tile(Location::new(x, destination.y())), (x - destination.x()) as f64 + 0.5, properties)
                             }).is_some()
                         )
                     ),

@@ -7,8 +7,6 @@ use aicup2019::{
         Level,
         Location,
         dump_level,
-        get_tile_index,
-        get_tile_location,
     }
 };
 
@@ -64,18 +62,18 @@ fn test_dump_level_example_level() {
 
 #[test]
 fn test_get_tile_index() {
-    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(0, 0)), 0);
-    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(39, 0)), 1170);
-    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(0, 29)), 29);
-    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(39, 29)), 1199);
-    assert_eq!(get_tile_index(&Level::from_model(&example_level()), Location::new(10, 10)), 310);
+    assert_eq!(Level::from_model(&example_level()).get_tile_index(Location::new(0, 0)), 0);
+    assert_eq!(Level::from_model(&example_level()).get_tile_index(Location::new(39, 0)), 1170);
+    assert_eq!(Level::from_model(&example_level()).get_tile_index(Location::new(0, 29)), 29);
+    assert_eq!(Level::from_model(&example_level()).get_tile_index(Location::new(39, 29)), 1199);
+    assert_eq!(Level::from_model(&example_level()).get_tile_index(Location::new(10, 10)), 310);
 }
 
 #[test]
 fn test_get_tile_location() {
-    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 0), Location::new(0, 0));
-    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 1170), Location::new(39, 0));
-    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 29), Location::new(0, 29));
-    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 1199), Location::new(39, 29));
-    assert_eq!(get_tile_location(&Level::from_model(&example_level()), 310), Location::new(10, 10));
+    assert_eq!(Level::from_model(&example_level()).get_tile_location(0), Location::new(0, 0));
+    assert_eq!(Level::from_model(&example_level()).get_tile_location(1170), Location::new(39, 0));
+    assert_eq!(Level::from_model(&example_level()).get_tile_location(29), Location::new(0, 29));
+    assert_eq!(Level::from_model(&example_level()).get_tile_location(1199), Location::new(39, 29));
+    assert_eq!(Level::from_model(&example_level()).get_tile_location(310), Location::new(10, 10));
 }

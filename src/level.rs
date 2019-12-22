@@ -3,7 +3,6 @@ use model::{
 };
 use crate::my_strategy::{
     Location,
-    Vec2,
 };
 
 #[derive(Debug, Clone)]
@@ -27,8 +26,28 @@ impl Level {
     }
 
     #[inline(always)]
+    pub fn size(&self) -> usize {
+        self.tiles.len()
+    }
+
+    #[inline(always)]
+    pub fn size_x(&self) -> usize {
+        self.size_x
+    }
+
+    #[inline(always)]
+    pub fn size_y(&self) -> usize {
+        self.size_y
+    }
+
+    #[inline(always)]
     pub fn get_tile_index(&self, location: Location) -> usize {
         location.y() + location.x() * self.size_y
+    }
+
+    #[inline(always)]
+    pub fn get_tile_location(&self, index: usize) -> Location {
+        Location::new(index / self.size_y, index % self.size_y)
     }
 
     #[inline(always)]
@@ -47,44 +66,14 @@ impl Level {
     }
 }
 
-#[inline(always)]
-pub fn get_tile_by_vec2(level: &Level, position: Vec2) -> Tile {
-    get_tile(level, position.as_location())
-}
-
-#[inline(always)]
-pub fn get_tile(level: &Level, location: Location) -> Tile {
-    level.tiles[get_tile_index(level, location)].clone()
-}
-
-#[inline(always)]
-pub fn get_tile_index(level: &Level, location: Location) -> usize {
-    location.y() + location.x() * get_level_size_y(level)
-}
-
-#[inline(always)]
-pub fn get_tile_location(level: &Level, index: usize) -> Location {
-    Location::new(index / get_level_size_y(level), index % get_level_size_y(level))
-}
-
-#[inline(always)]
-pub fn get_level_size_x(level: &Level) -> usize {
-    level.size_x
-}
-
-#[inline(always)]
-pub fn get_level_size_y(level: &Level) -> usize {
-    level.size_y
-}
-
 pub fn dump_level(level: &Level) -> String {
     let mut buffer: Vec<u8> = std::iter::repeat('\n' as u8)
-        .take((get_level_size_x(level) + 1) * get_level_size_y(level))
+        .take((level.size_x() + 1) * level.size_y())
         .collect();
-    let get_index = |x: usize, y: usize| -> usize { x + (get_level_size_y(level) - y - 1) * (get_level_size_x(level) + 1) };
-    for x in 0 .. get_level_size_x(level) {
-        for y in 0 .. get_level_size_y(level) {
-            buffer[get_index(x, y)] = match get_tile(level, Location::new(x, y)) {
+    let get_index = |x: usize, y: usize| -> usize { x + (level.size_y() - y - 1) * (level.size_x() + 1) };
+    for x in 0 .. level.size_x() {
+        for y in 0 .. level.size_y() {
+            buffer[get_index(x, y)] = match level.get_tile(Location::new(x, y)) {
                 Tile::Empty => '.' as u8,
                 Tile::Wall => '#' as u8,
                 Tile::Platform => '^' as u8,

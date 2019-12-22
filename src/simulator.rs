@@ -22,9 +22,6 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
-    get_level_size_x,
-    get_level_size_y,
-    get_tile,
     remove_if,
 };
 
@@ -268,13 +265,13 @@ impl<'r> Simulator<'r> {
 
     fn collide_moving_unit_and_tiles_by_x(&mut self, unit: usize) {
         let min_x = self.units[unit].moving_left().max(0.0) as usize;
-        let max_x = (self.units[unit].moving_right() as usize + 1).min(get_level_size_x(&self.level));
+        let max_x = (self.units[unit].moving_right() as usize + 1).min(self.level.size_x());
         let min_y = self.units[unit].holding_bottom() as usize;
         let max_y = self.units[unit].holding_top() as usize + 1;
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
-                match get_tile(&self.level, Location::new(x, y)) {
+                match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
                         self.units[unit].collide_with_tile_by_x(x, y);
                     },
@@ -297,7 +294,7 @@ impl<'r> Simulator<'r> {
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
-                match get_tile(&self.level, Location::new(x, y)) {
+                match self.level.get_tile(Location::new(x, y)) {
                     Tile::Ladder => {
                         if !self.units[unit].base.on_ladder && can_use_ladder(&self.units[unit], x, y) {
                             self.units[unit].base.on_ladder = true;
@@ -346,11 +343,11 @@ impl<'r> Simulator<'r> {
         let min_x = self.units[unit].holding_left() as usize;
         let max_x = self.units[unit].holding_right() as usize + 1;
         let min_y = self.units[unit].moving_bottom().max(0.0) as usize;
-        let max_y = (self.units[unit].holding_center_y() as usize + 1).min(get_level_size_y(&self.level));
+        let max_y = (self.units[unit].holding_center_y() as usize + 1).min(self.level.size_y());
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
-                match get_tile(&self.level, Location::new(x, y)) {
+                match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
                         if self.units[unit].collide_with_tile_by_y(x, y) {
                             self.units[unit].base.on_ground = true;
@@ -387,11 +384,11 @@ impl<'r> Simulator<'r> {
         let min_x = self.units[unit].holding_left() as usize;
         let max_x = self.units[unit].holding_right() as usize + 1;
         let min_y = self.units[unit].holding_center_y().max(0.0) as usize;
-        let max_y = (self.units[unit].moving_top() as usize + 1).min(get_level_size_y(&self.level));
+        let max_y = (self.units[unit].moving_top() as usize + 1).min(self.level.size_y());
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
-                match get_tile(&self.level, Location::new(x, y)) {
+                match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
                         if self.units[unit].collide_with_tile_by_y(x, y) {
                             cancel_jump(&mut self.units[unit]);
@@ -453,13 +450,13 @@ impl<'r> Simulator<'r> {
 
     fn collide_bulles_and_tiles(&mut self, bullet: usize) -> bool {
         let min_x = self.bullets[bullet].left() as usize;
-        let max_x = (self.bullets[bullet].right() as usize + 1).min(get_level_size_x(&self.level));
+        let max_x = (self.bullets[bullet].right() as usize + 1).min(self.level.size_x());
         let min_y = self.bullets[bullet].bottom() as usize;
-        let max_y = (self.bullets[bullet].top() as usize + 1).min(get_level_size_y(&self.level));
+        let max_y = (self.bullets[bullet].top() as usize + 1).min(self.level.size_y());
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
-                match get_tile(&self.level, Location::new(x, y)) {
+                match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
                         if let Some(explosion) = collide_unit_and_tile(x, y, &mut self.bullets[bullet]) {
                             for unit in 0 .. self.units.len() {
@@ -485,9 +482,9 @@ impl<'r> Simulator<'r> {
         assert_eq!(self.units[unit].velocity_x, 0.0);
         assert_eq!(self.units[unit].velocity_y, 0.0);
 
-        for x in 0 .. get_level_size_x(&self.level) {
-            for y in 0 .. get_level_size_y(&self.level) {
-                match get_tile(&self.level, Location::new(x, y)) {
+        for x in 0 .. self.level.size_x() {
+            for y in 0 .. self.level.size_y() {
+                match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
                         let tile_size = 1.0;
                         let tile_y = y as f64 + 0.5;

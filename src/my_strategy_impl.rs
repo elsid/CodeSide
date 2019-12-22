@@ -31,7 +31,6 @@ use crate::my_strategy::{
 use crate::my_strategy::{
     Level,
     Rectangular,
-    get_tile_location,
 };
 
 #[cfg(feature = "dump_level")]
@@ -181,11 +180,11 @@ fn render_backtrack(backtrack: &Vec<usize>, level: &Level, debug: &mut Debug) {
         if backtrack[i] == i {
             continue;
         }
-        let dst = get_tile_location(level, i).center();
-        let src = get_tile_location(level, backtrack[i]).center();
+        let dst = level.get_tile_location(i).center();
+        let src = level.get_tile_location(backtrack[i]).center();
         debug.draw(CustomData::Line {
-            p1: get_tile_location(level, i).center().as_model_f32(),
-            p2: get_tile_location(level, backtrack[i]).center().as_model_f32(),
+            p1: level.get_tile_location(i).center().as_model_f32(),
+            p2: level.get_tile_location(backtrack[i]).center().as_model_f32(),
             width: 0.05,
             color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.33 },
         });

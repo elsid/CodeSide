@@ -11,8 +11,6 @@ use crate::my_strategy::{
     WalkGrid,
     World,
     as_score,
-    get_tile,
-    get_tile_by_vec2,
     normalize_angle,
 };
 
@@ -176,7 +174,7 @@ pub fn get_hit_probability_over_obstacles(shooter: &Rect, target: &Rect, level: 
     let begin = shooter.center();
     let end = target.center();
     if begin.x() as i32 == end.x() as i32 && begin.y() as i32 == end.y() as i32 {
-        return (get_tile_by_vec2(level, begin) != Tile::Wall) as i32 as f64;
+        return (level.get_tile(begin.as_location()) != Tile::Wall) as i32 as f64;
     }
     if begin.x() as i32 == end.x() as i32 {
         return will_hit_by_vertical(begin, end, level) as i32 as f64;
@@ -199,12 +197,12 @@ pub fn will_hit_by_vertical(begin: Vec2, end: Vec2, level: &Level) -> bool {
     let end_y = end.y() as isize;
     let direction = (end_y - y).signum();
     while y != end_y {
-        if get_tile(level, Location::new(x as usize, y as usize)) == Tile::Wall {
+        if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
             return false;
         }
         y += direction;
     }
-    get_tile(level, Location::new(x as usize, y as usize)) != Tile::Wall
+    level.get_tile(Location::new(x as usize, y as usize)) != Tile::Wall
 }
 
 pub fn will_hit_by_horizontal(begin: Vec2, end: Vec2, level: &Level) -> bool {
@@ -213,17 +211,17 @@ pub fn will_hit_by_horizontal(begin: Vec2, end: Vec2, level: &Level) -> bool {
     let end_x = end.x() as i32;
     let direction = (end_x - x).signum();
     while x != end_x {
-        if get_tile(level, Location::new(x as usize, y as usize)) == Tile::Wall {
+        if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
             return false;
         }
         x += direction;
     }
-    get_tile(level, Location::new(x as usize, y as usize)) != Tile::Wall
+    level.get_tile(Location::new(x as usize, y as usize)) != Tile::Wall
 }
 
 pub fn will_hit_by_line(begin: Vec2, end: Vec2, level: &Level) -> bool {
     for position in WalkGrid::new(begin, end) {
-        if get_tile_by_vec2(level, position) == Tile::Wall {
+        if level.get_tile(position.as_location()) == Tile::Wall {
             return false;
         }
     }
@@ -232,7 +230,7 @@ pub fn will_hit_by_line(begin: Vec2, end: Vec2, level: &Level) -> bool {
 
 pub fn get_distance_to_nearest_hit_wall_by_line(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     for position in WalkGrid::new(begin, end) {
-        if get_tile_by_vec2(level, position) == Tile::Wall {
+        if level.get_tile(position.as_location()) == Tile::Wall {
             return Some(begin.distance(position));
         }
     }
