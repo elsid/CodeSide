@@ -22,9 +22,7 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
-    as_score,
     get_weapon_score,
-    should_shoot,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -37,18 +35,9 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, world: &World, rng: &mut XorShiftRng, debug: &mut Debug) -> UnitAction {
-    let nearest_opponent = world.units().iter()
-        .filter(|unit| world.is_opponent_unit(unit))
-        .filter(|unit| {
-            if let Some(weapon) = current_unit.weapon.as_ref() {
-                should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, true,
-                    world.config().optimal_action_number_of_directions)
-            } else {
-                false
-            }
-        })
-        .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
+pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, target: Option<i32>, world: &World,
+        rng: &mut XorShiftRng, debug: &mut Debug) -> UnitAction {
+    let nearest_opponent = target.map(|unit_id| world.get_unit(unit_id));
 
     let (shoot, aim) = if let Some(opponent) = nearest_opponent {
         #[cfg(feature = "enable_debug")]
