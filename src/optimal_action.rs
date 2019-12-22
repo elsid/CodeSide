@@ -26,7 +26,6 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
-    as_score,
     get_hit_probabilities,
     get_hit_probability_by_spread,
     get_weapon_score,
@@ -42,23 +41,25 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, world: &World, rng: &mut XorShiftRng, debug: &mut Debug) -> UnitAction {
-    let nearest_opponent = world.units().iter()
-        .filter(|unit| world.is_opponent_unit(unit))
-        .filter(|unit| {
-            if let Some(weapon) = current_unit.weapon.as_ref() {
-                should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world,
-                    world.config().optimal_action_number_of_directions, debug)
+pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, target: Option<i32>, world: &World, rng: &mut XorShiftRng, debug: &mut Debug) -> UnitAction {
+    let (shoot, aim) = if let Some(target_id) = target {
+        let unit = world.get_unit(target_id);
+        let (shoot, aim) = if let Some(weapon) = current_unit.weapon.as_ref() {
+            let shoot = should_shoot(current_unit.id, current_unit.center(), unit, weapon, world, debug);
+            let aim = if let (true, Some(last_angle)) = (shoot, weapon.last_angle) {
+                Vec2::i().rotated(last_angle)
             } else {
-                false
-            }
-        })
-        .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
+                unit.position() - current_unit.position()
+            };
+            (shoot, aim)
+        } else {
+            (false, unit.position() - current_unit.position())
+        };
 
-    let (shoot, aim) = if let Some(opponent) = nearest_opponent {
         #[cfg(feature = "enable_debug")]
-        render_aim(current_unit, opponent, world, debug);
-        (true, opponent.position() - current_unit.position())
+        render_aim(aim, shoot, current_unit, unit, world, debug);
+
+        (shoot, aim)
     } else {
         (false, Vec2::zero())
     };
@@ -157,8 +158,12 @@ fn should_plant_mine(current_unit: &Unit, world: &World) -> bool {
     number_of_exploded_opponents >= 2
 }
 
-fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon,
+pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon,
         world: &World, number_of_directions: usize, debug: &mut Debug) -> bool {
+    if weapon.last_angle.is_none() || weapon.fire_timer.is_some() {
+        return false;
+    }
+
     let opponent_rect = opponent.rect();
 
     let possible_optimal_spread = minimize1d(
@@ -178,12 +183,6 @@ fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit
 
     if hit_probabilities.teammate_units > world.config().max_teammates_hits_to_shoot {
         return false;
-    }
-
-    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
-        if min_distance < explosion.radius + 2.0 {
-            return false;
-        }
     }
 
     let hit_probability = (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64;
@@ -242,9 +241,14 @@ fn render_tiles_path(unit: &Unit, tiles_path: &Vec<Location>, debug: &mut Debug)
 }
 
 #[cfg(feature = "enable_debug")]
-fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
+fn render_aim(mut direction: Vec2, shoot: bool, unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
+    direction = direction.normalized();
+
+    let source = unit.rect().center();
+    let to_target = direction * world.max_distance();
+
     let mut s = Vec::new();
-    for position in WalkGrid::new(unit.rect().center(), opponent.rect().center()) {
+    for position in WalkGrid::new(unit.rect().center(), source + to_target) {
         s.push(position);
         debug.draw(CustomData::Rect {
             pos: position.as_location().as_model_f32(),
@@ -252,10 +256,24 @@ fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
             color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.66 },
         });
     }
+
+    #[cfg(feature = "enable_debug")]
+    debug.draw(CustomData::Line {
+        p1: source.as_model_f32(),
+        p2: (source + to_target).as_model_f32(),
+        width: if shoot {
+            0.125
+        } else {
+            0.075
+        },
+        color: if shoot {
+            ColorF32 { a: 0.75, r: 1.0, g: 0.0, b: 0.0 }
+        } else {
+            ColorF32 { a: 0.66, r: 1.0, g: 0.33, b: 0.33 }
+        },
+    });
+
     if let Some(weapon) = unit.weapon.as_ref() {
-        let source = unit.rect().center();
-        let direction = (opponent.rect().center() - source).normalized();
-        let to_target = direction * world.max_distance();
         let left = direction.left() * weapon.params.bullet.size;
         let right = direction.right() * weapon.params.bullet.size;
         let number_of_directions = world.config().hit_number_of_directions;

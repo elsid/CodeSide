@@ -36,6 +36,12 @@ pub struct Config {
     pub max_teammates_hits_to_shoot: usize,
     pub min_target_hits_to_shoot: usize,
     pub optimal_action_number_of_directions: usize,
+    pub hit_number_of_directions: usize,
+    pub optimal_target_distance_score_weight: f64,
+    pub optimal_target_rocket_launcher_distance_factor: f64,
+    pub optimal_target_hit_opponent_score_weight: f64,
+    pub optimal_target_hit_teammates_score_weight: f64,
+    pub optimal_target_aim_time_score_weight: f64,
 }
 
 impl Config {
@@ -75,6 +81,12 @@ impl Config {
             max_teammates_hits_to_shoot: 1,
             min_target_hits_to_shoot: 1,
             optimal_action_number_of_directions: 11,
+            hit_number_of_directions: 11,
+            optimal_target_distance_score_weight: -1.0,
+            optimal_target_rocket_launcher_distance_factor: -1.0,
+            optimal_target_hit_opponent_score_weight: 1.0,
+            optimal_target_hit_teammates_score_weight: -2.0,
+            optimal_target_aim_time_score_weight: -1.0,
         }
     }
 
