@@ -42,7 +42,8 @@ pub fn get_optimal_action(current_unit: &Unit, global_destination: Vec2, world: 
         .filter(|unit| world.is_opponent_unit(unit))
         .filter(|unit| {
             if let Some(weapon) = current_unit.weapon.as_ref() {
-                should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, true)
+                should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, true,
+                    world.config().optimal_action_number_of_directions)
             } else {
                 false
             }

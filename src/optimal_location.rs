@@ -161,7 +161,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
             if let Some(weapon) = unit.weapon.as_ref() {
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
-                    let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction, &target, weapon.spread, weapon.params.bullet.size, world);
+                    let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
+                        &target, weapon.spread, weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
                     0.0
@@ -179,7 +180,11 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     }) as i32 as f64;
     let nearest_opponent = if let Some(weapon) = current_unit.weapon.as_ref() {
         world.units().iter()
-            .filter(|unit| world.is_opponent_unit(unit) && should_shoot(current_unit.id, current_unit_center, &unit, weapon, world, false))
+            .filter(|unit| {
+                world.is_opponent_unit(unit)
+                && should_shoot(current_unit.id, current_unit_center, &unit, weapon,
+                    world, false, world.config().optimal_location_number_of_directions)
+            })
             .min_by_key(|unit| as_score(current_unit_position.distance(unit.position())))
     } else {
         None
@@ -191,7 +196,9 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         } else {
             if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                 let direction = (unit.center() - current_unit_center).normalized();
-                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
+                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
+                    &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world,
+                    world.config().optimal_location_number_of_directions);
                 by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
             } else {
                 0.0
@@ -225,7 +232,9 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 .filter(|v| world.is_opponent_unit(v))
                 .map(|v| {
                     let direction = (v.center() - current_unit_center).normalized();
-                    get_hit_probabilities(current_unit.id, current_unit_center, direction, &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world)
+                    get_hit_probabilities(current_unit.id, current_unit_center, direction,
+                        &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world,
+                        world.config().optimal_location_number_of_directions)
                 })
                 .map(|v| v.teammate_units as f64 / v.total as f64)
                 .sum::<f64>()
@@ -263,7 +272,8 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
     }
 }
 
-pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, use_current_spread: bool) -> bool {
+pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon,
+        world: &World, use_current_spread: bool, number_of_directions: usize) -> bool {
     let spread = if use_current_spread {
         weapon.spread
     } else {
@@ -277,7 +287,8 @@ pub fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &
     }
 
     let direction = (opponent.center() - current_unit_center).normalized();
-    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction, &Target::from_unit(opponent), spread, weapon.params.bullet.size, world);
+    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
+        &Target::from_unit(opponent), spread, weapon.params.bullet.size, world, number_of_directions);
 
     if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
         if min_distance < explosion.radius + 2.0 {

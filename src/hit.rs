@@ -43,11 +43,11 @@ impl Target {
 }
 
 #[inline(never)]
-pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &Target, spread: f64, bullet_size: f64, world: &World) -> HitProbabilities {
+pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &Target,
+        spread: f64, bullet_size: f64, world: &World, number_of_directions: usize) -> HitProbabilities {
     let to_target = direction * world.max_distance();
     let left = direction.left() * bullet_size;
     let right = direction.right() * bullet_size;
-    let number_of_directions = world.config().hit_number_of_directions;
 
     let mut hit_wall = 0;
     let mut hit_opponent_units = 0;
