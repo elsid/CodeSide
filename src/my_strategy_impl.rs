@@ -57,7 +57,6 @@ pub struct MyStrategyImpl {
     optimal_actions: Vec<(i32, UnitAction)>,
     calls_per_tick: usize,
     last_tick: i32,
-    slow_down: bool,
 }
 
 impl MyStrategyImpl {
@@ -95,7 +94,6 @@ impl MyStrategyImpl {
             world,
             calls_per_tick: 0,
             last_tick: -1,
-            slow_down: false,
         }
     }
 
@@ -119,13 +117,11 @@ impl MyStrategyImpl {
 
             self.world.update(game);
 
-            if !self.slow_down {
-                for i in 0 .. self.optimal_locations.len() {
-                    let unit_id = self.optimal_locations[i].0;
-                    let unit = self.world.get_unit(unit_id);
-                    if self.world.is_teammate_unit(unit) {
-                        self.optimal_locations[i] = (unit_id, get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1));
-                    }
+            for i in 0 .. self.optimal_locations.len() {
+                let unit_id = self.optimal_locations[i].0;
+                let unit = self.world.get_unit(unit_id);
+                if self.world.is_teammate_unit(unit) {
+                    self.optimal_locations[i] = (unit_id, get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1));
                 }
             }
 
@@ -193,7 +189,6 @@ impl MyStrategyImpl {
         self.calls_per_tick = 0;
 
         if cpu_time_budget_spent > 90.0 {
-            self.slow_down = true;
             #[cfg(not(feature = "disable_output"))]
             {
                 eprintln!(
@@ -202,8 +197,6 @@ impl MyStrategyImpl {
                     cpu_time_budget_spent, time_budget_spent, self.max_cpu_time_budget_spent, self.max_time_budget_spent
                 );
             }
-        } else {
-            self.slow_down = false;
         }
     }
 }
