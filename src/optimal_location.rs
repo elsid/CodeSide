@@ -83,19 +83,19 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
         }
         if let Some((score, location)) = optimal {
             let path_info = world.get_path_info(unit_index, unit.location(), location).unwrap();
-            debug.log(format!("[{}] optimal_tile: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, path_info)));
+            debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, path_info)));
         }
     }
 
     optimal
 }
 
-fn is_busy_by_other(location: Location, unit_id: i32, optimal_tiles: &Vec<(i32, Option<Location>)>, world: &World) -> bool {
-    for i in 0 .. optimal_tiles.len() {
-        if optimal_tiles[i].0 == unit_id {
+fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World) -> bool {
+    for i in 0 .. optimal_locations.len() {
+        if optimal_locations[i].0 == unit_id {
             continue;
         }
-        if let Some(v) = optimal_tiles[i].1 {
+        if let Some(v) = optimal_locations[i].1 {
             if v == location {
                 return true;
             }
@@ -159,7 +159,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
-                if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+                if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction, &target, weapon.spread, weapon.params.bullet.size, world);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
@@ -189,7 +189,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         if by_spread == 0.0 {
             0.0
         } else {
-            if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+            if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                 let direction = (unit.center() - current_unit_center).normalized();
                 let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction, &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world);
                 by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
@@ -220,7 +220,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         0.0
     };
     let hit_teammates_score = if let Some(weapon) = current_unit.weapon.as_ref() {
-        if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_tile_min_fire_timer {
+        if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
             world.units().iter()
                 .filter(|v| world.is_opponent_unit(v))
                 .map(|v| {
@@ -237,21 +237,21 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     };
 
     [
-        distance_to_opponent_score * world.config().optimal_tile_distance_to_opponent_score_weight,
-        distance_to_position_score * world.config().optimal_tile_distance_to_position_score_weight,
-        health_pack_score * world.config().optimal_tile_health_pack_score_weight,
-        first_weapon_score * world.config().optimal_tile_first_weapon_score_weight,
-        swap_weapon_score * world.config().optimal_tile_swap_weapon_score_weight,
-        hit_by_opponent_score * world.config().optimal_tile_hit_by_opponent_score_weight,
-        opponent_obstacle_score * world.config().optimal_tile_opponent_obstacle_score_weight,
-        loot_box_mine_score * world.config().optimal_tile_loot_box_mine_score_weight,
-        mines_score * world.config().optimal_tile_mines_score_weight,
-        hit_nearest_opponent_score * world.config().optimal_tile_hit_nearest_opponent_score_weight,
-        height_score * world.config().optimal_tile_height_score_weight,
-        over_ground_score * world.config().optimal_tile_over_ground_score_weight,
-        bullets_score * world.config().optimal_tile_bullets_score_weight,
-        mine_obstacle_score * world.config().optimal_tile_mine_obstacle_score_weight,
-        hit_teammates_score * world.config().optimal_tile_hit_teammates_score_weight,
+        distance_to_opponent_score * world.config().optimal_location_distance_to_opponent_score_weight,
+        distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
+        health_pack_score * world.config().optimal_location_health_pack_score_weight,
+        first_weapon_score * world.config().optimal_location_first_weapon_score_weight,
+        swap_weapon_score * world.config().optimal_location_swap_weapon_score_weight,
+        hit_by_opponent_score * world.config().optimal_location_hit_by_opponent_score_weight,
+        opponent_obstacle_score * world.config().optimal_location_opponent_obstacle_score_weight,
+        loot_box_mine_score * world.config().optimal_location_loot_box_mine_score_weight,
+        mines_score * world.config().optimal_location_mines_score_weight,
+        hit_nearest_opponent_score * world.config().optimal_location_hit_nearest_opponent_score_weight,
+        height_score * world.config().optimal_location_height_score_weight,
+        over_ground_score * world.config().optimal_location_over_ground_score_weight,
+        bullets_score * world.config().optimal_location_bullets_score_weight,
+        mine_obstacle_score * world.config().optimal_location_mine_obstacle_score_weight,
+        hit_teammates_score * world.config().optimal_location_hit_teammates_score_weight,
     ]
 }
 
