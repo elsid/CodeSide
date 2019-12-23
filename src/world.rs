@@ -101,7 +101,7 @@ impl World {
                 let unit = self.get_unit(self.paths[i].0);
                 if self.is_teammate_unit(unit) {
                     let location = unit.location();
-                    self.update_tile_path_infos(i, self.paths[i].0, location);
+                    self.update_tile_path_infos(i, location);
                 }
             }
         }
@@ -292,7 +292,7 @@ impl World {
             .unwrap()
     }
 
-    fn update_tile_path_infos(&mut self, index: usize, unit_id: i32, source: Location) {
+    fn update_tile_path_infos(&mut self, index: usize, source: Location) {
         use std::collections::{BTreeSet, BinaryHeap};
 
         let size_x = self.level.size_x();
