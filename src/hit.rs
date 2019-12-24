@@ -7,6 +7,7 @@ use crate::my_strategy::{
     Location,
     Rect,
     Rectangular,
+    Sector,
     Vec2,
     WalkGrid,
     World,
@@ -166,8 +167,13 @@ pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target
     hit
 }
 
-pub fn get_hit_probability_by_spread(shooter: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
-    target.get_max_cross_section_from(shooter, spread + bullet_size / shooter.distance(target.center()))
+pub fn get_hit_probability_by_spread(source: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
+    get_hit_probability_by_spread_with_destination(source, target.center(), target, spread, bullet_size)
+}
+
+pub fn get_hit_probability_by_spread_with_destination(source: Vec2, destination: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
+    Sector::from_direction_and_spread(destination - source, spread + bullet_size / source.distance(target.center()))
+        .get_intersection_fraction(Sector::from_source_and_rect(source, target))
 }
 
 pub fn get_hit_probability_over_obstacles(shooter: &Rect, target: &Rect, level: &Level) -> f64 {

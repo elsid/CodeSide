@@ -9,7 +9,10 @@ use aicup2019::examples::{
 };
 use aicup2019::my_strategy::{
     Level,
+    Rect,
     Vec2,
+    get_hit_probability_by_spread,
+    get_hit_probability_by_spread_with_destination,
     get_hit_probability_over_obstacles,
     will_hit_by_horizontal,
     will_hit_by_line,
@@ -77,4 +80,40 @@ fn test_get_hit_probability_over_obstacles() {
     let shooter = make_unit_rect(Vec2::new(0.2312, 0.6423), &properties);
     let target = make_unit_rect(Vec2::new(2.653, 1.234), &properties);
     assert_eq!(get_hit_probability_over_obstacles(&shooter, &target, &level), 0.0);
+}
+
+#[test]
+fn test_get_hit_probability_by_spread() {
+    assert_eq!(
+        get_hit_probability_by_spread(Vec2::new(0.5, 0.3), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.3, 0.4),
+        0.2880293914297168
+    );
+    assert_eq!(
+        get_hit_probability_by_spread(Vec2::new(0.5, 0.3), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.05, 0.4),
+        1.0
+    );
+    assert_eq!(
+        get_hit_probability_by_spread(Vec2::new(19.5, 0.7), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.3, 0.4),
+        0.2880293914297171
+    );
+}
+
+#[test]
+fn test_get_hit_probability_by_spread_with_destination() {
+    assert_eq!(
+        get_hit_probability_by_spread_with_destination(Vec2::new(0.5, 0.3), Vec2::new(10.0, 0.5), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.3, 0.4),
+        0.2880293914297168
+    );
+    assert_eq!(
+        get_hit_probability_by_spread_with_destination(Vec2::new(0.5, 0.3), Vec2::new(10.0, 0.5), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.05, 0.4),
+        1.0
+    );
+    assert_eq!(
+        get_hit_probability_by_spread_with_destination(Vec2::new(19.5, 0.7), Vec2::new(10.0, 0.5), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.3, 0.4),
+        0.2880293914297171
+    );
+    assert_eq!(
+        get_hit_probability_by_spread_with_destination(Vec2::new(0.5, 0.3), Vec2::new(10.0, 4.0), &Rect::new(Vec2::new(10.0, 0.5), Vec2::new(0.4, 0.9)), 0.3, 0.4),
+        0.13299230152296315
+    );
 }
