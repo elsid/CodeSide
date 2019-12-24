@@ -1036,7 +1036,7 @@ pub fn make_weapon(weapon_type: WeaponType, properties: &Properties) -> Weapon {
         typ: weapon_type,
         magazine: params.magazine_size,
         was_shooting: false,
-        spread: 0.0,
+        spread: params.max_spread,
         fire_timer: None,
         last_angle: None,
         last_fire_tick: None,

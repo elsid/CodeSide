@@ -9,7 +9,7 @@ use helpers::{
     with_bullet,
     with_mine,
     with_my_unit_with_weapon,
-    with_opponent_unit_with_weapon,
+    with_opponent_unit_with_weapon_type,
 };
 use aicup2019::{
     examples::{
@@ -211,7 +211,7 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_without_weapon() 
 
 #[test]
 fn test_get_location_score_my_unit_without_weapon_nearby_opponent_with_weapon() {
-    let world = updated_world(with_opponent_unit_with_weapon(example_world(), WeaponType::AssaultRifle));
+    let world = updated_world(with_opponent_unit_with_weapon_type(example_world(), WeaponType::AssaultRifle));
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
@@ -219,13 +219,13 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_with_weapon() 
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -0.633737734478532
+        0.032928932188134585
     );
 }
 
 #[test]
 fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
-    let world = updated_world(with_opponent_unit_with_weapon(with_my_unit_with_weapon(example_world(), WeaponType::AssaultRifle), WeaponType::AssaultRifle));
+    let world = updated_world(with_opponent_unit_with_weapon_type(with_my_unit_with_weapon(example_world(), WeaponType::AssaultRifle), WeaponType::AssaultRifle));
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
@@ -233,6 +233,6 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        1.3662622655214678
+        2.0329289321881348
     );
 }

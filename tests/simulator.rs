@@ -461,7 +461,7 @@ fn test_simulator_unit_pickup_weapon() {
             params: world.properties().weapon_params[&WeaponType::RocketLauncher].clone(),
             magazine: 1,
             was_shooting: false,
-            spread: 0.0,
+            spread: 0.5,
             fire_timer: None,
             last_angle: None,
             last_fire_tick: None,
