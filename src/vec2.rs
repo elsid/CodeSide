@@ -153,6 +153,11 @@ impl Vec2 {
     pub fn right(&self) -> Self {
         Self { x: self.y, y: -self.x }
     }
+
+    #[inline(always)]
+    pub fn rotation(&self, other: Self) -> f64 {
+        self.cos(other).acos()
+    }
 }
 
 impl Add for Vec2 {

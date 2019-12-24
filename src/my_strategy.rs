@@ -53,6 +53,12 @@ pub mod vec2;
 #[allow(unused_imports)]
 pub use vec2::*;
 
+#[path = "sector.rs"]
+pub mod sector;
+
+#[allow(unused_imports)]
+pub use sector::*;
+
 #[path = "walk_grid.rs"]
 pub mod walk_grid;
 
