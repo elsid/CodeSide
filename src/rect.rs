@@ -13,6 +13,11 @@ impl Rect {
     }
 
     #[inline(always)]
+    pub fn from_min_max(min: Vec2, max: Vec2) -> Self {
+        Self { center: (min + max) / 2.0, half: ((max - min) / 2.0).abs() }
+    }
+
+    #[inline(always)]
     pub const fn center(&self) -> Vec2 {
         self.center
     }

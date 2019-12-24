@@ -59,6 +59,18 @@ pub mod sector;
 #[allow(unused_imports)]
 pub use sector::*;
 
+#[path = "polygon.rs"]
+pub mod polygon;
+
+#[allow(unused_imports)]
+pub use polygon::*;
+
+#[path = "map.rs"]
+pub mod map;
+
+#[allow(unused_imports)]
+pub use map::*;
+
 #[path = "walk_grid.rs"]
 pub mod walk_grid;
 

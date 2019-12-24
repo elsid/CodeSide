@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+
 use model::{
     Bullet,
     Game,
@@ -10,6 +11,7 @@ use model::{
     Tile,
     Unit,
 };
+
 use crate::my_strategy::{
     Config,
     ImplicitProperties,
