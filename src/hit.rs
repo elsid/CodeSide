@@ -153,7 +153,7 @@ pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target
         }
     }
 
-    if let Some(distance) = get_distance_to_nearest_hit_wall_by_line(source, destination, world.level()) {
+    if let Some(distance) = get_distance_to_nearest_hit_wall(source, destination, world.level()) {
         if max_distance > distance {
             hit = Some(Hit {
                 distance: distance,
@@ -197,41 +197,62 @@ pub fn get_hit_probability_over_obstacles(shooter: &Rect, target: &Rect, level: 
     ) as f64 / 3.0
 }
 
+fn get_distance_to_nearest_hit_wall(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
+    if begin.x() as i32 == end.x() as i32 {
+        get_distance_to_nearest_hit_wall_by_vertical(begin, end, level)
+    } else if begin.y() as i32 == end.y() as i32 {
+        get_distance_to_nearest_hit_wall_by_horizontal(begin, end, level)
+    } else {
+        get_distance_to_nearest_hit_wall_by_line(begin, end, level)
+    }
+}
+
 pub fn will_hit_by_vertical(begin: Vec2, end: Vec2, level: &Level) -> bool {
+    get_distance_to_nearest_hit_wall_by_vertical(begin, end, level).is_none()
+}
+
+pub fn get_distance_to_nearest_hit_wall_by_vertical(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     let x = begin.x() as isize;
     let mut y = begin.y() as isize;
     let end_y = end.y() as isize;
     let direction = (end_y - y).signum();
     while y != end_y {
         if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-            return false;
+            return Some((y as f64 - begin.y()).abs());
         }
         y += direction;
     }
-    level.get_tile(Location::new(x as usize, y as usize)) != Tile::Wall
+    if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
+        Some((y as f64 - begin.y()).abs())
+    } else {
+        None
+    }
 }
 
 pub fn will_hit_by_horizontal(begin: Vec2, end: Vec2, level: &Level) -> bool {
+    get_distance_to_nearest_hit_wall_by_horizontal(begin, end, level).is_none()
+}
+
+pub fn get_distance_to_nearest_hit_wall_by_horizontal(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     let y = begin.y() as i32;
     let mut x = begin.x() as i32;
     let end_x = end.x() as i32;
     let direction = (end_x - x).signum();
     while x != end_x {
         if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-            return false;
+            return Some((x as f64 - begin.x()).abs());
         }
         x += direction;
     }
-    level.get_tile(Location::new(x as usize, y as usize)) != Tile::Wall
+    if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
+        Some((x as f64 - begin.x()).abs())
+    } else {
+        None
+    }
 }
 
 pub fn will_hit_by_line(begin: Vec2, end: Vec2, level: &Level) -> bool {
-    for position in WalkGrid::new(begin, end) {
-        if level.get_tile(position.as_location()) == Tile::Wall {
-            return false;
-        }
-    }
-    true
+    get_distance_to_nearest_hit_wall_by_line(begin, end, level).is_none()
 }
 
 pub fn wall_or_jump_pad_on_the_way(begin: Vec2, end: Vec2, level: &Level) -> bool {
