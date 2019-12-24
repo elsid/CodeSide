@@ -342,7 +342,7 @@ impl World {
                 }
                 let node_index = self.level.get_tile_index(node_location);
                 let neighbor_index = self.level.get_tile_index(neighbor_location);
-                let new_distance = distances[node_index] + distance;
+                let new_distance = distances[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
                 if new_distance < distances[neighbor_index] {
                     distances[neighbor_index] = new_distance;
                     has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || self.has_opponent_unit(neighbor_location);
@@ -469,4 +469,12 @@ fn get_units_locations(units: &Vec<Unit>) -> Vec<(i32, Location)> {
         .collect();
     result.sort();
     result
+}
+
+fn get_distance_factor(source: Tile, destination: Tile) -> f64 {
+    if source == Tile::JumpPad || destination == Tile::JumpPad {
+        2.0
+    } else {
+        1.0
+    }
 }

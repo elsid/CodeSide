@@ -41,7 +41,7 @@ fn test_get_optimal_location() {
 
     assert_eq!(
         get_optimal_location(&unit, &Vec::new(), &world, &mut Debug::new(&mut debug)),
-        Some((3.1001405512609455, Location::new(29, 1)))
+        Some((3.028865463678731, Location::new(29, 1)))
     );
 }
 
