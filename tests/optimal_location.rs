@@ -219,7 +219,7 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_with_weapon() 
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        0.032928932188134585
+        -0.633737734478532
     );
 }
 
@@ -233,6 +233,6 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        2.0329289321881348
+        1.3662622655214678
     );
 }
