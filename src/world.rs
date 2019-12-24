@@ -408,15 +408,11 @@ pub fn is_tile_reachable_from(source: Location, destination: Location, level: &L
     }
     match level.get_tile(destination) {
         Tile::Wall => false,
-        Tile::Ladder => true,
-        Tile::Platform => true,
-        Tile::JumpPad => true,
+        Tile::Ladder | Tile::Platform | Tile::JumpPad => true,
         Tile::Empty => {
             match level.get_tile(source) {
                 Tile::Wall => false,
-                Tile::Ladder => true,
-                Tile::Platform => true,
-                Tile::JumpPad => true,
+                Tile::Ladder | Tile::Platform | Tile::JumpPad => true,
                 Tile::Empty => source.y() > destination.y()
                     || (source.y() > 0
                         && (
@@ -459,13 +455,7 @@ pub fn can_fly_from(tile: Tile, length: f64, properties: &Properties) -> bool {
 }
 
 pub fn is_walkable(tile: Tile) -> bool {
-    match tile {
-        Tile::Wall => true,
-        Tile::Ladder => true,
-        Tile::Platform => true,
-        Tile::JumpPad => true,
-        Tile::Empty => false,
-    }
+    tile != Tile::Empty
 }
 
 fn get_units_locations(units: &Vec<Unit>) -> Vec<(i32, Location)> {
