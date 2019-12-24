@@ -42,6 +42,7 @@ pub struct World {
     unit_index: Vec<i32>,
     max_distance: f64,
     number_of_teammates: usize,
+    max_path_distance: f64,
 }
 
 impl World {
@@ -73,6 +74,7 @@ impl World {
             mines: game.mines.clone(),
             loot_boxes: game.loot_boxes.clone(),
             max_distance: size.norm(),
+            max_path_distance: 0.0,
         }
     }
 
@@ -292,6 +294,10 @@ impl World {
             .unwrap()
     }
 
+    pub fn max_path_distance(&self) -> f64 {
+        self.max_path_distance
+    }
+
     fn update_tile_path_infos(&mut self, index: usize, source: Location) {
         use std::collections::{BTreeSet, BinaryHeap};
 
@@ -349,6 +355,7 @@ impl World {
             }
         }
 
+        let mut max_distance: f64 = 0.0;
         for x in 0 .. size_x {
             for y in 0 .. size_y {
                 let destination = Location::new(x, y);
@@ -360,9 +367,12 @@ impl World {
                         has_opponent_unit: has_opponent_unit[tile_index],
                         has_mine: has_mine[tile_index],
                     });
+                    max_distance = max_distance.max(distance);
                 }
             }
         }
+
+        self.max_path_distance = max_distance;
     }
 }
 
