@@ -10,9 +10,9 @@ if ! [[ "${PORT}" ]]; then
 fi
 
 if [[ "${CONFIG}" ]] && [[ "${CONFIG}" != 'etc/_' ]]; then
-    cargo build --release --features=read_config,dump_config
+    cargo build --release --features=read_config
 else
-    cargo build --release --features=dump_config
+    cargo build --release
 fi
 
 cp target/release/aicup2019 ${BIN}
