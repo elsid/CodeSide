@@ -78,7 +78,7 @@ pub fn normalize_angle(value: f64) -> f64 {
     if value > PI {
         value - (value * 0.5 * FRAC_1_PI).round() * 2.0 * PI
     } else if value < -PI {
-        value - (value.abs() * 0.5 * FRAC_1_PI).round() * 2.0 * PI
+        value + (value.abs() * 0.5 * FRAC_1_PI).round() * 2.0 * PI
     } else {
         value
     }
