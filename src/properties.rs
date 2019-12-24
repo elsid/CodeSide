@@ -9,7 +9,7 @@ pub trait ImplicitProperties {
 
 impl ImplicitProperties for Properties {
     fn max_jump_pad_height(&self) -> f64 {
-        self.jump_pad_jump_speed * self.jump_pad_jump_time
+        self.jump_pad_jump_speed * self.jump_pad_jump_time + 1.0
     }
 
     fn max_unit_jump_height(&self) -> f64 {
