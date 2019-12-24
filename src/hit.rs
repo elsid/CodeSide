@@ -244,7 +244,7 @@ pub fn wall_or_jump_pad_on_the_way(begin: Vec2, end: Vec2, level: &Level) -> boo
     false
 }
 
-pub fn get_distance_to_nearest_hit_wall_by_line(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
+fn get_distance_to_nearest_hit_wall_by_line(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     for position in WalkGrid::new(begin, end) {
         if level.get_tile(position.as_location()) == Tile::Wall {
             return Some(begin.distance(position));
@@ -260,7 +260,7 @@ pub struct UnitHit {
     is_teammate: bool,
 }
 
-pub fn get_distance_to_nearest_hit_unit_by_line(unit_id: i32, target_id: i32, source: Vec2, target: Vec2, world: &World) -> Option<UnitHit> {
+fn get_distance_to_nearest_hit_unit_by_line(unit_id: i32, target_id: i32, source: Vec2, target: Vec2, world: &World) -> Option<UnitHit> {
     world.units().iter()
         .filter(|unit| unit.id != unit_id && unit.id != target_id)
         .filter_map(|unit| {
@@ -277,7 +277,7 @@ pub struct MineHit {
     is_teammate: bool,
 }
 
-pub fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &World) -> Option<MineHit> {
+fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &World) -> Option<MineHit> {
     world.mines().iter()
         .filter_map(|mine| {
             mine.rect().get_intersection_with_line(source, target)
