@@ -37,8 +37,10 @@ pub struct World {
     loot_boxes: Vec<LootBox>,
     size: Vec2,
     items_by_tile: BTreeMap<Location, Item>,
-    paths: Vec<(i32, BTreeMap<(Location, Location), TilePathInfo>)>,
     backtracks: Vec<(i32, Vec<usize>)>,
+    distances: Vec<(i32, Vec<f64>)>,
+    has_opponent_unit: Vec<(i32, Vec<bool>)>,
+    has_mine: Vec<(i32, Vec<bool>)>,
     unit_index: Vec<i32>,
     max_distance: f64,
     number_of_teammates: usize,
@@ -60,8 +62,10 @@ impl World {
             items_by_tile: game.loot_boxes.iter()
                 .map(|v| (v.location(), v.item.clone()))
                 .collect(),
-            paths: game.units.iter().map(|v| (v.id, BTreeMap::new())).collect(),
-            backtracks: game.units.iter().map(|v| (v.id, std::iter::repeat(0).take(level_size_x * level_size_y).collect::<Vec<_>>())).collect(),
+            backtracks: game.units.iter().map(|v| (v.id, std::iter::repeat(0).take(level.size()).collect::<Vec<_>>())).collect(),
+            distances: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
+            has_opponent_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
+            has_mine: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             unit_index,
             number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
             config,
@@ -94,13 +98,16 @@ impl World {
 
         if self.unit_index.len() > self.units.len() {
             self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
-            self.paths.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.backtracks.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.distances.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.has_opponent_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.has_mine.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
         }
 
-        if self.paths.iter().find(|v| v.1.is_empty()).is_some() || old_units_locations != new_units_locations {
-            for i in 0 .. self.paths.len() {
-                let unit = self.get_unit(self.paths[i].0);
+        if self.current_tick == 0 || old_units_locations != new_units_locations {
+            self.max_path_distance = 0.0;
+            for i in 0 .. self.unit_index.len() {
+                let unit = self.get_unit(self.unit_index[i]);
                 if self.is_teammate_unit(unit) {
                     let location = unit.location();
                     self.update_tile_path_infos(i, location);
@@ -198,8 +205,18 @@ impl World {
         self.items_by_tile.get(&location)
     }
 
-    pub fn get_path_info(&self, unit_index: usize, source: Location, destination: Location) -> Option<&TilePathInfo> {
-        self.paths[unit_index].1.get(&(source, destination))
+    pub fn get_path_info(&self, unit_index: usize, destination: Location) -> Option<TilePathInfo> {
+        let tile_index = self.level.get_tile_index(destination);
+        let distance = self.distances[unit_index].1[tile_index];
+        if distance != std::f64::MAX {
+            Some(TilePathInfo {
+                distance,
+                has_opponent_unit: self.has_opponent_unit[unit_index].1[tile_index],
+                has_mine: self.has_mine[unit_index].1[tile_index],
+            })
+        } else {
+            None
+        }
     }
 
     pub fn has_opponent_unit(&self, location: Location) -> bool {
@@ -300,22 +317,20 @@ impl World {
         self.max_path_distance
     }
 
-    fn update_tile_path_infos(&mut self, index: usize, source: Location) {
+    fn update_tile_path_infos(&mut self, unit_index: usize, source: Location) {
         use std::collections::{BTreeSet, BinaryHeap};
 
         let size_x = self.level.size_x();
         let size_y = self.level.size_y();
 
-        let mut distances: Vec<f64> = std::iter::repeat(std::f64::MAX).take(size_x * size_y).collect();
-        distances[self.level.get_tile_index(source)] = 0.0;
-
-        let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
-
-        let mut has_mine: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
-
-        for i in 0 .. self.backtracks[index].1.len() {
-            self.backtracks[index].1[i] = i;
+        for i in 0 .. self.level.size() {
+            self.backtracks[unit_index].1[i] = i;
+            self.distances[unit_index].1[i] = std::f64::MAX;
+            self.has_opponent_unit[unit_index].1[i] = false;
+            self.has_mine[unit_index].1[i] = false;
         }
+
+        self.distances[unit_index].1[self.level.get_tile_index(source)] = 0.0;
 
         let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
         ordered.push((0, source));
@@ -344,12 +359,12 @@ impl World {
                 }
                 let node_index = self.level.get_tile_index(node_location);
                 let neighbor_index = self.level.get_tile_index(neighbor_location);
-                let new_distance = distances[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
-                if new_distance < distances[neighbor_index] {
-                    distances[neighbor_index] = new_distance;
-                    has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || self.has_opponent_unit(neighbor_location);
-                    has_mine[neighbor_index] = has_mine[node_index] || self.has_mine(neighbor_location);
-                    self.backtracks[index].1[neighbor_index] = node_index;
+                let new_distance = self.distances[unit_index].1[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
+                if new_distance < self.distances[unit_index].1[neighbor_index] {
+                    self.distances[unit_index].1[neighbor_index] = new_distance;
+                    self.has_opponent_unit[unit_index].1[neighbor_index] = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
+                    self.has_mine[unit_index].1[neighbor_index] = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
+                    self.backtracks[unit_index].1[neighbor_index] = node_index;
                     if destinations.insert(neighbor_location) {
                         ordered.push((as_score(distance), neighbor_location));
                     }
@@ -357,24 +372,12 @@ impl World {
             }
         }
 
-        let mut max_distance: f64 = 0.0;
-        for x in 0 .. size_x {
-            for y in 0 .. size_y {
-                let destination = Location::new(x, y);
-                let tile_index = self.level.get_tile_index(destination);
-                let distance = distances[tile_index];
-                if distance != std::f64::MAX {
-                    self.paths[index].1.insert((source, destination), TilePathInfo {
-                        distance,
-                        has_opponent_unit: has_opponent_unit[tile_index],
-                        has_mine: has_mine[tile_index],
-                    });
-                    max_distance = max_distance.max(distance);
-                }
+        for i in 0 .. self.level.size() {
+            let distance = self.distances[unit_index].1[i];
+            if distance != std::f64::MAX {
+                self.max_path_distance = self.max_path_distance.max(distance);
             }
         }
-
-        self.max_path_distance = max_distance;
     }
 }
 

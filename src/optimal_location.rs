@@ -53,8 +53,8 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
             if tile == Tile::Wall || is_busy_by_other(location, unit.id, optimal_locations, world) {
                 continue;
             }
-            if let Some(path_info) = world.get_path_info(unit_index, unit.location(), location) {
-                let candidate_score = get_location_score(location, unit, world, path_info);
+            if let Some(path_info) = world.get_path_info(unit_index, location) {
+                let candidate_score = get_location_score(location, unit, world, &path_info);
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
@@ -83,8 +83,8 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
             }
         }
         if let Some((score, location)) = optimal {
-            let path_info = world.get_path_info(unit_index, unit.location(), location).unwrap();
-            debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, path_info)));
+            let path_info = world.get_path_info(unit_index, location).unwrap();
+            debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
         }
     }
 

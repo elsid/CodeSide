@@ -51,10 +51,10 @@ fn test_get_location_score_random_tile() {
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(10, 5);
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         0.3964842027797048
     );
 }
@@ -67,10 +67,10 @@ fn test_get_location_score_for_tile_with_bullet() {
         .find(|v| v.unit_id != EXAMPLE_MY_UNIT_ID)
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         -0.08413152885143038
     );
 }
@@ -81,10 +81,10 @@ fn test_get_location_score_for_tile_with_opponent() {
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = world.get_unit(EXAMPLE_OPPONENT_UNIT_ID).location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         -0.6378392442935059
     );
 }
@@ -97,10 +97,10 @@ fn test_get_location_score_for_tile_with_weapon() {
         .find(|v| if let Item::Weapon { .. } = v.item { true } else { false })
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         1.1541766408990042
     );
 }
@@ -113,10 +113,10 @@ fn test_get_location_score_my_unit_with_weapon_for_tile_with_weapon() {
         .find(|v| if let Item::Weapon { .. } = v.item { true } else { false })
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         1.3872443569922313
     );
 }
@@ -129,10 +129,10 @@ fn test_get_location_score_for_tile_with_health_pack() {
         .find(|v| if let Item::HealthPack { .. } = v.item { true } else { false })
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         0.37731656828292665
     );
 }
@@ -145,10 +145,10 @@ fn test_get_location_score_for_tile_with_loot_box_mine() {
         .find(|v| if let Item::Mine { } = v.item { true } else { false })
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         0.5143823327086419
     );
 }
@@ -159,10 +159,10 @@ fn test_get_location_score_for_tile_with_mine() {
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = world.mines()[0].location();
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         -5.54753707347546
     );
 }
@@ -173,10 +173,10 @@ fn test_get_location_score_for_tile_with_mine_on_the_way() {
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(24, 9);
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         -5.551413927149232
     );
 }
@@ -187,10 +187,10 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_without_weapon
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         0.4037913167278128
     );
 }
@@ -201,10 +201,10 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_without_weapon() 
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         2.403791316727813
     );
 }
@@ -215,10 +215,10 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_with_weapon() 
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         -0.5962086832721871
     );
 }
@@ -229,10 +229,10 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
-    let path_info = world.get_path_info(unit_index, unit.location(), location);
+    let path_info = world.get_path_info(unit_index, location);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
         1.4037913167278129
     );
 }
