@@ -14,13 +14,13 @@ use aicup2019::my_strategy::{
     get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_destination,
     get_hit_probability_over_obstacles,
-    will_hit_by_horizontal,
-    will_hit_by_line,
-    will_hit_by_vertical,
+    get_distance_to_nearest_hit_wall_by_horizontal,
+    get_distance_to_nearest_hit_wall_by_line,
+    get_distance_to_nearest_hit_wall_by_vertical,
 };
 
 #[test]
-fn test_will_hit_by_vertical_with_only_empty_tiles() {
+fn test_get_distance_to_nearest_hit_wall_by_vertical_with_only_empty_tiles() {
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -28,11 +28,14 @@ fn test_will_hit_by_vertical_with_only_empty_tiles() {
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
         ]
     });
-    assert!(will_hit_by_vertical(Vec2::new(0.5, 0.5), Vec2::new(0.5, 2.5), &level));
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_vertical(Vec2::new(0.5, 0.5), Vec2::new(0.5, 2.5), &level),
+        None
+    );
 }
 
 #[test]
-fn test_will_hit_by_horizontal_with_only_empty_tiles() {
+fn test_get_distance_to_nearest_hit_wall_by_horizontal_with_only_empty_tiles() {
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -40,11 +43,14 @@ fn test_will_hit_by_horizontal_with_only_empty_tiles() {
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
         ]
     });
-    assert!(will_hit_by_horizontal(Vec2::new(0.5, 0.5), Vec2::new(2.5, 0.5), &level));
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_horizontal(Vec2::new(0.5, 0.5), Vec2::new(2.5, 0.5), &level),
+        None
+    );
 }
 
 #[test]
-fn test_will_hit_by_line_with_only_empty_tiles() {
+fn test_get_distance_to_nearest_hit_wall_by_line_with_only_empty_tiles() {
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -52,11 +58,14 @@ fn test_will_hit_by_line_with_only_empty_tiles() {
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
         ]
     });
-    assert!(will_hit_by_line(Vec2::new(0.5, 0.5), Vec2::new(2.5, 1.5), &level));
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_line(Vec2::new(0.5, 0.5), Vec2::new(2.5, 1.5), &level),
+        None
+    );
 }
 
 #[test]
-fn test_will_hit_by_line_through_wall() {
+fn test_get_distance_to_nearest_hit_wall_by_line_through_wall() {
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -64,12 +73,14 @@ fn test_will_hit_by_line_through_wall() {
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
         ]
     });
-    assert!(!will_hit_by_line(Vec2::new(0.2312, 0.6423), Vec2::new(2.653, 1.234), &level));
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_line(Vec2::new(0.2312, 0.6423), Vec2::new(2.653, 1.234), &level),
+        Some(1.0)
+    );
 }
 
 #[test]
 fn test_get_hit_probability_over_obstacles() {
-    let properties = example_properties();
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -77,9 +88,7 @@ fn test_get_hit_probability_over_obstacles() {
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
         ]
     });
-    let shooter = make_unit_rect(Vec2::new(0.2312, 0.6423), &properties);
-    let target = make_unit_rect(Vec2::new(2.653, 1.234), &properties);
-    assert_eq!(get_hit_probability_over_obstacles(&shooter, &target, &level), 0.0);
+    assert_eq!(get_hit_probability_over_obstacles(Vec2::new(0.2312, 0.6423), Vec2::new(2.653, 1.234), &level), 0.0);
 }
 
 #[test]

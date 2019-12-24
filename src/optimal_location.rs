@@ -133,7 +133,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     let distance_to_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
-            get_hit_probability_over_obstacles(&current_unit_rect, &unit.rect(), world.level()) * current_unit_center.distance(unit.center())
+            get_hit_probability_over_obstacles(current_unit_center, unit.center(), world.level()) * current_unit_center.distance(unit.center())
         })
         .sum::<f64>() / max_distance;
     let distance_to_position_score = path_info.distance() / world.max_path_distance();
