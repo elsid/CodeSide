@@ -225,8 +225,12 @@ impl World {
     pub fn find_shortcut_tiles_path(&self, unit_id: i32, source: Location, destination: Location) -> Vec<Location> {
         let tiles_path = self.find_reversed_tiles_path(unit_id, source, destination);
 
+        if tiles_path.len() < 2 {
+            return tiles_path;
+        }
+
         let mut result = Vec::new();
-        let mut end = tiles_path.len();
+        let mut end = tiles_path.len() - 1;
         let mut current = source;
 
         while end > 0 {
@@ -234,16 +238,14 @@ impl World {
             while tile < end && wall_or_jump_pad_on_the_way(current.center(), tiles_path[tile].center(), &self.level) {
                 tile += 1;
             }
-            if tile == tiles_path.len() {
-                break;
-            }
             if tile == end {
-                result.push(destination);
-                break;
+                result.push(tiles_path[tile]);
+                end -= 1;
+            } else {
+                current = tiles_path[tile];
+                end = tile;
+                result.push(tiles_path[end]);
             }
-            current = tiles_path[tile];
-            end = tile;
-            result.push(tiles_path[end]);
         }
 
         result
