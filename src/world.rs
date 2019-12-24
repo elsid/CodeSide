@@ -12,14 +12,12 @@ use model::{
 };
 use crate::my_strategy::{
     Config,
-    ImplicitProperties,
     Level,
     Location,
     Positionable,
     Rectangular,
     Vec2,
     Vec2i,
-    as_score,
     wall_or_jump_pad_on_the_way,
 };
 
@@ -42,7 +40,7 @@ pub struct World {
     unit_index: Vec<i32>,
     max_distance: f64,
     number_of_teammates: usize,
-    max_path_distance: f64,
+    max_path_distance: usize,
 }
 
 impl World {
@@ -74,7 +72,7 @@ impl World {
             mines: game.mines.clone(),
             loot_boxes: game.loot_boxes.clone(),
             max_distance: size.norm(),
-            max_path_distance: 0.0,
+            max_path_distance: 0,
         }
     }
 
@@ -294,7 +292,7 @@ impl World {
             .unwrap()
     }
 
-    pub fn max_path_distance(&self) -> f64 {
+    pub fn max_path_distance(&self) -> usize {
         self.max_path_distance
     }
 
@@ -304,8 +302,8 @@ impl World {
         let size_x = self.level.size_x();
         let size_y = self.level.size_y();
 
-        let mut distances: Vec<f64> = std::iter::repeat(std::f64::MAX).take(size_x * size_y).collect();
-        distances[self.level.get_tile_index(source)] = 0.0;
+        let mut distances: Vec<usize> = std::iter::repeat(std::usize::MAX).take(size_x * size_y).collect();
+        distances[self.level.get_tile_index(source)] = 0;
 
         let mut has_opponent_unit: Vec<bool> = std::iter::repeat(false).take(size_x * size_y).collect();
 
@@ -315,53 +313,49 @@ impl World {
             self.backtracks[index].1[i] = i;
         }
 
-        let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
+        let mut ordered: BinaryHeap<(usize, Location)> = BinaryHeap::new();
         ordered.push((0, source));
 
         let mut destinations: BTreeSet<Location> = BTreeSet::new();
         destinations.insert(source);
 
-        const EDGES: &[(Vec2i, f64)] = &[
-            (Vec2i::new(-1, -1), std::f64::consts::SQRT_2),
-            (Vec2i::new(-1, 0), 1.0),
-            // (Vec2i::new(-1, 1), std::f64::consts::SQRT_2),
-            (Vec2i::new(0, -1), 1.0),
-            (Vec2i::new(0, 1), 1.0),
-            (Vec2i::new(1, -1), std::f64::consts::SQRT_2),
-            (Vec2i::new(1, 0), 1.0),
-            // (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
+        const EDGES: &[Vec2i] = &[
+            Vec2i::new(-1, 0),
+            Vec2i::new(0, -1),
+            Vec2i::new(0, 1),
+            Vec2i::new(1, 0),
         ];
 
         while let Some((_, node_location)) = ordered.pop() {
             destinations.remove(&node_location);
-            for &(shift, distance) in EDGES.iter() {
+            for &shift in EDGES.iter() {
                 let neighbor_location = node_location + shift;
                 if neighbor_location.x() >= size_x || neighbor_location.y() >= size_y
-                    || !is_tile_reachable_from(node_location, neighbor_location, &self.level, self.properties()) {
+                    || !is_tile_reachable(neighbor_location, &self.level) {
                     continue;
                 }
                 let node_index = self.level.get_tile_index(node_location);
                 let neighbor_index = self.level.get_tile_index(neighbor_location);
-                let new_distance = distances[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
+                let new_distance = distances[node_index] + get_distance(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
                 if new_distance < distances[neighbor_index] {
                     distances[neighbor_index] = new_distance;
                     has_opponent_unit[neighbor_index] = has_opponent_unit[node_index] || self.has_opponent_unit(neighbor_location);
                     has_mine[neighbor_index] = has_mine[node_index] || self.has_mine(neighbor_location);
                     self.backtracks[index].1[neighbor_index] = node_index;
                     if destinations.insert(neighbor_location) {
-                        ordered.push((as_score(distance), neighbor_location));
+                        ordered.push((new_distance, neighbor_location));
                     }
                 }
             }
         }
 
-        let mut max_distance: f64 = 0.0;
+        let mut max_distance = 0;
         for x in 0 .. size_x {
             for y in 0 .. size_y {
                 let destination = Location::new(x, y);
                 let tile_index = self.level.get_tile_index(destination);
                 let distance = distances[tile_index];
-                if distance != std::f64::MAX {
+                if distance != std::usize::MAX {
                     self.paths[index].1.insert((source, destination), TilePathInfo {
                         distance,
                         has_opponent_unit: has_opponent_unit[tile_index],
@@ -380,7 +374,7 @@ impl World {
 pub struct TilePathInfo {
     has_opponent_unit: bool,
     has_mine: bool,
-    distance: f64,
+    distance: usize,
 }
 
 impl TilePathInfo {
@@ -395,71 +389,22 @@ impl TilePathInfo {
     }
 
     #[inline(always)]
-    pub fn distance(&self) -> f64 {
+    pub fn distance(&self) -> usize {
         self.distance
     }
 }
 
-pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
-    match level.get_tile(destination) {
+fn is_tile_reachable(destination: Location, level: &Level) -> bool {
+    is_passable(level.get_tile(destination)) && is_passable(level.get_tile(destination + Vec2i::new(0, 1)))
+}
+
+fn is_passable(tile: Tile) -> bool {
+    match tile {
         Tile::Wall => false,
         Tile::Ladder => true,
         Tile::Platform => true,
         Tile::JumpPad => true,
-        Tile::Empty => {
-            match level.get_tile(source) {
-                Tile::Wall => false,
-                Tile::Ladder => true,
-                Tile::Platform => true,
-                Tile::JumpPad => true,
-                Tile::Empty => source.y() > destination.y()
-                    || (source.y() > 0
-                        && (
-                            is_walkable(level.get_tile(source + Vec2i::new(0, -1)))
-                            || is_walkable(level.get_tile(destination + Vec2i::new(0, -1)))
-                            || (2 .. source.y() as isize + 1).find(|&dy| {
-                                can_jump_up_from(level.get_tile(source + Vec2i::new(0, -dy)), dy as f64 + 0.5, properties)
-                            }).is_some()
-                            || (1 .. destination.x() as isize).find(|&dx| {
-                                can_fly_from(level.get_tile(destination + Vec2i::new(-dx, 0)), dx as f64 + 0.5, properties)
-                            }).is_some()
-                            || (destination.x() + 1 .. level.size_x() - 1).find(|&x| {
-                                can_fly_from(level.get_tile(Location::new(x, destination.y())), (x - destination.x()) as f64 + 0.5, properties)
-                            }).is_some()
-                        )
-                    ),
-            }
-        },
-    }
-}
-
-pub fn can_jump_up_from(tile: Tile, height: f64, properties: &Properties) -> bool {
-    match tile {
-        Tile::Wall => properties.max_unit_jump_height() >= height,
-        Tile::Ladder => properties.max_unit_jump_height() >= height,
-        Tile::Platform => properties.max_unit_jump_height() >= height,
-        Tile::JumpPad => properties.max_jump_pad_height() >= height,
-        Tile::Empty => false,
-    }
-}
-
-pub fn can_fly_from(tile: Tile, length: f64, properties: &Properties) -> bool {
-    match tile {
-        Tile::Wall => properties.max_unit_jump_length() >= length,
-        Tile::Ladder => properties.max_unit_jump_length() >= length,
-        Tile::Platform => properties.max_unit_jump_length() >= length,
-        Tile::JumpPad => properties.max_jump_pad_length() >= length,
-        Tile::Empty => false,
-    }
-}
-
-pub fn is_walkable(tile: Tile) -> bool {
-    match tile {
-        Tile::Wall => true,
-        Tile::Ladder => true,
-        Tile::Platform => true,
-        Tile::JumpPad => true,
-        Tile::Empty => false,
+        Tile::Empty => true,
     }
 }
 
@@ -471,10 +416,10 @@ fn get_units_locations(units: &Vec<Unit>) -> Vec<(i32, Location)> {
     result
 }
 
-fn get_distance_factor(source: Tile, destination: Tile) -> f64 {
+fn get_distance(source: Tile, destination: Tile) -> usize {
     if source == Tile::JumpPad || destination == Tile::JumpPad {
-        2.0
+        2
     } else {
-        1.0
+        1
     }
 }
