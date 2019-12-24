@@ -31,6 +31,7 @@ use crate::my_strategy::{
     as_score,
     get_hit_probabilities,
     get_hit_probability_by_spread,
+    get_hit_probability_by_spread_with_destination,
     get_hit_probability_over_obstacles,
 };
 
@@ -226,12 +227,17 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         0.0
     };
-    let hit_teammates_score = if let Some(weapon) = current_unit.weapon.as_ref() {
+    let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (current_unit.weapon.as_ref(), nearest_opponent) {
         if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+            let opponent_rect = opponent.rect();
             world.units().iter()
-                .filter(|v| world.is_opponent_unit(v))
+                .filter(|v| {
+                    world.is_opponent_unit(v)
+                    && get_hit_probability_by_spread_with_destination(current_unit_center, opponent_rect.center(), &opponent_rect,
+                        weapon.spread, weapon.params.bullet.size) > 0.0
+                })
                 .map(|v| {
-                    let direction = (v.center() - current_unit_center).normalized();
+                    let direction = (opponent.center() - current_unit_center).normalized();
                     get_hit_probabilities(current_unit.id, current_unit_center, direction,
                         &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world,
                         world.config().optimal_location_number_of_directions)
