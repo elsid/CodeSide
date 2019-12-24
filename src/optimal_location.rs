@@ -136,7 +136,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
             get_hit_probability_over_obstacles(&current_unit_rect, &unit.rect(), world.level()) * current_unit_center.distance(unit.center())
         })
         .sum::<f64>() / max_distance;
-    let distance_to_position_score = path_info.distance() / max_distance;
+    let distance_to_position_score = path_info.distance() / world.max_path_distance();
     let health_pack_score = match world.tile_item(location) {
         Some(&Item::HealthPack { .. }) => 1.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
         _ => 0.0,

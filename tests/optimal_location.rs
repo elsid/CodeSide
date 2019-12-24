@@ -41,7 +41,7 @@ fn test_get_optimal_location() {
 
     assert_eq!(
         get_optimal_location(&unit, &Vec::new(), &world, &mut Debug::new(&mut debug)),
-        Some((2.9833333333333334, Location::new(29, 1)))
+        Some((3.1001405512609455, Location::new(29, 1)))
     );
 }
 
@@ -55,7 +55,7 @@ fn test_get_location_score_random_tile() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        0.3616666666666667
+        0.3964842027797048
     );
 }
 
@@ -71,7 +71,7 @@ fn test_get_location_score_for_tile_with_bullet() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -0.11333333333333334
+        -0.08413152885143038
     );
 }
 
@@ -85,7 +85,7 @@ fn test_get_location_score_for_tile_with_opponent() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -1.6787377344785321
+        -1.637839244293506
     );
 }
 
@@ -101,7 +101,7 @@ fn test_get_location_score_for_tile_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        0.4533333333333335
+        1.1541766408990042
     );
 }
 
@@ -117,7 +117,7 @@ fn test_get_location_score_my_unit_with_weapon_for_tile_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        1.3333333333333335
+        1.3872443569922313
     );
 }
 
@@ -133,7 +133,7 @@ fn test_get_location_score_for_tile_with_health_pack() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        0.31666666666666665
+        0.37731656828292665
     );
 }
 
@@ -149,7 +149,7 @@ fn test_get_location_score_for_tile_with_loot_box_mine() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        0.4683333333333334
+        0.5143823327086419
     );
 }
 
@@ -163,7 +163,7 @@ fn test_get_location_score_for_tile_with_mine() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -5.57
+        -5.54753707347546
     );
 }
 
@@ -177,7 +177,7 @@ fn test_get_location_score_for_tile_with_mine_on_the_way() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -5.575
+        -5.551413927149232
     );
 }
 
@@ -191,7 +191,7 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_without_weapon
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        0.3662622655214679
+        0.4037913167278128
     );
 }
 
@@ -205,7 +205,7 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_without_weapon() 
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        2.366262265521468
+        2.403791316727813
     );
 }
 
@@ -219,7 +219,7 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_with_weapon() 
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -0.633737734478532
+        -0.5962086832721871
     );
 }
 
@@ -233,6 +233,6 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        1.3662622655214678
+        1.4037913167278129
     );
 }
