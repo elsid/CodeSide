@@ -401,6 +401,9 @@ impl TilePathInfo {
 }
 
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
+    if level.get_tile(destination + Vec2i::new(0, 1)) == Tile::Wall {
+        return false;
+    }
     match level.get_tile(destination) {
         Tile::Wall => false,
         Tile::Ladder => true,
