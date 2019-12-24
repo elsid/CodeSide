@@ -163,7 +163,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, weapon.spread, weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
+                        &target, weapon.params.min_spread, weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
                     0.0
@@ -233,12 +233,12 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 .filter(|v| {
                     world.is_opponent_unit(v)
                     && get_hit_probability_by_spread_with_destination(current_unit_center, opponent_rect.center(), &opponent_rect,
-                        weapon.spread, weapon.params.bullet.size) > 0.0
+                        weapon.params.min_spread, weapon.params.bullet.size) > 0.0
                 })
                 .map(|v| {
                     let direction = (opponent.center() - current_unit_center).normalized();
                     get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &Target::from_unit(v), weapon.spread, weapon.params.bullet.size, world,
+                        &Target::from_unit(v), weapon.params.min_spread, weapon.params.bullet.size, world,
                         world.config().optimal_location_number_of_directions)
                 })
                 .map(|v| v.teammate_units as f64 / v.total as f64)
