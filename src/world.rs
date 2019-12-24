@@ -318,7 +318,7 @@ impl World {
     }
 
     fn update_tile_path_infos(&mut self, unit_index: usize, source: Location) {
-        use std::collections::{BTreeSet, BinaryHeap};
+        use std::collections::BinaryHeap;
 
         let size_x = self.level.size_x();
         let size_y = self.level.size_y();
@@ -335,8 +335,8 @@ impl World {
         let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
         ordered.push((0, source));
 
-        let mut destinations: BTreeSet<Location> = BTreeSet::new();
-        destinations.insert(source);
+        let mut destinations = self.has_mine[unit_index].1.clone();
+        destinations[self.level.get_tile_index(source)] = true;
 
         const EDGES: &[(Vec2i, f64)] = &[
             (Vec2i::new(-1, -1), std::f64::consts::SQRT_2),
@@ -350,14 +350,14 @@ impl World {
         ];
 
         while let Some((_, node_location)) = ordered.pop() {
-            destinations.remove(&node_location);
+            let node_index = self.level.get_tile_index(node_location);
+            destinations[node_index] = false;
             for &(shift, distance) in EDGES.iter() {
                 let neighbor_location = node_location + shift;
                 if neighbor_location.x() >= size_x || neighbor_location.y() >= size_y
                     || !is_tile_reachable_from(node_location, neighbor_location, &self.level, self.properties()) {
                     continue;
                 }
-                let node_index = self.level.get_tile_index(node_location);
                 let neighbor_index = self.level.get_tile_index(neighbor_location);
                 let new_distance = self.distances[unit_index].1[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
                 if new_distance < self.distances[unit_index].1[neighbor_index] {
@@ -365,7 +365,8 @@ impl World {
                     self.has_opponent_unit[unit_index].1[neighbor_index] = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
                     self.has_mine[unit_index].1[neighbor_index] = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
                     self.backtracks[unit_index].1[neighbor_index] = node_index;
-                    if destinations.insert(neighbor_location) {
+                    if !destinations[neighbor_index] {
+                        destinations[neighbor_index] = true;
                         ordered.push((as_score(distance), neighbor_location));
                     }
                 }
