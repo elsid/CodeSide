@@ -767,6 +767,35 @@ fn test_simulator_my_bullet_explode_and_kill_unit() {
 }
 
 #[test]
+fn test_simulator_unit_set_jump_false_cancel_jump() {
+    let world = example_world();
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert!(simulator.unit().base().jump_state.can_jump);
+    simulator.unit_mut().action_mut().jump = true;
+    for _ in 0 .. 2 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+        );
+    }
+    assert!(simulator.unit().base().jump_state.can_jump);
+    simulator.unit_mut().action_mut().jump = false;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+    );
+    assert!(!simulator.unit().base().jump_state.can_jump);
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

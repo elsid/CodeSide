@@ -189,6 +189,7 @@ impl<'r> Simulator<'r> {
                     }
                 } else {
                     self.units[unit].start_move_by_y(-self.properties.unit_fall_speed * time_interval);
+                    cancel_jump(&mut self.units[unit]);
                 }
                 self.units[unit].base.on_ground = false;
             }
