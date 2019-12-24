@@ -85,7 +85,7 @@ fn test_get_location_score_for_tile_with_opponent() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, path_info.unwrap()),
-        -1.637839244293506
+        -0.6378392442935059
     );
 }
 
