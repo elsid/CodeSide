@@ -45,7 +45,7 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, other: &[
 
     let simulator = Simulator::new(&world, current_unit.id);
     let planner = Planner::new(local_destination, world.config(), simulator, world.max_distance(),
-        make_get_unit_action_at(other));
+        world.max_score(), make_get_unit_action_at(other));
 
     planner.make(world.current_tick(), rng, debug)
 }
