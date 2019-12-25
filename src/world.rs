@@ -192,7 +192,7 @@ impl World {
     }
 
     pub fn tick_time_interval(&self) -> f64 {
-        1.0 / self.properties.ticks_per_second as f64
+        self.properties.tick_time_interval()
     }
 
     pub fn get_tile(&self, location: Location) -> Tile {
