@@ -167,6 +167,12 @@ pub mod optimal_target;
 #[allow(unused_imports)]
 pub use optimal_target::*;
 
+#[path = "optimal_plan.rs"]
+pub mod optimal_plan;
+
+#[allow(unused_imports)]
+pub use optimal_plan::*;
+
 #[path = "optimal_action.rs"]
 pub mod optimal_action;
 

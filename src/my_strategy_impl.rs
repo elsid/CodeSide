@@ -17,6 +17,7 @@ use crate::my_strategy::{
     Config,
     Debug,
     Location,
+    Plan,
     Positionable,
     SeedableRng,
     Vec2,
@@ -25,6 +26,7 @@ use crate::my_strategy::{
     get_optimal_action,
     get_optimal_destination,
     get_optimal_location,
+    get_optimal_plan,
     get_optimal_target,
 };
 
@@ -43,6 +45,7 @@ pub struct MyStrategyImpl {
     optimal_locations: Vec<(i32, Option<Location>)>,
     optimal_destinations: Vec<(i32, Vec2)>,
     optimal_targets: Vec<(i32, Option<i32>)>,
+    optimal_plans: Vec<(i32, Plan)>,
     optimal_actions: Vec<(i32, UnitAction)>,
     last_tick: i32,
 }
@@ -72,6 +75,7 @@ impl MyStrategyImpl {
             optimal_locations: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_destinations: world.units().iter().map(|v| (v.id, v.position())).collect(),
             optimal_targets: world.units().iter().map(|v| (v.id, None)).collect(),
+            optimal_plans: world.units().iter().map(|v| (v.id, Plan::default())).collect(),
             optimal_actions: world.units().iter().map(|v| (v.id, default_action.clone())).collect(),
             world,
             last_tick: -1,
@@ -87,6 +91,7 @@ impl MyStrategyImpl {
                 self.optimal_locations.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_destinations.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_targets.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+                self.optimal_plans.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_actions.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             }
 
@@ -116,13 +121,22 @@ impl MyStrategyImpl {
                 }
             }
 
+            for i in 0 .. self.optimal_plans.len() {
+                let unit_id = self.optimal_plans[i].0;
+                let unit = self.world.get_unit(unit_id);
+                if self.world.is_teammate_unit(unit) {
+                    let destination = self.optimal_destinations[i].1;
+                    self.optimal_plans[i] = (unit_id, get_optimal_plan(unit, destination, &self.world, &mut self.rng, debug));
+                }
+            }
+
             for i in 0 .. self.optimal_actions.len() {
                 let unit_id = self.optimal_actions[i].0;
                 let unit = self.world.get_unit(unit_id);
                 if self.world.is_teammate_unit(unit) {
-                    let destination = self.optimal_destinations[i].1;
+                    let plan = &self.optimal_plans[i].1;
                     let target = self.optimal_targets[i].1;
-                    self.optimal_actions[i] = (unit_id, get_optimal_action(unit, destination, target, &self.world, &mut self.rng, debug));
+                    self.optimal_actions[i] = (unit_id, get_optimal_action(unit, plan, target, &self.world, debug));
                 }
             }
 
@@ -194,8 +208,6 @@ fn render_backtrack(backtrack: &Vec<usize>, level: &Level, debug: &mut Debug) {
         if backtrack[i] == i {
             continue;
         }
-        let dst = level.get_tile_location(i).center();
-        let src = level.get_tile_location(backtrack[i]).center();
         debug.draw(CustomData::Line {
             p1: level.get_tile_location(i).center().as_model_f32(),
             p2: level.get_tile_location(backtrack[i]).center().as_model_f32(),
