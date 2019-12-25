@@ -100,7 +100,7 @@ impl World {
             .map(|v| (v.location(), v.item.clone()))
             .collect();
         let new_units_locations = get_units_locations(&self.units);
-        self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count();
+        self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count() - 1;
 
         if self.unit_index.len() > self.units.len() {
             self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
