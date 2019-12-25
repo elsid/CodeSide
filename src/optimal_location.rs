@@ -191,7 +191,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
                     &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world,
                     world.config().optimal_location_number_of_directions);
-                by_spread * hit_probabilities.target as f64 / hit_probabilities.total as f64
+                by_spread * (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
             } else {
                 0.0
             }
@@ -287,6 +287,6 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
         }
     }
 
-    hit_probabilities.target.max(hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
+    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
     && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }
