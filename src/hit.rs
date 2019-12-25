@@ -69,10 +69,10 @@ pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target
             (source, destination)
         };
         if let Some(hit) = get_nearest_hit(unit_id, src, dst, target, world) {
-            hit_opponent_units += !hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
-            hit_teammate_units += hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
-            hit_opponent_mines += !hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
-            hit_teammate_mines += hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
+            hit_opponent_units += !hit.is_target as usize & !hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
+            hit_teammate_units += !hit.is_target as usize & hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
+            hit_opponent_mines += !hit.is_target as usize & !hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
+            hit_teammate_mines += !hit.is_target as usize & hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
             hit_wall += (hit.object_type == ObjectType::Wall) as usize;
             hit_target += hit.is_target as usize;
             if min_distance.is_none() || min_distance.unwrap() > hit.distance {
