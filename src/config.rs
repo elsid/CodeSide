@@ -33,11 +33,13 @@ pub struct Config {
     pub optimal_location_min_target_hits_to_shoot: usize,
     pub optimal_location_max_teammates_hits_to_shoot: usize,
     pub optimal_location_min_hit_probability_by_spread_to_shoot: f64,
-    pub optimal_target_min_target_hits_to_shoot: usize,
-    pub optimal_target_max_teammates_hits_to_shoot: usize,
     pub optimal_target_number_of_directions: usize,
     pub optimal_target_min_hit_probability_by_spread_to_shoot: f64,
     pub optimal_target_distance_score_weight: f64,
+    pub optimal_target_hit_opponents_score_weight: f64,
+    pub optimal_target_hit_teammates_score_weight: f64,
+    pub optimal_action_min_opponents_hits_to_shoot: usize,
+    pub optimal_action_max_teammates_hits_to_shoot: usize,
 }
 
 impl Config {
@@ -75,10 +77,12 @@ impl Config {
             optimal_location_max_teammates_hits_to_shoot: 1,
             optimal_location_min_hit_probability_by_spread_to_shoot: 0.3,
             optimal_target_number_of_directions: 11,
-            optimal_target_min_target_hits_to_shoot: 1,
-            optimal_target_max_teammates_hits_to_shoot: 1,
             optimal_target_min_hit_probability_by_spread_to_shoot: 0.3,
             optimal_target_distance_score_weight: -1.0,
+            optimal_target_hit_opponents_score_weight: 1.0,
+            optimal_target_hit_teammates_score_weight: -1.0,
+            optimal_action_min_opponents_hits_to_shoot: 1,
+            optimal_action_max_teammates_hits_to_shoot: 1,
         }
     }
 
