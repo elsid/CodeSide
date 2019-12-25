@@ -41,7 +41,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         Self {
-            plan_max_iterations: 100,
+            plan_max_iterations: 200,
             plan_min_ticks_per_transition: 1,
             plan_max_ticks_per_transition: 1,
             plan_microticks_per_tick: 3,
@@ -79,6 +79,7 @@ impl Config {
     }
 
     pub fn adjusted(mut self, team_size: i32) -> Self {
+        self.plan_max_iterations /= team_size as usize;
         self.optimal_location_health_pack_score_weight *= (team_size * team_size) as f64;
         self.optimal_location_opponent_obstacle_score_weight *= team_size as f64;
         self
