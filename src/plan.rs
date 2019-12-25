@@ -38,11 +38,12 @@ pub struct Planner<'c, 's> {
     config: &'c Config,
     simulator: Simulator<'s>,
     max_distance: f64,
+    max_score: i32,
 }
 
 impl<'c, 's> Planner<'c, 's> {
-    pub fn new(target: Vec2, config: &'c Config, simulator: Simulator<'s>, max_distance: f64) -> Self {
-        Self { target, config, simulator, max_distance }
+    pub fn new(target: Vec2, config: &'c Config, simulator: Simulator<'s>, max_distance: f64, max_score: i32) -> Self {
+        Self { target, config, simulator, max_distance, max_score }
     }
 
     pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
@@ -95,7 +96,7 @@ impl<'c, 's> Planner<'c, 's> {
             .map(|v| v.score)
             .sum::<i32>();
 
-        let game_score_diff_score = (my_score - opponents_score) as f64 / ((self.simulator.players().len() as i32 * self.simulator.properties().kill_score * self.simulator.properties().team_size) as f64 * 1.5);
+        let game_score_diff_score = 1.0 - (opponents_score - my_score) as f64 / self.max_score as f64;
 
         let triggered_mines_by_me_score = if self.simulator.counters().max_number_of_mines > 0 {
             1.0 - self.simulator.counters().triggered_mines_by_me as f64 / self.simulator.counters().max_number_of_mines as f64

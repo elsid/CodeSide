@@ -45,6 +45,7 @@ pub struct World {
     max_distance: f64,
     number_of_teammates: usize,
     max_path_distance: f64,
+    max_score: i32,
 }
 
 impl World {
@@ -79,6 +80,11 @@ impl World {
             loot_boxes: game.loot_boxes.clone(),
             max_distance: size.norm(),
             max_path_distance: 0.0,
+            max_score: (
+                game.properties.team_size
+                * (game.properties.kill_score + game.properties.unit_max_health)
+                + game.loot_boxes.iter().filter(|v| is_health_pack(v)).count() as i32 * game.properties.health_pack_health
+            )
         }
     }
 
@@ -179,6 +185,10 @@ impl World {
 
     pub fn number_of_teammates(&self) -> usize {
         self.number_of_teammates
+    }
+
+    pub fn max_score(&self) -> i32 {
+        self.max_score
     }
 
     pub fn tick_time_interval(&self) -> f64 {
@@ -475,5 +485,13 @@ fn get_distance_factor(source: Tile, destination: Tile) -> f64 {
         2.0
     } else {
         1.0
+    }
+}
+
+fn is_health_pack(loot_box: &LootBox) -> bool {
+    if let &Item::HealthPack { .. } = &loot_box.item {
+        true
+    } else {
+        false
     }
 }
