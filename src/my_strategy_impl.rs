@@ -65,6 +65,8 @@ impl MyStrategyImpl {
             swap_weapon: false,
             plant_mine: false,
         };
+        let mut units = world.units().clone();
+        units.sort_by_key(|v| v.player_id == current_unit.player_id);
         Self {
             rng: XorShiftRng::from_seed([
                 3918248293,
@@ -72,11 +74,11 @@ impl MyStrategyImpl {
                 1841971383,
                 1904458926,
             ]),
-            optimal_locations: world.units().iter().map(|v| (v.id, None)).collect(),
-            optimal_destinations: world.units().iter().map(|v| (v.id, v.position())).collect(),
-            optimal_targets: world.units().iter().map(|v| (v.id, None)).collect(),
-            optimal_plans: world.units().iter().map(|v| (v.id, Plan::default())).collect(),
-            optimal_actions: world.units().iter().map(|v| (v.id, default_action.clone())).collect(),
+            optimal_locations: units.iter().map(|v| (v.id, None)).collect(),
+            optimal_destinations: units.iter().map(|v| (v.id, v.position())).collect(),
+            optimal_targets: units.iter().map(|v| (v.id, None)).collect(),
+            optimal_plans: units.iter().map(|v| (v.id, Plan::default())).collect(),
+            optimal_actions: units.iter().map(|v| (v.id, default_action.clone())).collect(),
             world,
             last_tick: -1,
         }
