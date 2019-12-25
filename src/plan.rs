@@ -26,6 +26,7 @@ use crate::my_strategy::{
     as_score,
 };
 
+#[derive(Clone, Default)]
 pub struct Plan {
     pub transitions: Vec<Transition>,
     pub score: i32,
