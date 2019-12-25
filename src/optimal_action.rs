@@ -1,6 +1,5 @@
 use model::{
     Item,
-    Tile,
     Unit,
     UnitAction,
 };
@@ -14,7 +13,6 @@ use model::{
 
 use crate::my_strategy::{
     Debug,
-    Location,
     Plan,
     Positionable,
     Rectangular,
@@ -48,6 +46,19 @@ pub fn get_optimal_action(current_unit: &Unit, plan: &Plan, target: Option<i32>,
     #[cfg(feature = "enable_debug")]
     debug.log(format!("[{}] plan_score={}, transitions: {:?}", current_unit.id, plan.score, plan.transitions.iter().map(|v| (v.kind, v.id)).collect::<Vec<_>>()));
 
+    if plan.transitions.is_empty() {
+        return UnitAction {
+            velocity: 0.0,
+            jump: false,
+            jump_down: false,
+            shoot,
+            aim: aim.as_model(),
+            reload: false,
+            swap_weapon: false,
+            plant_mine: false,
+        }
+    }
+
     let mut action = plan.transitions[0].action.clone();
     action.shoot = shoot;
     action.aim = aim.as_model();
@@ -55,32 +66,6 @@ pub fn get_optimal_action(current_unit: &Unit, plan: &Plan, target: Option<i32>,
     action.plant_mine = should_plant_mine(current_unit, world);
 
     action
-}
-
-fn get_quickstart_action(current_unit: &Unit, target: Vec2, aim: Vec2, shoot: bool, world: &World) -> UnitAction {
-    let mut jump = target.y() > current_unit.position.y;
-    if target.x() > current_unit.position.x
-        && world.get_tile(Location::new((current_unit.position.x + 1.0) as usize, (current_unit.position.y) as usize))
-            == Tile::Wall
-    {
-        jump = true
-    }
-    if target.x() < current_unit.position.x
-        && world.get_tile(Location::new((current_unit.position.x - 1.0) as usize, (current_unit.position.y) as usize))
-            == Tile::Wall
-    {
-        jump = true
-    }
-    UnitAction {
-        velocity: target.x() - current_unit.position.x,
-        jump,
-        jump_down: target.y() < current_unit.position.y,
-        shoot,
-        aim: aim.as_model(),
-        reload: false,
-        swap_weapon: false,
-        plant_mine: false,
-    }
 }
 
 fn should_swap_weapon(current_unit: &Unit, should_shoot: bool, world: &World) -> bool {
