@@ -156,6 +156,13 @@ impl MyStrategyImpl {
             }
         }
 
+        #[cfg(feature = "enable_debug")]
+        {
+            if let Some(weapon) = current_unit.weapon.as_ref() {
+                debug.log(format!("[{}] weapon: last_angle={:?}", current_unit.id, weapon.last_angle));
+            }
+        }
+
         let action = self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1.clone();
 
         #[cfg(feature = "enable_debug")]
