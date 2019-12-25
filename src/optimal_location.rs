@@ -182,19 +182,14 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         None
     };
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
-        let by_spread = get_hit_probability_by_spread(current_unit_center, &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size);
-        if by_spread == 0.0 {
-            0.0
+        if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+            let direction = (unit.center() - current_unit_center).normalized();
+            let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
+                &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world,
+                world.config().optimal_location_number_of_directions);
+            (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
         } else {
-            if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
-                let direction = (unit.center() - current_unit_center).normalized();
-                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                    &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world,
-                    world.config().optimal_location_number_of_directions);
-                by_spread * (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
-            } else {
-                0.0
-            }
+            0.0
         }
     } else {
         0.0
