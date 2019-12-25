@@ -14,6 +14,7 @@ use model::{
 };
 
 use crate::my_strategy::{
+    AimTarget,
     Config,
     Debug,
     Location,
@@ -44,7 +45,7 @@ pub struct MyStrategyImpl {
     rng: XorShiftRng,
     optimal_locations: Vec<(i32, Option<Location>)>,
     optimal_destinations: Vec<(i32, Vec2)>,
-    optimal_targets: Vec<(i32, Option<i32>)>,
+    optimal_targets: Vec<(i32, Option<AimTarget>)>,
     optimal_plans: Vec<(i32, Plan)>,
     optimal_actions: Vec<(i32, UnitAction)>,
     last_tick: i32,
@@ -135,7 +136,7 @@ impl MyStrategyImpl {
                 let unit = self.world.get_unit(unit_id);
                 if self.world.is_teammate_unit(unit) {
                     let plan = &self.optimal_plans[i].1;
-                    let target = self.optimal_targets[i].1;
+                    let target = &self.optimal_targets[i].1;
                     self.optimal_actions[i] = (unit_id, get_optimal_action(unit, plan, target, &self.world, debug));
                 }
             }
