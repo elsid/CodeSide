@@ -146,6 +146,10 @@ impl<'r> Simulator<'r> {
         &self.players[(self.player_index + 1) % 2]
     }
 
+    pub fn set_unit_action(&mut self, index: usize, action: UnitAction) {
+        self.units[index].action = action;
+    }
+
     pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
