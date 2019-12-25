@@ -33,16 +33,21 @@ pub struct Plan {
 }
 
 #[derive(Clone)]
-pub struct Planner<'c, 's> {
+pub struct Planner<'c, 's, 'a, G>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
     target: Vec2,
     config: &'c Config,
     simulator: Simulator<'s>,
     max_distance: f64,
+    get_unit_action_at: G,
 }
 
-impl<'c, 's> Planner<'c, 's> {
-    pub fn new(target: Vec2, config: &'c Config, simulator: Simulator<'s>, max_distance: f64) -> Self {
-        Self { target, config, simulator, max_distance }
+impl<'c, 's, 'a, G> Planner<'c, 's, 'a, G>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
+    pub fn new(target: Vec2, config: &'c Config, simulator: Simulator<'s>, max_distance: f64, get_unit_action_at: G) -> Self {
+        Self { target, config, simulator, max_distance, get_unit_action_at }
     }
 
     pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
@@ -143,17 +148,21 @@ impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
         }
     }
 
-    pub fn make_initial_state<'c, 's>(&mut self, planner: Planner<'c, 's>) -> State<'c, 's> {
+    pub fn make_initial_state<'c, 's, 'a, G>(&mut self, planner: Planner<'c, 's, 'a, G>) -> State<'c, 's, 'a, G>
+        where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
         State::initial(self.state_id_generator.next(), planner)
     }
 }
 
-impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd1, 'd2> {
-    fn is_final(&self, state: &State) -> bool {
+impl<'r, 'c, 'd1, 'd2, 's, 'a, G> Visitor<State<'c, 's, 'a, G>, Transition> for VisitorImpl<'r, 'd1, 'd2>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
+    fn is_final(&self, state: &State<'c, 's, 'a, G>) -> bool {
         state.depth >= state.planner.config.plan_min_state_depth
     }
 
-    fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
+    fn get_transitions(&mut self, state: &State<'c, 's, 'a, G>) -> Vec<Transition> {
         if state.depth >= state.planner.config.plan_max_state_depth {
             return Vec::new();
         }
@@ -171,15 +180,26 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         result
     }
 
-    fn apply(&mut self, iteration: usize, state: &State<'c, 's>, transition: &Transition) -> State<'c, 's> {
+    fn apply(&mut self, iteration: usize, state: &State<'c, 's, 'a, G>, transition: &Transition) -> State<'c, 's, 'a, G> {
         let mut next = state.clone();
         let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
         next.id = self.state_id_generator.next();
         next.depth += 1;
         *next.planner.simulator.unit_mut().action_mut() = transition.action.clone();
+
         let min = state.planner.config.plan_min_ticks_per_transition;
         let max = state.planner.config.plan_max_ticks_per_transition;
         for _ in 0..next.depth.clamp1(min, max) {
+            for i in 0 .. next.planner.simulator.units().len() {
+                let unit_id = next.planner.simulator.units()[i].base().id;
+                if next.planner.simulator.unit().base().id == unit_id {
+                    continue;
+                }
+                if let Some(action) = (state.planner.get_unit_action_at)(unit_id, next.planner.simulator.current_tick()) {
+                    next.planner.simulator.set_unit_action(i, action.clone());
+                }
+            }
+
             next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng);
         }
 
@@ -197,25 +217,29 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         next
     }
 
-    fn get_transition_cost(&mut self, source_state: &State, destination_state: &State, transition: &Transition) -> i32 {
+    fn get_transition_cost(&mut self, source_state: &State<'c, 's, 'a, G>, destination_state: &State<'c, 's, 'a, G>, transition: &Transition) -> i32 {
         source_state.get_score() - destination_state.get_score()
     }
 
-    fn get_score(&self, state: &State) -> i32 {
+    fn get_score(&self, state: &State<'c, 's, 'a, G>) -> i32 {
         state.get_score()
     }
 }
 
 #[derive(Clone)]
-pub struct State<'c, 's> {
+pub struct State<'c, 's, 'a, G>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
     id: i32,
     score: i32,
-    planner: Planner<'c, 's>,
+    planner: Planner<'c, 's, 'a, G>,
     depth: usize,
 }
 
-impl<'c, 's> State<'c, 's> {
-    pub fn initial(id: i32, planner: Planner<'c, 's>) -> Self {
+impl<'c, 's, 'a, G> State<'c, 's, 'a, G>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
+    pub fn initial(id: i32, planner: Planner<'c, 's, 'a, G>) -> Self {
         Self {
             id,
             score: 0,
@@ -224,7 +248,7 @@ impl<'c, 's> State<'c, 's> {
         }
     }
 
-    pub fn planner(&self) -> &Planner<'c, 's> {
+    pub fn planner(&self) -> &Planner<'c, 's, 'a, G> {
         &self.planner
     }
 
@@ -245,13 +269,17 @@ impl<'c, 's> State<'c, 's> {
     }
 }
 
-impl<'c, 's> std::fmt::Debug for State<'c, 's> {
+impl<'c, 's, 'a, G> std::fmt::Debug for State<'c, 's, 'a, G>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "id={} position={:?} score={:?}", self.id, self.planner.simulator.unit().position(), self.planner.get_score_components())
     }
 }
 
-impl<'c, 's> Identifiable for State<'c, 's> {
+impl<'c, 's, 'a, G> Identifiable for State<'c, 's, 'a, G>
+    where G: Clone + Fn(i32, i32) -> Option<&'a UnitAction> {
+
     fn id(&self) -> i32 {
         self.id
     }

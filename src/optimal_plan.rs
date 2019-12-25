@@ -1,5 +1,6 @@
 use model::{
     Unit,
+    UnitAction,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -26,7 +27,7 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, world: &World,
+pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, other: &[(i32, Plan)], world: &World,
         rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
     let tiles_path = world.find_shortcut_tiles_path(current_unit.id, current_unit.location(), global_destination.as_location());
 
@@ -43,9 +44,22 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, world: &W
     debug.log(format!("[{}] global_destination: {:?} local_destination: {:?}", current_unit.id, global_destination, local_destination));
 
     let simulator = Simulator::new(&world, current_unit.id);
-    let planner = Planner::new(local_destination, world.config(), simulator, world.max_distance());
+    let planner = Planner::new(local_destination, world.config(), simulator, world.max_distance(),
+        make_get_unit_action_at(other));
 
     planner.make(world.current_tick(), rng, debug)
+}
+
+fn make_get_unit_action_at<'r>(other: &'r [(i32, Plan)]) -> impl Clone + Fn(i32, i32) -> Option<&'r UnitAction> {
+    move |unit_id: i32, tick: i32| -> Option<&'r UnitAction> {
+        other.iter()
+            .find(|(id, _)| *id == unit_id)
+            .map(|(_, plan)| {
+                plan.transitions.get(tick as usize)
+                    .map(|transition| &transition.action)
+            })
+            .unwrap_or(None)
+    }
 }
 
 #[cfg(feature = "enable_debug")]
