@@ -86,9 +86,9 @@ fn test_my_strategy_impl_get_action_with_assault_rifle_nearby_opponent() {
     let mut debug = aicup2019::Debug(&mut stream);
     let result = my_strategy.get_action(&unit, &world.game(), &mut Debug::new(&mut debug));
     assert_eq!(UnitActionWrapper(&result), UnitActionWrapper(&UnitAction {
-        velocity: 10.0,
+        velocity: 0.0,
         jump: false,
-        jump_down: false,
+        jump_down: true,
         aim: model::Vec2F64 {
             x: -2.0,
             y: 0.0

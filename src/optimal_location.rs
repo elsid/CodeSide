@@ -32,7 +32,6 @@ use crate::my_strategy::{
     get_hit_probabilities,
     get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_destination,
-    get_hit_probability_over_obstacles,
 };
 
 #[inline(never)]
@@ -121,21 +120,14 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
     get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 14] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
-    let max_distance = world.size().norm();
     let tile_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
     );
-    let distance_to_opponent_score = world.units().iter()
-        .filter(|unit| world.is_opponent_unit(unit))
-        .map(|unit| {
-            get_hit_probability_over_obstacles(current_unit_center, unit.center(), world.level()) * current_unit_center.distance(unit.center())
-        })
-        .sum::<f64>() / max_distance;
     let distance_to_position_score = path_info.distance() / world.max_path_distance();
     let health_pack_score = match world.tile_item(location) {
         Some(&Item::HealthPack { .. }) => 1.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
@@ -251,7 +243,6 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     };
 
     [
-        distance_to_opponent_score * world.config().optimal_location_distance_to_opponent_score_weight,
         distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
         health_pack_score * world.config().optimal_location_health_pack_score_weight,
         first_weapon_score * world.config().optimal_location_first_weapon_score_weight,

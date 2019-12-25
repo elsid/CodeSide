@@ -3,17 +3,13 @@ mod helpers;
 use model::{
     Tile,
 };
-use helpers::make_unit_rect;
-use aicup2019::examples::{
-    example_properties,
-};
+
 use aicup2019::my_strategy::{
     Level,
     Rect,
     Vec2,
     get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_destination,
-    get_hit_probability_over_obstacles,
     get_distance_to_nearest_hit_wall_by_horizontal,
     get_distance_to_nearest_hit_wall_by_line,
     get_distance_to_nearest_hit_wall_by_vertical,
@@ -77,18 +73,6 @@ fn test_get_distance_to_nearest_hit_wall_by_line_through_wall() {
         get_distance_to_nearest_hit_wall_by_line(Vec2::new(0.2312, 0.6423), Vec2::new(2.653, 1.234), &level),
         Some(1.0)
     );
-}
-
-#[test]
-fn test_get_hit_probability_over_obstacles() {
-    let level = Level::from_model(&model::Level {
-        tiles: vec![
-            vec![Tile::Empty, Tile::Empty, Tile::Empty],
-            vec![Tile::Wall, Tile::Wall, Tile::Wall],
-            vec![Tile::Empty, Tile::Empty, Tile::Empty],
-        ]
-    });
-    assert_eq!(get_hit_probability_over_obstacles(Vec2::new(0.2312, 0.6423), Vec2::new(2.653, 1.234), &level), 0.0);
 }
 
 #[test]

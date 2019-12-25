@@ -176,10 +176,6 @@ pub fn get_hit_probability_by_spread_with_destination(source: Vec2, destination:
         .get_intersection_fraction(Sector::from_source_and_rect(source, target))
 }
 
-pub fn get_hit_probability_over_obstacles(source: Vec2, target: Vec2, level: &Level) -> f64 {
-    get_distance_to_nearest_hit_wall(source, target, level).is_none() as i32 as f64
-}
-
 fn get_distance_to_nearest_hit_wall(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     if begin.x() as i32 == end.x() as i32 {
         get_distance_to_nearest_hit_wall_by_vertical(begin, end, level)
