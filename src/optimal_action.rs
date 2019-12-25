@@ -3,6 +3,7 @@ use model::{
     Tile,
     Unit,
     UnitAction,
+    Weapon,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -13,7 +14,10 @@ use model::{
 };
 
 use crate::my_strategy::{
+    AimTarget,
+    Config,
     Debug,
+    HitProbabilities,
     Location,
     Plan,
     Positionable,
@@ -33,14 +37,17 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_action(current_unit: &Unit, plan: &Plan, target: Option<i32>, world: &World,
+pub fn get_optimal_action(current_unit: &Unit, plan: &Plan, target: &Option<AimTarget>, world: &World,
         debug: &mut Debug) -> UnitAction {
-    let nearest_opponent = target.map(|unit_id| world.get_unit(unit_id));
+    let unit_target = target.as_ref().map(|v| (world.get_unit(v.unit_id), &v.hit_probabilities));
 
-    let (shoot, aim) = if let Some(opponent) = nearest_opponent {
+    let (shoot, aim) = if let (Some((opponent, hit_probabilities)), Some(weapon)) = (unit_target, current_unit.weapon.as_ref()) {
         #[cfg(feature = "enable_debug")]
         render_aim(current_unit, opponent, world, debug);
-        (true, opponent.position() - current_unit.position())
+        (
+            should_shoot(hit_probabilities, weapon, world.config()),
+            opponent.position() - current_unit.position()
+        )
     } else {
         (false, Vec2::zero())
     };
@@ -81,6 +88,17 @@ fn get_quickstart_action(current_unit: &Unit, target: Vec2, aim: Vec2, shoot: bo
         swap_weapon: false,
         plant_mine: false,
     }
+}
+
+fn should_shoot(hit_probabilities: &HitProbabilities, weapon: &Weapon, config: &Config) -> bool {
+    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
+        if min_distance < explosion.radius + 2.0 {
+            return false;
+        }
+    }
+
+    (hit_probabilities.target + hit_probabilities.opponent_units) >= config.min_opponents_hits_to_shoot
+    && hit_probabilities.teammate_units <= config.max_teammates_hits_to_shoot
 }
 
 fn should_swap_weapon(current_unit: &Unit, should_shoot: bool, world: &World) -> bool {
@@ -134,7 +152,7 @@ fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
         let to_target = direction * world.max_distance();
         let left = direction.left() * weapon.params.bullet.size;
         let right = direction.right() * weapon.params.bullet.size;
-        let number_of_directions = world.config().optimal_action_number_of_directions;
+        let number_of_directions = world.config().optimal_target_number_of_directions;
 
         for i in 0 .. number_of_directions {
             let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * weapon.spread;

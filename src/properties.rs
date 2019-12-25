@@ -5,6 +5,7 @@ pub trait ImplicitProperties {
     fn max_unit_jump_height(&self) -> f64;
     fn max_jump_pad_length(&self) -> f64;
     fn max_unit_jump_length(&self) -> f64;
+    fn tick_time_interval(&self) -> f64;
 }
 
 impl ImplicitProperties for Properties {
@@ -22,5 +23,9 @@ impl ImplicitProperties for Properties {
 
     fn max_unit_jump_length(&self) -> f64 {
         self.unit_max_horizontal_speed * self.unit_jump_time
+    }
+
+    fn tick_time_interval(&self) -> f64 {
+        1.0 / self.ticks_per_second as f64
     }
 }

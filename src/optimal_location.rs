@@ -282,6 +282,6 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
         }
     }
 
-    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
+    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_opponents_hits_to_shoot
     && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }
