@@ -40,7 +40,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         Self {
-            plan_max_iterations: 100,
+            plan_max_iterations: 120,
             plan_min_ticks_per_transition: 1,
             plan_max_ticks_per_transition: 1,
             plan_microticks_per_tick: 3,
