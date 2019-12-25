@@ -23,11 +23,11 @@ cp target/release/aicup2019 ${BIN}
     while [[ ${try} -lt 10 ]]; do
         echo "date $(date) ${number}"
         env CONFIG=${CONFIG} ${BIN} 127.0.0.1 ${PORT} && {
-            try=0
+            try=1
         } || {
             try=$(( try + 1 ))
         }
-        sleep 0.2
+        sleep $( echo "print 0.1 * ${try}" | perl )
         number=$(( number + 1 ))
     done
 } 2>&1 | tee results/logs/run.${PORT}.log
