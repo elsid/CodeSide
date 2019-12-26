@@ -20,7 +20,7 @@ use crate::my_strategy::{
     Vec2,
     Vec2i,
     as_score,
-    wall_or_jump_pad_on_the_way,
+    is_shortcut,
 };
 
 #[derive(Debug, Clone)]
@@ -262,7 +262,7 @@ impl World {
 
         while end > 0 {
             let mut tile = 0;
-            while tile < end && wall_or_jump_pad_on_the_way(current.center(), tiles_path[tile].center(), &self.level) {
+            while tile < end && !is_shortcut(current.center(), tiles_path[tile].center(), &self.level) {
                 tile += 1;
             }
             if tile == end {
