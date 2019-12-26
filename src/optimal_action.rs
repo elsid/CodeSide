@@ -119,7 +119,7 @@ fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
         let to_target = direction * world.max_distance();
         let left = direction.left() * weapon.params.bullet.size;
         let right = direction.right() * weapon.params.bullet.size;
-        let number_of_directions = world.config().optimal_action_number_of_directions;
+        let number_of_directions = world.config().optimal_target_number_of_directions;
 
         for i in 0 .. number_of_directions {
             let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * weapon.spread;

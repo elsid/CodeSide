@@ -267,7 +267,7 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
     let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(),
         weapon.params.min_spread, weapon.params.bullet.size);
 
-    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+    if hit_probability_by_spread < world.config().optimal_location_min_hit_probability_by_spread_to_shoot {
         return false;
     }
 
@@ -282,6 +282,6 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
         }
     }
 
-    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
-    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
+    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().optimal_location_min_target_hits_to_shoot
+    && hit_probabilities.teammate_units <= world.config().optimal_location_max_teammates_hits_to_shoot
 }
