@@ -118,7 +118,7 @@ impl MyStrategyImpl {
                 let unit_id = self.optimal_targets[i].0;
                 let unit = self.world.get_unit(unit_id);
                 if self.world.is_teammate_unit(unit) {
-                    self.optimal_targets[i] = (unit_id, get_optimal_target(unit, &self.world));
+                    self.optimal_targets[i] = (unit_id, get_optimal_target(unit, &self.world, &mut self.rng, debug));
                 }
             }
 
