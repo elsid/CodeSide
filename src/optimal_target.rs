@@ -23,8 +23,15 @@ pub struct AimTarget {
 pub fn get_optimal_target(current_unit: &Unit, world: &World) -> Option<AimTarget> {
     if let Some(weapon) = current_unit.weapon.as_ref() {
         world.units().iter()
-            .filter(|unit| world.is_opponent_unit(unit))
-            .filter_map(|unit| get_target_score(current_unit.id, current_unit.center(), &unit, weapon, &world).map(|(score, hp)| (unit.id, score, hp)))
+            .filter(|unit| {
+                world.is_opponent_unit(unit)
+                    && get_hit_probability_by_spread(current_unit.center(), &unit.rect(), weapon.params.min_spread, weapon.params.bullet.size)
+                        >= world.config().optimal_target_min_hit_probability_by_spread_to_shoot
+            })
+            .map(|unit| {
+                let (score, hit_probabilities) = get_target_score(current_unit.id, current_unit.center(), unit, weapon, &world);
+                (unit.id, score, hit_probabilities)
+            })
             .max_by_key(|&(_, score, _)| score)
             .map(|(unit_id, _, hit_probabilities)| AimTarget { unit_id, hit_probabilities })
     } else {
@@ -32,13 +39,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World) -> Option<AimTarge
     }
 }
 
-fn get_target_score(current_unit_id: i32, source: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> Option<(i32, HitProbabilities)> {
-    let hit_probability_by_spread = get_hit_probability_by_spread(source, &opponent.rect(), weapon.params.min_spread, weapon.params.bullet.size);
-
-    if hit_probability_by_spread < world.config().optimal_target_min_hit_probability_by_spread_to_shoot {
-        return None;
-    }
-
+fn get_target_score(current_unit_id: i32, source: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> (i32, HitProbabilities) {
     let destination = opponent.center();
     let last_angle = weapon.last_angle.unwrap_or(0.0);
     let time_to_shoot = weapon.fire_timer.unwrap_or(world.tick_time_interval());
@@ -50,14 +51,14 @@ fn get_target_score(current_unit_id: i32, source: Vec2, opponent: &Unit, weapon:
         &Target::from_unit(opponent), spread, weapon.params.bullet.size, world,
         world.config().optimal_target_number_of_directions);
 
-    Some((
+    (
         as_score(get_target_score_components(source, destination, &hit_probabilities, world).iter().sum()),
         hit_probabilities
-    ))
+    )
 }
 
-fn get_target_score_components(current_unit_center: Vec2, opponent_center: Vec2, hit_probabilities: &HitProbabilities, world: &World) -> [f64; 3] {
-    let distance_score = current_unit_center.distance(opponent_center) / world.max_distance();
+fn get_target_score_components(source: Vec2, destination: Vec2, hit_probabilities: &HitProbabilities, world: &World) -> [f64; 3] {
+    let distance_score = source.distance(destination) / world.max_distance();
 
     let hit_opponents_score = (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64;
 
