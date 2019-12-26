@@ -15,7 +15,7 @@ use crate::my_strategy::{
     normalize_angle,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HitProbabilities {
     pub wall: usize,
     pub opponent_units: usize,

@@ -50,7 +50,7 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, other: &[
     planner.make(world.current_tick(), rng, debug)
 }
 
-fn make_get_unit_action_at<'r>(other: &'r [(i32, Plan)]) -> impl Clone + Fn(i32, i32) -> Option<&'r UnitAction> {
+pub fn make_get_unit_action_at<'r>(other: &'r [(i32, Plan)]) -> impl Clone + Fn(i32, i32) -> Option<&'r UnitAction> {
     move |unit_id: i32, tick: i32| -> Option<&'r UnitAction> {
         other.iter()
             .find(|(id, _)| *id == unit_id)

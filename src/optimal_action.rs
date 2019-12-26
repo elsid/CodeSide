@@ -37,14 +37,12 @@ use crate::my_strategy::{
 #[inline(never)]
 pub fn get_optimal_action(current_unit: &Unit, plan: &Plan, target: &Option<AimTarget>, world: &World,
         debug: &mut Debug) -> UnitAction {
-    let unit_target = target.as_ref().map(|v| (world.get_unit(v.unit_id), &v.hit_probabilities));
-
-    let (shoot, aim) = if let (Some((opponent, hit_probabilities)), Some(weapon)) = (unit_target, current_unit.weapon.as_ref()) {
+    let (shoot, aim) = if let (Some(target), Some(weapon)) = (target, current_unit.weapon.as_ref()) {
         #[cfg(feature = "enable_debug")]
-        render_aim(current_unit, opponent, world, debug);
+        render_aim(current_unit, target.position, world.get_unit(target.unit_id), world, debug);
         (
-            should_shoot(hit_probabilities, weapon, world.config()),
-            opponent.position() - current_unit.position()
+            should_shoot(&target.hit_probabilities, weapon, world.config()),
+            target.position - current_unit.position()
         )
     } else {
         (false, Vec2::zero())
@@ -121,9 +119,9 @@ fn should_plant_mine(current_unit: &Unit, world: &World) -> bool {
 }
 
 #[cfg(feature = "enable_debug")]
-fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
+fn render_aim(unit: &Unit, destination: Vec2, opponent: &Unit, world: &World, debug: &mut Debug) {
     let mut s = Vec::new();
-    for position in WalkGrid::new(unit.rect().center(), opponent.rect().center()) {
+    for position in WalkGrid::new(unit.rect().center(), destination) {
         s.push(position);
         debug.draw(CustomData::Rect {
             pos: position.as_location().as_model_f32(),
@@ -133,7 +131,7 @@ fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
     }
     if let Some(weapon) = unit.weapon.as_ref() {
         let source = unit.rect().center();
-        let direction = (opponent.rect().center() - source).normalized();
+        let direction = (destination - source).normalized();
         let to_target = direction * world.max_distance();
         let left = direction.left() * weapon.params.bullet.size;
         let right = direction.right() * weapon.params.bullet.size;

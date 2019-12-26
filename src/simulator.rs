@@ -114,6 +114,10 @@ impl<'r> Simulator<'r> {
         self.current_tick
     }
 
+    pub fn current_time(&self) -> f64 {
+        self.current_time
+    }
+
     pub fn properties(&self) -> &Properties {
         &self.properties
     }
