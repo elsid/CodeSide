@@ -19,4 +19,14 @@ impl Vec2i {
     pub const fn y(&self) -> isize {
         self.y
     }
+
+    #[inline(always)]
+    pub const fn only_x(x: isize) -> Self {
+        Self { x, y: 0 }
+    }
+
+    #[inline(always)]
+    pub const fn only_y(y: isize) -> Self {
+        Self { x: 0, y }
+    }
 }

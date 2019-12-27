@@ -52,7 +52,12 @@ impl Level {
 
     #[inline(always)]
     pub fn get_tile(&self, location: Location) -> Tile {
-        self.tiles[self.get_tile_index(location)].clone()
+        self.get_tile_by_index(self.get_tile_index(location)).clone()
+    }
+
+    #[inline(always)]
+    pub fn get_tile_by_index(&self, index: usize) -> Tile {
+        self.tiles[index].clone()
     }
 
     pub fn as_model(&self) -> model::Level {

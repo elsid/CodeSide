@@ -46,6 +46,7 @@ pub struct World {
     number_of_teammates: usize,
     max_path_distance: f64,
     max_score: i32,
+    is_complex_level: bool,
 }
 
 impl World {
@@ -72,6 +73,7 @@ impl World {
             config,
             current_tick: game.current_tick,
             properties: game.properties.clone(),
+            is_complex_level: is_complex_level(&level),
             level,
             players: game.players.clone(),
             units: game.units.clone(),
@@ -189,6 +191,10 @@ impl World {
 
     pub fn max_score(&self) -> i32 {
         self.max_score
+    }
+
+    pub fn is_complex_level(&self) -> bool {
+        self.is_complex_level
     }
 
     pub fn tick_time_interval(&self) -> f64 {
@@ -494,4 +500,55 @@ fn is_health_pack(loot_box: &LootBox) -> bool {
     } else {
         false
     }
+}
+
+fn is_complex_level(level: &Level) -> bool {
+    let wall = (0 .. level.size()).find(|v| level.get_tile_by_index(*v) == Tile::Wall);
+
+    if wall.is_none() {
+        return false;
+    }
+
+    let mut used = std::iter::repeat(false).take(level.size()).collect::<Vec<_>>();
+    let mut stack = vec![wall.unwrap()];
+
+    used[wall.unwrap()] = true;
+
+    while let Some(index) = stack.pop() {
+        let location = level.get_tile_location(index);
+
+        if location.x() > 0 {
+            let neighbor_index = level.get_tile_index(location + Vec2i::only_x(-1));
+            if level.get_tile_by_index(neighbor_index) == Tile::Wall && !used[neighbor_index] {
+                used[neighbor_index] = true;
+                stack.push(neighbor_index);
+            }
+        }
+
+        if location.x() + 1 < level.size_x() {
+            let neighbor_index = level.get_tile_index(location + Vec2i::only_x(1));
+            if level.get_tile_by_index(neighbor_index) == Tile::Wall && !used[neighbor_index] {
+                used[neighbor_index] = true;
+                stack.push(neighbor_index);
+            }
+        }
+
+        if location.y() > 0 {
+            let neighbor_index = level.get_tile_index(location + Vec2i::only_y(-1));
+            if level.get_tile_by_index(neighbor_index) == Tile::Wall && !used[neighbor_index] {
+                used[neighbor_index] = true;
+                stack.push(neighbor_index);
+            }
+        }
+
+        if location.y() + 1 < level.size_y() {
+            let neighbor_index = level.get_tile_index(location + Vec2i::only_y(1));
+            if level.get_tile_by_index(neighbor_index) == Tile::Wall && !used[neighbor_index] {
+                used[neighbor_index] = true;
+                stack.push(neighbor_index);
+            }
+        }
+    }
+
+    (0 .. level.size()).find(|v| !used[*v] && level.get_tile_by_index(*v) == Tile::Wall).is_some()
 }
