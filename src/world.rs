@@ -47,6 +47,8 @@ pub struct World {
     max_path_distance: f64,
     max_score: i32,
     is_complex_level: bool,
+    my_player_index: usize,
+    opponent_player_index: usize,
 }
 
 impl World {
@@ -86,7 +88,9 @@ impl World {
                 game.properties.team_size
                 * (game.properties.kill_score + game.properties.unit_max_health)
                 + game.loot_boxes.iter().filter(|v| is_health_pack(v)).count() as i32 * game.properties.health_pack_health
-            )
+            ),
+            my_player_index: game.players.iter().position(|v| v.id == player_id).unwrap(),
+            opponent_player_index: game.players.iter().position(|v| v.id != player_id).unwrap(),
         }
     }
 
@@ -102,7 +106,10 @@ impl World {
             .map(|v| (v.location(), v.item.clone()))
             .collect();
         let new_units_locations = get_units_locations(&self.units);
+
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count() - 1;
+        self.my_player_index = self.players().iter().position(|v| v.id == self.player_id).unwrap();
+        self.opponent_player_index = (self.my_player_index + 1) % 2;
 
         if self.unit_index.len() > self.units.len() {
             self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
@@ -195,6 +202,14 @@ impl World {
 
     pub fn is_complex_level(&self) -> bool {
         self.is_complex_level
+    }
+
+    pub fn my_player(&self) -> &Player {
+        &self.players[self.my_player_index]
+    }
+
+    pub fn opponent_player(&self) -> &Player {
+        &self.players[self.opponent_player_index]
     }
 
     pub fn tick_time_interval(&self) -> f64 {

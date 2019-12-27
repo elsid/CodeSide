@@ -149,6 +149,12 @@ pub mod plan;
 #[allow(unused_imports)]
 pub use plan::*;
 
+#[path = "role.rs"]
+pub mod role;
+
+#[allow(unused_imports)]
+pub use role::*;
+
 #[path = "optimal_location.rs"]
 pub mod optimal_location;
 

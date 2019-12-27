@@ -104,14 +104,16 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
     world.units().iter()
         .filter(|v| v.id != unit_id)
         .find(|v| {
-            for x in -1 .. 2 {
-                for y in -1 .. 3 {
-                    if v.location() == location + Vec2i::new(x, y) {
-                        return true;
-                    }
-                }
+            if !world.is_complex_level() || world.is_opponent_unit(v) {
+                v.rect().has_collision(&make_location_rect(location))
+            } else if world.is_teammate_unit(v) {
+                let radius = world.properties().mine_explosion_params.radius;
+                let explosion_rect = Rect::new(location.bottom(), Vec2::new(radius, radius));
+
+                v.rect().has_collision(&explosion_rect)
+            } else {
+                false
             }
-            false
         })
         .is_some()
 }
@@ -284,4 +286,8 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
 
     (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
     && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
+}
+
+pub fn make_location_rect(location: Location) -> Rect {
+    Rect::new(location.center(), Vec2::new(0.5, 0.5))
 }

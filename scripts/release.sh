@@ -30,6 +30,7 @@ cp src/properties.rs ${DIR}/src
 cp src/random.rs ${DIR}/src
 cp src/rect.rs ${DIR}/src
 cp src/rectangular.rs ${DIR}/src
+cp src/role.rs ${DIR}/src
 cp src/search.rs ${DIR}/src
 cp src/sector.rs ${DIR}/src
 cp src/simulator.rs ${DIR}/src
