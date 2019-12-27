@@ -104,9 +104,7 @@ fn should_plant_mine(current_unit: &Unit, world: &World) -> bool {
 
 #[cfg(feature = "enable_debug")]
 fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
-    let mut s = Vec::new();
     for position in WalkGrid::new(unit.rect().center(), opponent.rect().center()) {
-        s.push(position);
         debug.draw(CustomData::Rect {
             pos: position.as_location().as_model_f32(),
             size: Vec2F32 { x: 1.0, y: 1.0 },
@@ -145,7 +143,6 @@ fn render_aim(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
                         ColorF32 { a: 0.5, r: 0.5, g: 0.33, b: 0.0 }
                     },
                 };
-                #[cfg(feature = "enable_debug")]
                 debug.draw(CustomData::Line {
                     p1: src.as_model_f32(),
                     p2: (src + (dst - src).normalized() * hit.distance).as_model_f32(),
