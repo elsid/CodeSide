@@ -126,7 +126,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
-    let tile_rect = Rect::new(
+    let location_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
     );
@@ -203,14 +203,15 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         .count();
     let bullets_score = if number_of_bullets > 0 {
         world.bullets().iter()
-            .filter(|v| v.unit_id != current_unit.id && v.rect().has_collision(&tile_rect))
+            .filter(|v| v.unit_id != current_unit.id && v.rect().has_collision(&location_rect))
             .count() as f64
     } else {
         0.0
     };
     let mines_score = if world.mines().len() > 0 {
+        let mine_half = Vec2::new(world.properties().mine_trigger_radius, world.properties().mine_trigger_radius);
         world.mines().iter()
-            .filter(|v| v.rect().center().distance(tile_rect.center()) <= 2.0 * world.properties().mine_trigger_radius)
+            .filter(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
             .count() as f64
     } else {
         0.0

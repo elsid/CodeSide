@@ -16,10 +16,12 @@ use crate::my_strategy::{
     Level,
     Location,
     Positionable,
+    Rect,
     Rectangular,
     Vec2,
     Vec2i,
     as_score,
+    make_location_rect,
     wall_or_jump_pad_on_the_way,
 };
 
@@ -251,15 +253,18 @@ impl World {
     }
 
     pub fn has_opponent_unit(&self, location: Location) -> bool {
+        let location_rect = make_location_rect(location);
         self.units.iter()
             .filter(|v| self.is_opponent_unit(v))
-            .find(|v| v.center().distance(location.center()) <= v.size.y)
+            .find(|v| v.rect().has_collision(&location_rect))
             .is_some()
     }
 
     pub fn has_mine(&self, location: Location) -> bool {
+        let location_rect = make_location_rect(location);
+        let mine_half = Vec2::new(self.properties.mine_trigger_radius, self.properties.mine_trigger_radius);
         self.mines.iter()
-            .find(|v| v.location().center().distance(location.center()) <= 2.0 * self.properties.mine_trigger_radius)
+            .find(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
             .is_some()
     }
 
