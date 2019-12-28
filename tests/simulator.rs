@@ -841,6 +841,39 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
 }
 
 #[test]
+fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
+    let world = with_my_position(example_world(), Vec2::new(9.5, 8.0));
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.unit_mut().action_mut().jump = true;
+    for _ in 0 .. 5 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(
+        simulator.unit().position(),
+        Vec2::new(9.5, 8.831666667666797)
+    );
+    simulator.unit_mut().action_mut().jump = false;
+    for _ in 0 .. 6 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(
+        simulator.unit().position(),
+        Vec2::new(9.5, 8.000000001)
+    );
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

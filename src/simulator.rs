@@ -419,16 +419,22 @@ impl<'r> Simulator<'r> {
                         }
                     },
                     Tile::Ladder => {
-                        if !self.units[unit].base.on_ladder && !self.units[unit].action.jump_down {
-                            if can_use_ladder(&self.units[unit], x, y) && self.units[unit].collide_with_tile_by_y(x, y) {
+                        if self.units[unit].action.jump_down {
+                            if can_use_ladder_moving(&self.units[unit], x, y) {
                                 self.units[unit].base.on_ladder = true;
+                                self.units[unit].base.on_ground = true;
+                                allow_jump(&mut self.units[unit], &self.properties);
+                            }
+                        } else {
+                            if !self.units[unit].base.on_ladder && cross_tile_border(&self.units[unit], y)
+                                    && can_use_ladder_moving(&self.units[unit], x, y) && self.units[unit].collide_with_tile_by_y(x, y) {
                                 self.units[unit].base.on_ground = true;
                                 allow_jump(&mut self.units[unit], &self.properties);
                             }
                         }
                     },
                     Tile::Platform => {
-                        if !self.units[unit].action.jump_down && cross_platform(&self.units[unit], y) {
+                        if !self.units[unit].action.jump_down && cross_tile_border(&self.units[unit], y) {
                             if self.units[unit].collide_with_tile_by_y(x, y) {
                                 self.units[unit].base.on_ground = true;
                                 allow_jump(&mut self.units[unit], &self.properties);
@@ -951,7 +957,15 @@ pub fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
     )
 }
 
-pub fn cross_platform(unit: &UnitExt, y: usize) -> bool {
+pub fn can_use_ladder_moving(unit: &UnitExt, x: usize, y: usize) -> bool {
+    unit.moving_center_x() as usize >= x && unit.moving_center_x() <= (x + 1) as f64
+    && (
+        (unit.moving_bottom() as usize >= y && (unit.moving_bottom() <= (y + 1) as f64))
+        || (unit.moving_center_y() as usize >= y && (unit.moving_center_y() <= (y + 1) as f64))
+    )
+}
+
+pub fn cross_tile_border(unit: &UnitExt, y: usize) -> bool {
     unit.holding_bottom() as usize >= y + 1 && unit.moving_bottom() < (y + 1) as f64
 }
 
