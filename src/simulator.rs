@@ -263,19 +263,25 @@ impl<'r> Simulator<'r> {
             }
         }
 
+        let mut explosions = Vec::new();
+
         for bullet in 0 .. self.bullets.len() {
             if self.bullets[bullet].hit {
                 continue;
             }
 
-            if self.collide_bullet_and_units(bullet) {
+            if self.collide_bullet_and_units(bullet, &mut explosions) {
                 continue;
             }
 
             self.bullets[bullet].advance(time_interval);
 
-            if self.collide_bulles_and_tiles(bullet) {
+            if self.collide_bulles_and_tiles(bullet, &mut explosions) {
                 continue
+            }
+
+            if self.collide_bullet_and_mines(bullet, &mut explosions) {
+                continue;
             }
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
@@ -301,16 +307,11 @@ impl<'r> Simulator<'r> {
         }
 
         for mine in 0 .. self.mines.len() {
-            if self.mines[mine].base.state == MineState::Exploded {
+            if self.mines[mine].ignore() {
                 continue;
             }
             if let Some(explosion) = update_mine(time_interval, &mut self.mines[mine]) {
-                for unit in 0 .. self.units.len() {
-                    if self.units[unit].ignore() {
-                        continue;
-                    }
-                    explode(&explosion, self.properties.kill_score, &mut self.units[unit], &mut self.players);
-                }
+                explosions.push(explosion);
             } else if self.mines[mine].base.state == MineState::Idle {
                 for unit in 0 .. self.units.len() {
                     if self.units[unit].ignore() {
@@ -322,6 +323,11 @@ impl<'r> Simulator<'r> {
                     }
                 }
             }
+        }
+
+        while let Some(explosion) = explosions.pop() {
+            self.explode_units(&explosion);
+            self.explode_mines(&explosion, &mut explosions);
         }
 
         #[cfg(feature = "simulator_weapon")]
@@ -523,18 +529,13 @@ impl<'r> Simulator<'r> {
         }
     }
 
-    fn collide_bullet_and_units(&mut self, bullet: usize) -> bool {
+    fn collide_bullet_and_units(&mut self, bullet: usize, explosions: &mut Vec<Explosion>) -> bool {
         for unit in 0 .. self.units.len() {
             if self.units[unit].ignore() {
                 continue;
             }
             if let Some(explosion) = collide_unit_and_bullet(self.properties.kill_score, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
-                for i in 0 .. self.units.len() {
-                    if self.units[i].ignore() {
-                        continue;
-                    }
-                    explode(&explosion, self.properties.kill_score, &mut self.units[i], &mut self.players);
-                }
+                explosions.push(explosion);
             }
             if self.bullets[bullet].hit {
                 return true;
@@ -543,7 +544,7 @@ impl<'r> Simulator<'r> {
         false
     }
 
-    fn collide_bulles_and_tiles(&mut self, bullet: usize) -> bool {
+    fn collide_bulles_and_tiles(&mut self, bullet: usize, explosions: &mut Vec<Explosion>) -> bool {
         let min_x = self.bullets[bullet].left() as usize;
         let max_x = (self.bullets[bullet].right() as usize + 1).min(self.level.size_x());
         let min_y = self.bullets[bullet].bottom() as usize;
@@ -553,14 +554,7 @@ impl<'r> Simulator<'r> {
             for y in min_y .. max_y {
                 match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
-                        if let Some(explosion) = collide_bullet_and_tile(x, y, &mut self.bullets[bullet]) {
-                            for unit in 0 .. self.units.len() {
-                                if self.units[unit].ignore() {
-                                    continue;
-                                }
-                                explode(&explosion, self.properties.kill_score, &mut self.units[unit], &mut self.players);
-                            }
-                        }
+                        collide_bullet_and_tile(x, y, &mut self.bullets[bullet], explosions);
                         if self.bullets[bullet].hit {
                             return true;
                         }
@@ -570,6 +564,37 @@ impl<'r> Simulator<'r> {
             }
         }
         false
+    }
+
+    fn collide_bullet_and_mines(&mut self, bullet: usize, explosions: &mut Vec<Explosion>) -> bool {
+        for mine in 0 .. self.mines.len() {
+            if self.mines[mine].ignore() {
+                continue;
+            }
+            collide_bullet_and_mine(&mut self.bullets[bullet], &mut self.mines[mine], explosions);
+            if self.bullets[bullet].hit {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn explode_units(&mut self, explosion: &Explosion) {
+        for unit in 0 .. self.units.len() {
+            if self.units[unit].ignore() {
+                continue;
+            }
+            explode_unit(&explosion, self.properties.kill_score, &mut self.units[unit], &mut self.players);
+        }
+    }
+
+    fn explode_mines(&mut self, explosion: &Explosion, explosions: &mut Vec<Explosion>) {
+        for mine in 0 .. self.mines.len() {
+            if self.mines[mine].ignore() {
+                continue;
+            }
+            explode_mine(&explosion, &mut self.mines[mine], explosions);
+        }
     }
 
     #[cfg(feature = "verify_collisions")]
@@ -971,14 +996,16 @@ impl MineExt {
         Vec2::from_model(&self.base.position) + Vec2::only_y(self.base.size.y / 2.0)
     }
 
-    pub fn rect(&self, is_me: bool) -> Rect {
-        let size = if self.base.state == MineState::Idle {
-            let factor = 2.0 * is_me as i32 as f64;
-            Vec2::new(self.base.trigger_radius, self.base.trigger_radius) * factor
-        } else {
-            Vec2::from_model(&self.base.size) / 2.0
-        };
-        Rect::new(self.center(), size)
+    pub fn trigger_rect(&self, is_me: bool) -> Rect {
+        Rect::new(self.center(), Vec2::new(self.base.trigger_radius, self.base.trigger_radius))
+    }
+
+    pub fn rect(&self) -> Rect {
+        Rect::new(self.center(), Vec2::from_model(&self.base.size) / 2.0)
+    }
+
+    pub fn ignore(&self) -> bool {
+        self.base.state == MineState::Exploded
     }
 }
 
@@ -1050,7 +1077,7 @@ fn collide_unit_and_bullet(kill_score: i32, bullet: &mut BulletExt, unit: &mut U
         .map(|v| Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index})
 }
 
-fn explode(explosion: &Explosion, kill_score: i32, unit: &mut UnitExt, players: &mut Vec<Player>) {
+fn explode_unit(explosion: &Explosion, kill_score: i32, unit: &mut UnitExt, players: &mut Vec<Player>) {
     if !explosion.rect().has_collision(&unit.holding_rect()) {
         return;
     }
@@ -1063,13 +1090,34 @@ fn explode(explosion: &Explosion, kill_score: i32, unit: &mut UnitExt, players: 
     }
 }
 
-fn collide_bullet_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<Explosion> {
+fn explode_mine(explosion: &Explosion, mine: &mut MineExt, explosions: &mut Vec<Explosion>) {
+    if !explosion.rect().has_collision(&mine.rect()) {
+        return;
+    }
+    mine.base.state = MineState::Exploded;
+    explosions.push(Explosion { params: mine.base.explosion_params.clone(), position: mine.center(), player_index: mine.player_index })
+}
+
+fn collide_bullet_and_tile(x: usize, y: usize, bullet: &mut BulletExt, explosions: &mut Vec<Explosion>) {
     if !make_tile_rect(x, y).has_collision(&bullet.rect()) {
-        return None;
+        return;
     }
     bullet.hit = true;
-    bullet.explosion_params().as_ref()
-        .map(|v| Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index})
+    if let Some(v) = bullet.base.explosion_params.as_ref() {
+        explosions.push(Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index});
+    }
+}
+
+fn collide_bullet_and_mine(bullet: &mut BulletExt, mine: &mut MineExt, explosions: &mut Vec<Explosion>) {
+    if !bullet.rect().has_collision(&mine.rect()) {
+        return;
+    }
+    bullet.hit = true;
+    explosions.push(Explosion { params: mine.base.explosion_params.clone(), position: mine.center(), player_index: mine.player_index });
+    mine.base.state = MineState::Exploded;
+    if let Some(v) = bullet.base.explosion_params.as_ref() {
+        explosions.push(Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index});
+    }
 }
 
 fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt) -> bool {
@@ -1104,7 +1152,10 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
 }
 
 fn activate(properties: &Properties, mine: &mut MineExt, unit: &mut UnitExt) -> bool {
-    if !mine.rect(unit.is_me).has_collision(&unit.holding_rect()) {
+    if mine.base.state != MineState::Idle {
+        return false;
+    }
+    if !mine.trigger_rect(unit.is_me).has_collision(&unit.holding_rect()) {
         return false;
     }
     mine.base.state = MineState::Triggered;

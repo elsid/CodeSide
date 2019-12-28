@@ -893,6 +893,55 @@ fn test_simulator_shoot() {
 }
 
 #[test]
+fn test_simulator_bullet_hit_mine() {
+    let world = with_mine(
+        with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(20.0, 9.25), Vec2::new(1.0, 0.0), EXAMPLE_MY_UNIT_ID),
+        Vec2::new(25.716666665660146, 9.000000000999998), EXAMPLE_MY_PLAYER_ID
+    );
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.mines().len(), 1);
+    assert_eq!(simulator.mines()[0].base().state, MineState::Preparing,
+        "{:?}", simulator.mines()[0].base());
+    assert_eq!(simulator.bullets().len(), 1);
+    for _ in 0 .. 10 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator.mines().len(), 0);
+    assert_eq!(simulator.bullets().len(), 0);
+}
+
+#[test]
+fn test_simulator_bullet_explosion_chain() {
+    let world = with_mine(
+        with_mine(
+            with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(23.0, 12.0), Vec2::new(0.0, -1.0), EXAMPLE_MY_UNIT_ID),
+            Vec2::new(25.716666665660146, 9.000000000999998), EXAMPLE_MY_PLAYER_ID
+        ),
+        Vec2::new(28.716666665660146, 9.000000000999998), EXAMPLE_MY_PLAYER_ID
+    );
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.mines().len(), 2);
+    assert_eq!(simulator.bullets().len(), 1);
+    for _ in 0 .. 10 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator.mines().len(), 0);
+    assert_eq!(simulator.bullets().len(), 0);
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
