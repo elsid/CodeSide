@@ -553,7 +553,7 @@ impl<'r> Simulator<'r> {
             for y in min_y .. max_y {
                 match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
-                        if let Some(explosion) = collide_unit_and_tile(x, y, &mut self.bullets[bullet]) {
+                        if let Some(explosion) = collide_bullet_and_tile(x, y, &mut self.bullets[bullet]) {
                             for unit in 0 .. self.units.len() {
                                 if self.units[unit].ignore() {
                                     continue;
@@ -1063,7 +1063,7 @@ fn explode(explosion: &Explosion, kill_score: i32, unit: &mut UnitExt, players: 
     }
 }
 
-fn collide_unit_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<Explosion> {
+fn collide_bullet_and_tile(x: usize, y: usize, bullet: &mut BulletExt) -> Option<Explosion> {
     if !make_tile_rect(x, y).has_collision(&bullet.rect()) {
         return None;
     }
