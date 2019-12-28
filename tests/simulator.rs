@@ -13,6 +13,7 @@ use helpers::{
     with_loot_box,
     with_mine,
     with_my_position,
+    with_my_unit_with_weapon,
 };
 use aicup2019::{
     examples::{
@@ -871,6 +872,24 @@ fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
         simulator.unit().position(),
         Vec2::new(9.5, 8.000000001)
     );
+}
+
+#[cfg(all(feature = "simulator_weapon", feature = "simulator_shoot"))]
+#[test]
+fn test_simulator_shoot() {
+    let world = with_my_unit_with_weapon(example_world(), WeaponType::Pistol);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    simulator.unit_mut().action_mut().shoot = true;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+        &mut None,
+    );
+    assert_eq!(simulator.bullets().len(), 1);
+    assert_eq!(Vec2::from_model(&simulator.bullets()[0].base().position), Vec2::new(36.67500000000005, 1.900000001));
+    assert_eq!(Vec2::from_model(&simulator.bullets()[0].base().velocity), Vec2::new(-50.0, 0.0));
 }
 
 #[test]

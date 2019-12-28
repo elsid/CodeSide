@@ -324,6 +324,31 @@ impl<'r> Simulator<'r> {
             }
         }
 
+        #[cfg(feature = "simulator_weapon")]
+        for unit in 0 .. self.units.len() {
+            if let Some(weapon) = self.units[unit].base.weapon.as_mut() {
+                weapon.fire_timer = if let Some(fire_timer) = weapon.fire_timer {
+                    let new_fire_timer = fire_timer - time_interval;
+                    if new_fire_timer > 0.0 {
+                        Some(new_fire_timer)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+            }
+        }
+
+        #[cfg(all(feature = "simulator_weapon", feature = "simulator_shoot"))]
+        for unit in 0 .. self.units.len() {
+            if self.units[unit].action.shoot {
+                if let Some(bullet) = shoot(&mut self.units[unit]) {
+                    self.bullets.push(bullet);
+                }
+            }
+        }
+
         self.current_micro_tick += 1;
     }
 
@@ -718,6 +743,10 @@ impl UnitExt {
         self.base.position.y + self.base.size.y / 2.0
     }
 
+    pub fn holding_center(&self) -> Vec2 {
+        Vec2::new(self.holding_center_x(), self.holding_center_y())
+    }
+
     pub fn moving_center_x(&self) -> f64 {
         self.base.position.x + self.velocity_x / 2.0
     }
@@ -846,6 +875,10 @@ pub struct BulletExt {
 impl BulletExt {
     pub fn new(base: Bullet, player_index: usize) -> Self {
         Self { base, hit: false, player_index }
+    }
+
+    pub fn base(&self) -> &Bullet {
+        &self.base
     }
 
     pub fn half_size(&self) -> f64 {
@@ -1119,4 +1152,47 @@ pub fn make_weapon(weapon_type: WeaponType, properties: &Properties) -> Weapon {
         last_angle: None,
         last_fire_tick: None,
     }
+}
+
+#[cfg(all(feature = "simulator_weapon", feature = "simulator_shoot"))]
+fn shoot(unit: &mut UnitExt) -> Option<BulletExt> {
+    if unit.base.weapon.is_none() {
+        return None;
+    }
+
+    if unit.base.weapon.as_ref().unwrap().fire_timer.is_some() {
+        return None;
+    }
+
+    let walk_direction = if unit.base.walked_right {
+        Vec2::i()
+    } else {
+        -Vec2::i()
+    };
+
+    let weapon = unit.base.weapon.as_ref().unwrap();
+
+    let base = Bullet {
+        weapon_type: weapon.typ.clone(),
+        unit_id: unit.base.id,
+        player_id: unit.base.player_id,
+        position: unit.holding_center().as_model(),
+        velocity: (walk_direction.rotated(weapon.last_angle.unwrap_or(0.0)) * weapon.params.bullet.speed).as_model(),
+        damage: weapon.params.bullet.damage,
+        size: weapon.params.bullet.size,
+        explosion_params: weapon.params.explosion.clone(),
+    };
+
+    let weapon_mut = unit.base.weapon.as_mut().unwrap();
+
+    weapon_mut.magazine -= 1;
+
+    if weapon_mut.magazine == 0 {
+        weapon_mut.fire_timer = Some(weapon_mut.params.reload_time);
+        weapon_mut.magazine = weapon_mut.params.magazine_size;
+    } else {
+        weapon_mut.fire_timer = Some(weapon_mut.params.fire_rate);
+    }
+
+    Some(BulletExt::new(base, unit.player_index))
 }
