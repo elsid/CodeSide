@@ -14,6 +14,7 @@ use helpers::{
     with_mine,
     with_my_position,
     with_my_unit_with_weapon,
+    with_unit_position,
 };
 use aicup2019::{
     examples::{
@@ -939,6 +940,83 @@ fn test_simulator_bullet_explosion_chain() {
     }
     assert_eq!(simulator.mines().len(), 0);
     assert_eq!(simulator.bullets().len(), 0);
+}
+
+#[test]
+fn test_simulator_unit_land_on_unit() {
+    let world = with_my_position(example_world(), Vec2::new(2.5, 3.5));
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    for _ in 0 .. 10 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000002));
+    assert_eq!(simulator.unit().base().jump_state.can_jump, true);
+}
+
+#[test]
+fn test_simulator_unit_jump_from_unit_below() {
+    let world = with_my_position(example_world(), Vec2::new(2.5, 2.800000002));
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.unit().base().jump_state.can_jump, false);
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+        &mut None,
+    );
+    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000002));
+    assert_eq!(simulator.unit().base().jump_state.can_jump, true);
+    simulator.unit_mut().action_mut().jump = true;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+        &mut None,
+    );
+    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.9666666686666483));
+}
+
+#[test]
+fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
+    let world = with_unit_position(example_world(), EXAMPLE_OPPONENT_UNIT_ID, Vec2::new(37.5, 5.0));
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.unit().base().jump_state.can_jump, false);
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+        &mut None,
+    );
+    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.000000001));
+    assert_eq!(simulator.unit().base().jump_state.can_jump, true);
+    simulator.unit_mut().action_mut().jump = true;
+    for _ in 0 .. 6 {
+        simulator.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 2.000000001000023));
+    assert_eq!(simulator.unit().base().jump_state.can_jump, true);
+    simulator.unit_mut().action_mut().jump = true;
+    simulator.tick(
+        world.tick_time_interval(),
+        world.properties().updates_per_tick as usize,
+        &mut rng,
+        &mut None,
+    );
+    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.8666666656665296));
+    assert_eq!(simulator.unit().base().jump_state.can_jump, false);
 }
 
 #[test]

@@ -115,8 +115,12 @@ pub fn with_opponent_unit_with_weapon_type(world: World, weapon_type: WeaponType
 }
 
 pub fn with_my_position(world: World, position: Vec2) -> World {
+    with_unit_position(world, EXAMPLE_MY_UNIT_ID, position)
+}
+
+pub fn with_unit_position(world: World, unit_id: i32, position: Vec2) -> World {
     let mut game = world.game().clone();
-    let me_index = game.units.iter().position(|v| v.id == EXAMPLE_MY_UNIT_ID).unwrap();
+    let me_index = game.units.iter().position(|v| v.id == unit_id).unwrap();
     game.units[me_index].position = position.as_model();
     World::new(world.config().clone(), world.player_id(), game)
 }

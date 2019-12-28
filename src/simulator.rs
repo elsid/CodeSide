@@ -512,7 +512,13 @@ impl<'r> Simulator<'r> {
             if left_left[i].ignore() {
                 continue;
             }
-            left_right[0].collide_with_unit_by_y(&left_left[i]);
+            if left_right[0].collide_with_unit_by_y(&left_left[i]) {
+                if left_right[0].base.position.y > left_left[i].base.position.y {
+                    allow_jump(&mut left_right[0], &self.properties);
+                } else {
+                    cancel_jump(&mut left_right[0]);
+                }
+            }
             if left_right[0].velocity_y == 0.0 {
                 return;
             }
@@ -522,7 +528,13 @@ impl<'r> Simulator<'r> {
             if right[i].ignore() {
                 continue;
             }
-            left_right[0].collide_with_unit_by_y(&right[i]);
+            if left_right[0].collide_with_unit_by_y(&right[i]) {
+                if left_right[0].base.position.y > right[i].base.position.y {
+                    allow_jump(&mut left_right[0], &self.properties);
+                } else {
+                    cancel_jump(&mut left_right[0]);
+                }
+            }
             if left_right[0].velocity_y == 0.0 {
                 return;
             }
@@ -841,20 +853,21 @@ impl UnitExt {
         self.velocity_x -= (penetration_by_x + EPSILON).copysign(self.velocity_x);
     }
 
-    pub fn collide_with_unit_by_y(&mut self, other: &UnitExt) {
+    pub fn collide_with_unit_by_y(&mut self, other: &UnitExt) -> bool {
         let half_size_sum_x = (self.holding_size_x() + other.holding_size_x()) / 2.0;
         let distance_by_x = (self.holding_center_x() - other.holding_center_x()).abs();
         let penetration_by_x = half_size_sum_x - distance_by_x;
         if penetration_by_x <= EPSILON {
-            return;
+            return false;
         }
         let half_size_sum_y = (self.moving_size_y() + other.holding_size_y()) / 2.0;
         let distance_by_y = (self.moving_center_y() - other.holding_center_y()).abs();
         let penetration_by_y = half_size_sum_y - distance_by_y;
         if penetration_by_y <= 0.0 {
-            return;
+            return false;
         }
         self.velocity_y -= (penetration_by_y + EPSILON).copysign(self.velocity_y);
+        true
     }
 
     pub fn finish_move_by_x(&mut self) {
