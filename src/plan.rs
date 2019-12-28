@@ -4,7 +4,7 @@ use model::{
     Vec2F64,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_plan"))]
 use model::{
     ColorF32,
     CustomData,
@@ -184,7 +184,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut None);
         }
 
-        #[cfg(feature = "enable_debug")]
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_plan"))]
         self.debug.draw(CustomData::Line {
             p1: state.unit().position().as_debug(),
             p2: next.unit().position().as_debug(),

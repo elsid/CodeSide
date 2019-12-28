@@ -1,4 +1,4 @@
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
 use model::{
     CustomData,
     Vec2F32,
@@ -12,7 +12,7 @@ use model::{
     WeaponType,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
 use crate::my_strategy::{
     color_from_heat,
 };
@@ -38,7 +38,7 @@ use crate::my_strategy::{
 pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(f64, Location)> {
     let mut optimal: Option<(f64, Location)> = None;
 
-    #[cfg(feature = "enable_debug")]
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
     let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
         .take(world.level().size())
         .collect();
@@ -57,7 +57,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
-                #[cfg(feature = "enable_debug")]
+                #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
                 {
                     tiles[world.level().get_tile_index(location)] = Some(candidate_score);
                 }
@@ -65,7 +65,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
         }
     }
 
-    #[cfg(feature = "enable_debug")]
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
     {
         let min = tiles.iter().filter_map(|&v| v).min_by_key(|&v| as_score(v)).unwrap();
         let max = tiles.iter().filter_map(|&v| v).max_by_key(|&v| as_score(v)).unwrap();
@@ -81,9 +81,12 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 }
             }
         }
-        if let Some((score, location)) = optimal {
-            let path_info = world.get_path_info(unit_index, location).unwrap();
-            debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
+        #[cfg(feature = "enable_debug_log")]
+        {
+            if let Some((score, location)) = optimal {
+                let path_info = world.get_path_info(unit_index, location).unwrap();
+                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
+            }
         }
     }
 

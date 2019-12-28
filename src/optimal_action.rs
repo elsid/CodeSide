@@ -36,7 +36,7 @@ pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: Option<Vec2>
         (false, Vec2::zero())
     };
 
-    #[cfg(feature = "enable_debug")]
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
     debug.log(format!("[{}] plan_score={}, transitions: {:?}", current_unit.id, plan.score, plan.transitions.iter().map(|v| (v.kind, v.id)).collect::<Vec<_>>()));
 
     let mut action = if plan.transitions.is_empty() {

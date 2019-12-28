@@ -2,7 +2,7 @@ use model::{
     Unit,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_plan"))]
 use model::{
     ColorF32,
     CustomData,
@@ -19,7 +19,7 @@ use crate::my_strategy::{
     XorShiftRng,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_plan"))]
 use crate::my_strategy::{
     Location,
     Rectangular,
@@ -30,7 +30,7 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, world: &W
         rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
     let tiles_path = world.find_shortcut_tiles_path(current_unit.id, current_unit.location(), global_destination.as_location());
 
-    #[cfg(feature = "enable_debug")]
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_plan"))]
     render_tiles_path(current_unit, &tiles_path, debug);
 
     let local_destination = if !tiles_path.is_empty() {
@@ -39,7 +39,7 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, world: &W
         global_destination
     };
 
-    #[cfg(feature = "enable_debug")]
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_plan", feature = "enable_debug_log"))]
     debug.log(format!("[{}] global_destination: {:?} local_destination: {:?}", current_unit.id, global_destination, local_destination));
 
     let simulator = Simulator::new(&world, current_unit.id);
@@ -48,7 +48,7 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, world: &W
     planner.make(world.current_tick(), rng, debug)
 }
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_plan"))]
 fn render_tiles_path(unit: &Unit, tiles_path: &Vec<Location>, debug: &mut Debug) {
     if tiles_path.is_empty() {
         return;

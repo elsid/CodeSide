@@ -116,7 +116,7 @@ impl MyStrategyImpl {
 
             self.update_roles();
 
-            #[cfg(feature = "enable_debug")]
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
             for unit in self.world.units().iter() {
                 render_unit(unit, debug);
                 if unit.id == current_unit.id {
@@ -124,7 +124,7 @@ impl MyStrategyImpl {
                 }
             }
 
-            #[cfg(feature = "enable_debug")]
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
             for &(id, v) in self.optimal_locations.iter() {
                 if let Some(location) = v {
                     render_optimal_location(location, self.world.get_unit(id), debug);
@@ -132,7 +132,7 @@ impl MyStrategyImpl {
             }
         }
 
-        #[cfg(feature = "enable_debug")]
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
         {
             if let Some(weapon) = current_unit.weapon.as_ref() {
                 debug.log(format!("[{}] weapon: last_angle={:?}", current_unit.id, weapon.last_angle));
@@ -141,7 +141,7 @@ impl MyStrategyImpl {
 
         let action = self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1.clone();
 
-        #[cfg(feature = "enable_debug")]
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
         debug.log(format!("[{}] action: {:?}", current_unit.id, action));
 
         action
@@ -153,7 +153,7 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 self.roles[i] = (unit_id, get_role(unit, &self.roles[i].1, &self.world));
-                #[cfg(feature = "enable_debug")]
+                #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
                 debug.log(format!("[{}] role: {:?}", unit_id, self.roles[i].1));
             }
         }
@@ -248,7 +248,7 @@ impl Drop for MyStrategyImpl {
     }
 }
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_unit"))]
 fn render_unit(unit: &Unit, debug: &mut Debug) {
     let weapon = unit.weapon.as_ref().map(|v| v.fire_timer.map(|v| format!("{}", v)).unwrap_or(String::new())).unwrap_or(String::new());
     debug.draw(CustomData::PlacedText {
@@ -260,7 +260,7 @@ fn render_unit(unit: &Unit, debug: &mut Debug) {
     });
 }
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
 fn render_optimal_location(location: Location, unit: &Unit, debug: &mut Debug) {
     debug.draw(CustomData::Rect {
         pos: (location.center() - Vec2::new(0.25, 0.25)).as_debug(),
@@ -275,7 +275,7 @@ fn render_optimal_location(location: Location, unit: &Unit, debug: &mut Debug) {
     });
 }
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
 fn render_backtrack(backtrack: &Vec<usize>, level: &Level, debug: &mut Debug) {
     for i in 0 .. backtrack.len() {
         if backtrack[i] == i {

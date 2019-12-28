@@ -15,9 +15,10 @@ use model::{
     WeaponType,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
 use model::{
     ColorF32,
+    CustomData,
 };
 
 use crate::my_strategy::{
@@ -32,7 +33,7 @@ use crate::my_strategy::{
     remove_if,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
 use crate::my_strategy::{
     Rectangular,
 };
@@ -229,10 +230,35 @@ impl<'r> Simulator<'r> {
             #[cfg(feature = "verify_collisions")]
             self.verify_collisions(unit, "after_y");
 
-            #[cfg(feature = "enable_debug")]
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
             {
                 if let Some(d) = debug {
-                    d.draw(self.units[unit].base.rect().as_debug(ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }));
+                    let rect = self.units[unit].base.rect();
+                    let color = ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 };
+                    d.draw(CustomData::Line {
+                        p1: rect.bottom_left().as_debug(),
+                        p2: rect.top_left().as_debug(),
+                        width: 0.1,
+                        color: color.clone(),
+                    });
+                    d.draw(CustomData::Line {
+                        p1: rect.top_left().as_debug(),
+                        p2: rect.top_right().as_debug(),
+                        width: 0.1,
+                        color: color.clone(),
+                    });
+                    d.draw(CustomData::Line {
+                        p1: rect.top_right().as_debug(),
+                        p2: rect.bottom_right().as_debug(),
+                        width: 0.1,
+                        color: color.clone(),
+                    });
+                    d.draw(CustomData::Line {
+                        p1: rect.bottom_right().as_debug(),
+                        p2: rect.bottom_left().as_debug(),
+                        width: 0.1,
+                        color: color.clone(),
+                    });
                 }
             }
         }
@@ -249,7 +275,7 @@ impl<'r> Simulator<'r> {
                 continue
             }
 
-            #[cfg(feature = "enable_debug")]
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
             {
                 if let Some(d) = debug {
                     d.draw(self.bullets[bullet].rect().as_debug(ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }));

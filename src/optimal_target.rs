@@ -3,7 +3,7 @@ use model::{
     Weapon,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
 use model::{
     ColorF32,
     CustomData,
@@ -22,7 +22,7 @@ use crate::my_strategy::{
     get_hit_probability_by_spread,
 };
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
 use crate::my_strategy::{
     ObjectType,
     WalkGrid,
@@ -47,7 +47,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
             })
             .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
 
-        #[cfg(feature = "enable_debug")]
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
         {
             if let Some(opponent) = unit {
                 render_target(current_unit, opponent, world, debug);
@@ -82,7 +82,7 @@ fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit
     && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }
 
-#[cfg(feature = "enable_debug")]
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
 fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
     for position in WalkGrid::new(unit.rect().center(), opponent.rect().center()) {
         debug.draw(CustomData::Rect {
