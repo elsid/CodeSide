@@ -14,7 +14,14 @@ use model::{
     Weapon,
     WeaponType,
 };
+
+#[cfg(feature = "enable_debug")]
+use model::{
+    ColorF32,
+};
+
 use crate::my_strategy::{
+    Debug as Dbg,
     Level,
     Location,
     Rect,
@@ -23,6 +30,11 @@ use crate::my_strategy::{
     World,
     XorShiftRng,
     remove_if,
+};
+
+#[cfg(feature = "enable_debug")]
+use crate::my_strategy::{
+    Rectangular,
 };
 
 #[derive(Clone)]
@@ -146,10 +158,16 @@ impl<'r> Simulator<'r> {
         &self.players[(self.player_index + 1) % 2]
     }
 
-    pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng) {
+    pub fn set_unit_action(&mut self, unit_id: i32, action: UnitAction) {
+        if let Some(unit) = self.units.iter_mut().find(|v| v.base.id == unit_id) {
+            unit.action = action;
+        }
+    }
+
+    pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng, debug: &mut Option<&mut Dbg>) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
-            self.micro_tick(micro_tick_time_interval, rng);
+            self.micro_tick(micro_tick_time_interval, rng, debug);
         }
         self.current_tick += 1;
         self.current_time += time_interval;
@@ -160,7 +178,7 @@ impl<'r> Simulator<'r> {
         remove_if(&mut self.loot_boxes, |v| v.used);
     }
 
-    fn micro_tick(&mut self, time_interval: f64, rng: &mut XorShiftRng) {
+    fn micro_tick(&mut self, time_interval: f64, rng: &mut XorShiftRng, debug: &mut Option<&mut Dbg>) {
         rng.shuffle(&mut self.units[..]);
 
         for unit in 0 .. self.units.len() {
@@ -210,6 +228,13 @@ impl<'r> Simulator<'r> {
 
             #[cfg(feature = "verify_collisions")]
             self.verify_collisions(unit, "after_y");
+
+            #[cfg(feature = "enable_debug")]
+            {
+                if let Some(d) = debug {
+                    d.draw(self.units[unit].base.rect().as_debug(ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }));
+                }
+            }
         }
 
         for bullet in 0 .. self.bullets.len() {
@@ -220,7 +245,16 @@ impl<'r> Simulator<'r> {
             if self.collide_bullet_and_units(bullet) {
                 continue;
             }
-            self.collide_bulles_and_tiles(bullet);
+            if self.collide_bulles_and_tiles(bullet) {
+                continue
+            }
+
+            #[cfg(feature = "enable_debug")]
+            {
+                if let Some(d) = debug {
+                    d.draw(self.bullets[bullet].rect().as_debug(ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }));
+                }
+            }
         }
 
         for loot_box in 0 .. self.loot_boxes.len() {

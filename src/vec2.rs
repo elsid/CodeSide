@@ -54,7 +54,7 @@ impl Vec2 {
 
     #[cfg(feature = "enable_debug")]
     #[inline(always)]
-    pub const fn as_model_f32(&self) -> Vec2F32 {
+    pub const fn as_debug(&self) -> Vec2F32 {
         Vec2F32 { x: self.x as f32, y: self.y as f32 }
     }
 

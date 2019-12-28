@@ -201,6 +201,10 @@ pub mod my_strategy_dump_properties_json;
 #[path = "my_strategy_jump.rs"]
 pub mod my_strategy_jump;
 
+#[cfg(feature = "check_simulator")]
+#[path = "my_strategy_check_simulator.rs"]
+pub mod my_strategy_check_simulator;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
@@ -222,11 +226,15 @@ pub use self::my_strategy_dump_properties_json::MyStrategyImpl;
 #[cfg(feature = "jump")]
 pub use self::my_strategy_jump::MyStrategyImpl;
 
+#[cfg(feature = "check_simulator")]
+pub use self::my_strategy_check_simulator::MyStrategyImpl;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
     not(feature = "dump_properties_json"),
     not(feature = "jump"),
+    not(feature = "check_simulator"),
 ))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
@@ -255,12 +263,15 @@ impl MyStrategy {
             let config = get_config().adjusted(game.properties.team_size);
             #[cfg(feature = "dump_config")]
             println!("{}", rustc_serialize::json::encode(&config).expect("Can't serialize config"));
-            #[cfg(any(all(
-                not(feature = "dump_examples"),
-                not(feature = "dump_opponent"),
-                not(feature = "dump_properties_json"),
-                not(feature = "jump"),
-            )))]
+            #[cfg(any(
+                all(
+                    not(feature = "dump_examples"),
+                    not(feature = "dump_opponent"),
+                    not(feature = "dump_properties_json"),
+                    not(feature = "jump"),
+                ),
+                feature = "check_simulator",
+            ))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, unit.clone(), game.clone()));
             }

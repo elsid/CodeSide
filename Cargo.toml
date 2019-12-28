@@ -24,6 +24,7 @@ dump_properties_json = []
 read_config = []
 dump_config = []
 jump = []
+check_simulator = []
 
 [[bench]]
 name = "simulator"

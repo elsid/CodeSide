@@ -1,5 +1,11 @@
 use crate::my_strategy::Vec2;
 
+#[cfg(feature = "enable_debug")]
+use model::{
+    ColorF32,
+    CustomData,
+};
+
 #[derive(Default, Clone, Debug)]
 pub struct Rect {
     center: Vec2,
@@ -10,6 +16,15 @@ impl Rect {
     #[inline(always)]
     pub const fn new(center: Vec2, half: Vec2) -> Self {
         Self { center, half }
+    }
+
+    #[cfg(feature = "enable_debug")]
+    pub fn as_debug(&self, color: ColorF32) -> CustomData {
+        CustomData::Rect {
+            pos: (self.center - self.half).as_debug(),
+            size: (self.half * 2.0).as_debug(),
+            color,
+        }
     }
 
     #[inline(always)]

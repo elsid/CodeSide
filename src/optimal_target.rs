@@ -86,7 +86,7 @@ fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit
 fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
     for position in WalkGrid::new(unit.rect().center(), opponent.rect().center()) {
         debug.draw(CustomData::Rect {
-            pos: position.as_location().as_model_f32(),
+            pos: position.as_location().as_debug(),
             size: Vec2F32 { x: 1.0, y: 1.0 },
             color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.66 },
         });
@@ -124,8 +124,8 @@ fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug)
                     },
                 };
                 debug.draw(CustomData::Line {
-                    p1: src.as_model_f32(),
-                    p2: (src + (dst - src).normalized() * hit.distance).as_model_f32(),
+                    p1: src.as_debug(),
+                    p2: (src + (dst - src).normalized() * hit.distance).as_debug(),
                     width: 0.075,
                     color,
                 });

@@ -55,16 +55,16 @@ fn render_tiles_path(unit: &Unit, tiles_path: &Vec<Location>, debug: &mut Debug)
     }
 
     debug.draw(CustomData::Line {
-        p1: unit.center().as_model_f32(),
-        p2: tiles_path[0].center().as_model_f32(),
+        p1: unit.center().as_debug(),
+        p2: tiles_path[0].center().as_debug(),
         width: 0.1,
         color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.0 },
     });
 
     for tile in 0 .. tiles_path.len() - 1 {
         debug.draw(CustomData::Line {
-            p1: tiles_path[tile].center().as_model_f32(),
-            p2: tiles_path[tile + 1].center().as_model_f32(),
+            p1: tiles_path[tile].center().as_debug(),
+            p2: tiles_path[tile + 1].center().as_debug(),
             width: 0.1,
             color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.0 },
         });

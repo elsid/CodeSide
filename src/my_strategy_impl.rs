@@ -253,7 +253,7 @@ fn render_unit(unit: &Unit, debug: &mut Debug) {
     let weapon = unit.weapon.as_ref().map(|v| v.fire_timer.map(|v| format!("{}", v)).unwrap_or(String::new())).unwrap_or(String::new());
     debug.draw(CustomData::PlacedText {
         text: format!("{} {}", unit.id, weapon),
-        pos: (unit.position() + Vec2::only_y(unit.size.y)).as_model_f32(),
+        pos: (unit.position() + Vec2::only_y(unit.size.y)).as_debug(),
         alignment: TextAlignment::Center,
         size: 40.0,
         color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
@@ -263,12 +263,12 @@ fn render_unit(unit: &Unit, debug: &mut Debug) {
 #[cfg(feature = "enable_debug")]
 fn render_optimal_location(location: Location, unit: &Unit, debug: &mut Debug) {
     debug.draw(CustomData::Rect {
-        pos: (location.center() - Vec2::new(0.25, 0.25)).as_model_f32(),
+        pos: (location.center() - Vec2::new(0.25, 0.25)).as_debug(),
         size: Vec2F32 { x: 0.5, y: 0.5 },
         color: ColorF32 { a: 0.66, r: 0.0, g: 0.0, b: 0.0 },
     });
     debug.draw(CustomData::Line {
-        p1: unit.rect().center().as_model_f32(),
+        p1: unit.rect().center().as_debug(),
         p2: Vec2F32 { x: location.x() as f32 + 0.5, y: location.y() as f32 + 0.5 },
         width: 0.1,
         color: ColorF32 { a: 0.66, r: 0.0, g: 0.66, b: 0.0 },
@@ -282,8 +282,8 @@ fn render_backtrack(backtrack: &Vec<usize>, level: &Level, debug: &mut Debug) {
             continue;
         }
         debug.draw(CustomData::Line {
-            p1: level.get_tile_location(i).center().as_model_f32(),
-            p2: level.get_tile_location(backtrack[i]).center().as_model_f32(),
+            p1: level.get_tile_location(i).center().as_debug(),
+            p2: level.get_tile_location(backtrack[i]).center().as_debug(),
             width: 0.05,
             color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.33 },
         });

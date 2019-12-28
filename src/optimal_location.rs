@@ -74,7 +74,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 let location = Location::new(x, y);
                 if let Some(score) = tiles[world.level().get_tile_index(location)] {
                     debug.draw(CustomData::Rect {
-                        pos: location.as_model_f32(),
+                        pos: location.as_debug(),
                         size: Vec2F32 { x: 1.0, y: 1.0 },
                         color: color_from_heat(0.1, ((score - min) / (max - min)) as f32),
                     });

@@ -181,13 +181,13 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         let min = state.planner.config.plan_min_ticks_per_transition;
         let max = state.planner.config.plan_max_ticks_per_transition;
         for _ in 0..next.depth.clamp1(min, max) {
-            next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng);
+            next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut None);
         }
 
         #[cfg(feature = "enable_debug")]
         self.debug.draw(CustomData::Line {
-            p1: state.unit().position().as_model_f32(),
-            p2: next.unit().position().as_model_f32(),
+            p1: state.unit().position().as_debug(),
+            p2: next.unit().position().as_debug(),
             width: 0.1,
             color: ColorF32 { r: 0.25, g: 0.25, b: 0.75, a: 0.25 },
         });

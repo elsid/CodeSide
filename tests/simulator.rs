@@ -39,6 +39,7 @@ fn test_simulator_single_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -56,6 +57,7 @@ fn test_simulator_unit_move_horizontal_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -73,6 +75,7 @@ fn test_simulator_unit_jump_from_wall_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -90,6 +93,7 @@ fn test_simulator_unit_jump_from_platform_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -107,6 +111,7 @@ fn test_simulator_unit_jump_from_ladder_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -123,6 +128,7 @@ fn test_simulator_unit_jump_from_jump_pad_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -140,6 +146,7 @@ fn test_simulator_unit_jump_on_ladder_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -157,6 +164,7 @@ fn test_simulator_unit_jump_in_air_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -174,6 +182,7 @@ fn test_simulator_unit_jump_down_by_ladder_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -191,6 +200,7 @@ fn test_simulator_unit_fall_down_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -207,6 +217,7 @@ fn test_simulator_unit_stand_on_platform_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -224,6 +235,7 @@ fn test_simulator_unit_jump_down_through_platform_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -242,6 +254,7 @@ fn test_simulator_unit_jump_from_wall_until_land() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -254,6 +267,7 @@ fn test_simulator_unit_jump_from_wall_until_land() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -273,6 +287,7 @@ fn test_simulator_unit_cancel_jump() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -285,6 +300,7 @@ fn test_simulator_unit_cancel_jump() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -303,6 +319,7 @@ fn test_simulator_unit_run_into_wall() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -321,6 +338,7 @@ fn test_simulator_unit_run_into_unit() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -339,6 +357,7 @@ fn test_simulator_unit_fall_onto_unit() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -359,6 +378,7 @@ fn test_simulator_bullet_hit_unit() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.unit().health(), 95);
@@ -377,6 +397,7 @@ fn test_simulator_bullet_does_not_hit_its_shooter() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.unit().health(), 100);
@@ -395,6 +416,7 @@ fn test_simulator_bullet_explode_unit() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.unit().health(), 20);
@@ -413,6 +435,7 @@ fn test_simulator_bullet_hit_wall() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.bullets().len(), 0, "{:?}", simulator.bullets());
@@ -430,6 +453,7 @@ fn test_simulator_bullet_explode_on_hit_wall() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.unit().health(), 50);
@@ -451,6 +475,7 @@ fn test_simulator_unit_pickup_weapon() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.loot_boxes().len(), 19);
@@ -483,6 +508,7 @@ fn test_simulator_unit_pickup_health_pack() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.loot_boxes().len(), 19);
@@ -503,6 +529,7 @@ fn test_simulator_unit_pickup_mine() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.loot_boxes().len(), 19);
@@ -518,6 +545,7 @@ fn test_simulator_single_tick_unit_on_edge() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -536,6 +564,7 @@ fn test_simulator_single_tick_unit_left_border_on_right_edge() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -552,6 +581,7 @@ fn test_simulator_unit_stay_on_ladder_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -568,6 +598,7 @@ fn test_simulator_unit_fall_through_ladder_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -584,6 +615,7 @@ fn test_simulator_unit_fall_through_platform_for_one_tick() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -601,6 +633,7 @@ fn test_simulator_mine_change_state() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.mines().len(), 1, "{:?}", simulator.mines());
@@ -621,6 +654,7 @@ fn test_simulator_mine_explosion() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.mines().len(), 0, "{:?}", simulator.mines());
@@ -639,6 +673,7 @@ fn test_simulator_unit_land_on_platform() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -658,6 +693,7 @@ fn test_simulator_unit_land_on_platform_and_jump() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -668,6 +704,7 @@ fn test_simulator_unit_land_on_platform_and_jump() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -685,6 +722,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(
@@ -696,6 +734,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -707,6 +746,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert_eq!(
         simulator.unit().position(),
@@ -732,6 +772,7 @@ fn test_simulator_bullet_explode_and_kill_unit() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.unit().health(), 0);
@@ -758,6 +799,7 @@ fn test_simulator_my_bullet_explode_and_kill_unit() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert_eq!(simulator.unit().health(), 0);
@@ -775,6 +817,7 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert!(simulator.unit().base().jump_state.can_jump);
     simulator.unit_mut().action_mut().jump = true;
@@ -783,6 +826,7 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
             &mut rng,
+            &mut None,
         );
     }
     assert!(simulator.unit().base().jump_state.can_jump);
@@ -791,6 +835,7 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
         &mut rng,
+        &mut None,
     );
     assert!(!simulator.unit().base().jump_state.can_jump);
 }
