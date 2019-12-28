@@ -267,10 +267,13 @@ impl<'r> Simulator<'r> {
             if self.bullets[bullet].hit {
                 continue;
             }
-            self.bullets[bullet].advance(time_interval);
+
             if self.collide_bullet_and_units(bullet) {
                 continue;
             }
+
+            self.bullets[bullet].advance(time_interval);
+
             if self.collide_bulles_and_tiles(bullet) {
                 continue
             }
