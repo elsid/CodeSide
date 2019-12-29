@@ -977,22 +977,20 @@ pub struct LootBoxExt {
     base: LootBox,
     used: bool,
     location: Location,
+    rect: Rect,
 }
 
 impl LootBoxExt {
     pub fn new(base: LootBox) -> Self {
         Self {
             location: Location::from_model(&base.position),
+            rect: Rect::new(
+                Vec2::from_model(&base.position) + Vec2::only_y(base.size.y / 2.0),
+                Vec2::from_model(&base.size) / 2.0
+            ),
             base,
             used: false,
         }
-    }
-
-    pub fn rect(&self) -> Rect {
-        Rect::new(
-            Vec2::from_model(&self.base.position) + Vec2::only_y(self.base.size.y / 2.0),
-            Vec2::from_model(&self.base.size) / 2.0
-        )
     }
 }
 
@@ -1143,7 +1141,7 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
     if loot_box.location != unit.location() {
         return false;
     }
-    if !loot_box.rect().has_collision(&unit.holding_rect()) {
+    if !loot_box.rect.has_collision(&unit.holding_rect()) {
         return false;
     }
     match &mut loot_box.base.item {
