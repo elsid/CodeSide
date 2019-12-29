@@ -7,6 +7,7 @@ import statistics
 import sys
 import operator
 import functools
+import numbers
 
 from collections import defaultdict, Counter
 
@@ -36,7 +37,7 @@ def print_metric(metric, values, players):
             if isinstance(tuple(values.values())[0], dict):
                 for submetric, subvalues in values.items():
                     print_metric('%s %s' % (metric, submetric), subvalues, players)
-            if isinstance(tuple(values.values())[0], (int, float)):
+            elif isinstance(tuple(values.values())[0], numbers.Number):
                 print_counter(metric, values, players)
 
 
