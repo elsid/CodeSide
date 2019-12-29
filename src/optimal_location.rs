@@ -164,7 +164,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, weapon.params.min_spread, weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
+                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
                     0.0
@@ -196,7 +196,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
             let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &Target::from_unit(unit), weapon.params.min_spread, weapon.params.bullet.size, world,
+                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
                 world.config().optimal_location_number_of_directions);
             (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
         } else {
@@ -232,12 +232,12 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 .filter(|v| {
                     world.is_opponent_unit(v)
                     && get_hit_probability_by_spread_with_destination(current_unit_center, opponent_rect.center(), &opponent_rect,
-                        weapon.params.min_spread, weapon.params.bullet.size) > 0.0
+                        get_mean_spread(weapon), weapon.params.bullet.size) > 0.0
                 })
                 .map(|v| {
                     let direction = (opponent.center() - current_unit_center).normalized();
                     get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &Target::from_unit(v), weapon.params.min_spread, weapon.params.bullet.size, world,
+                        &Target::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
                         world.config().optimal_location_number_of_directions)
                 })
                 .map(|v| v.teammate_units as f64 / v.total as f64)
@@ -278,7 +278,7 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
 
 pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
     let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(),
-        weapon.params.min_spread, weapon.params.bullet.size);
+        get_mean_spread(weapon), weapon.params.bullet.size);
 
     if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
         return false;
@@ -286,7 +286,7 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
 
     let direction = (opponent.center() - current_unit_center).normalized();
     let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        &Target::from_unit(opponent), weapon.params.min_spread, weapon.params.bullet.size, world,
+        &Target::from_unit(opponent), get_mean_spread(weapon), weapon.params.bullet.size, world,
         world.config().optimal_location_number_of_directions);
 
     if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
@@ -301,4 +301,8 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
 
 pub fn make_location_rect(location: Location) -> Rect {
     Rect::new(location.center(), Vec2::new(0.5, 0.5))
+}
+
+fn get_mean_spread(weapon: &Weapon) -> f64 {
+    (weapon.params.max_spread + weapon.params.min_spread) / 2.0
 }
