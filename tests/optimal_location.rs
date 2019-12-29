@@ -71,7 +71,7 @@ fn test_get_location_score_for_tile_with_bullet() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -0.08413152885143038
+        -1.0841315288514304
     );
 }
 

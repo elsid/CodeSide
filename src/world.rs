@@ -44,6 +44,7 @@ pub struct World {
     has_opponent_unit: Vec<(i32, Vec<bool>)>,
     has_teammate_unit: Vec<(i32, Vec<bool>)>,
     has_mine: Vec<(i32, Vec<bool>)>,
+    has_bullet: Vec<(i32, Vec<bool>)>,
     unit_index: Vec<i32>,
     max_distance: f64,
     number_of_teammates: usize,
@@ -74,6 +75,7 @@ impl World {
             has_opponent_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             has_teammate_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             has_mine: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
+            has_bullet: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             unit_index,
             number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
             config,
@@ -122,6 +124,7 @@ impl World {
             self.has_opponent_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.has_teammate_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.has_mine.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.has_bullet.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
         }
 
         if self.current_tick == 0 || old_units_locations != new_units_locations {
@@ -250,6 +253,7 @@ impl World {
                 has_opponent_unit: self.has_opponent_unit[unit_index].1[tile_index],
                 has_teammate_unit: self.has_teammate_unit[unit_index].1[tile_index],
                 has_mine: self.has_mine[unit_index].1[tile_index],
+                has_bullet: self.has_bullet[unit_index].1[tile_index],
             })
         } else {
             None
@@ -277,6 +281,23 @@ impl World {
         let mine_half = Vec2::new(self.properties.mine_trigger_radius, self.properties.mine_trigger_radius);
         self.mines.iter()
             .find(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
+            .is_some()
+    }
+
+    pub fn has_bullet(&self, unit_id: i32, location: Location) -> bool {
+        let location_rect = make_location_rect(location);
+        let above_location_rect = make_location_rect(location + Vec2i::only_y(1));
+        self.bullets.iter()
+            .filter(|v| v.unit_id != unit_id)
+            .find(|v| {
+                let half = if let Some(explosion_params) = v.explosion_params.as_ref() {
+                    explosion_params.radius
+                } else {
+                    v.size / 2.0
+                };
+                let rect = Rect::new(v.position(), Vec2::new(half, half));
+                rect.has_collision(&location_rect) || rect.has_collision(&above_location_rect)
+            })
             .is_some()
     }
 
@@ -377,6 +398,7 @@ impl World {
             self.has_opponent_unit[unit_index].1[i] = false;
             self.has_teammate_unit[unit_index].1[i] = false;
             self.has_mine[unit_index].1[i] = false;
+            self.has_bullet[unit_index].1[i] = false;
         }
 
         self.distances[unit_index].1[self.level.get_tile_index(source)] = 0.0;
@@ -416,6 +438,7 @@ impl World {
                     self.has_opponent_unit[unit_index].1[neighbor_index] = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
                     self.has_teammate_unit[unit_index].1[neighbor_index] = self.has_teammate_unit[unit_index].1[node_index] || self.has_teammate_unit(unit_id, neighbor_location);
                     self.has_mine[unit_index].1[neighbor_index] = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
+                    self.has_bullet[unit_index].1[neighbor_index] = self.has_bullet[unit_index].1[node_index] || self.has_bullet(unit_id, neighbor_location);
                     self.backtracks[unit_index].1[neighbor_index] = node_index;
                     if !destinations[neighbor_index] {
                         destinations[neighbor_index] = true;
@@ -439,6 +462,7 @@ pub struct TilePathInfo {
     has_opponent_unit: bool,
     has_teammate_unit: bool,
     has_mine: bool,
+    has_bullet: bool,
     distance: f64,
 }
 
@@ -456,6 +480,11 @@ impl TilePathInfo {
     #[inline(always)]
     pub fn has_mine(&self) -> bool {
         self.has_mine
+    }
+
+    #[inline(always)]
+    pub fn has_bullet(&self) -> bool {
+        self.has_bullet
     }
 
     #[inline(always)]

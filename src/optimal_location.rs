@@ -129,7 +129,7 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
     get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 15] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -177,6 +177,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
     let teammate_obstacle_score = path_info.has_teammate_unit() as i32 as f64;
     let mine_obstacle_score = path_info.has_mine() as i32 as f64;
+    let bullet_obstacle_score = path_info.has_bullet() as i32 as f64;
     let loot_box_mine_score = (match world.tile_item(location) {
         Some(&Item::Mine { }) => true,
         _ => false,
@@ -265,6 +266,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         mine_obstacle_score * world.config().optimal_location_mine_obstacle_score_weight,
         hit_teammates_score * world.config().optimal_location_hit_teammates_score_weight,
         teammate_obstacle_score * world.config().optimal_location_teammate_obstacle_score_weight,
+        bullet_obstacle_score * world.config().optimal_location_bullet_obstacle_score_weight,
     ]
 }
 
