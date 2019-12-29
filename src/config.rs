@@ -3,8 +3,6 @@
 #[cfg_attr(feature = "dump_config", derive(RustcEncodable))]
 pub struct Config {
     pub plan_max_iterations: usize,
-    pub plan_min_ticks_per_transition: usize,
-    pub plan_max_ticks_per_transition: usize,
     pub plan_microticks_per_tick: usize,
     pub plan_min_state_depth: usize,
     pub plan_max_state_depth: usize,
@@ -42,8 +40,6 @@ impl Config {
     pub fn new() -> Self {
         Self {
             plan_max_iterations: 80,
-            plan_min_ticks_per_transition: 1,
-            plan_max_ticks_per_transition: 1,
             plan_microticks_per_tick: 9,
             plan_min_state_depth: 3,
             plan_max_state_depth: 30,
