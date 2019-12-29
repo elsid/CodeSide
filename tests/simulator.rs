@@ -466,7 +466,7 @@ fn test_simulator_bullet_explode_on_hit_wall() {
 
 #[test]
 fn test_simulator_unit_pickup_weapon() {
-    let world = with_loot_box(example_world(), Item::Weapon {weapon_type: WeaponType::RocketLauncher}, Vec2::new(36.0, 2.0));
+    let world = with_loot_box(example_world(), Item::Weapon {weapon_type: WeaponType::RocketLauncher}, Vec2::new(36.5, 1.0));
     let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
@@ -498,7 +498,7 @@ fn test_simulator_unit_pickup_weapon() {
 
 #[test]
 fn test_simulator_unit_pickup_health_pack() {
-    let world = with_loot_box(example_world(), Item::HealthPack {health: 40}, Vec2::new(36.0, 2.0));
+    let world = with_loot_box(example_world(), Item::HealthPack {health: 40}, Vec2::new(36.5, 1.0));
     let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
@@ -519,7 +519,7 @@ fn test_simulator_unit_pickup_health_pack() {
 
 #[test]
 fn test_simulator_unit_pickup_mine() {
-    let world = with_loot_box(example_world(), Item::Mine {}, Vec2::new(36.0, 2.0));
+    let world = with_loot_box(example_world(), Item::Mine {}, Vec2::new(36.5, 1.0));
     let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;

@@ -975,11 +975,16 @@ impl Explosion {
 pub struct LootBoxExt {
     base: LootBox,
     used: bool,
+    location: Location,
 }
 
 impl LootBoxExt {
     pub fn new(base: LootBox) -> Self {
-        Self { base, used: false }
+        Self {
+            location: Location::from_model(&base.position),
+            base,
+            used: false,
+        }
     }
 
     pub fn rect(&self) -> Rect {
@@ -1134,6 +1139,9 @@ fn collide_bullet_and_mine(bullet: &mut BulletExt, mine: &mut MineExt, explosion
 }
 
 fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt) -> bool {
+    if loot_box.location != unit.location() {
+        return false;
+    }
     if !loot_box.rect().has_collision(&unit.holding_rect()) {
         return false;
     }

@@ -1,5 +1,7 @@
 use std::ops::Add;
 
+use model::Vec2F64;
+
 #[cfg(feature = "enable_debug")]
 use model::Vec2F32;
 
@@ -18,6 +20,11 @@ impl Location {
     #[inline(always)]
     pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
+    }
+
+    #[inline(always)]
+    pub fn from_model(value: &Vec2F64) -> Self {
+        Self { x: value.x as usize, y: value.y as usize }
     }
 
     #[inline(always)]
