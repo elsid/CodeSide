@@ -1145,7 +1145,7 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
     if !loot_box.rect().has_collision(&unit.holding_rect()) {
         return false;
     }
-    match &loot_box.base.item {
+    match &mut loot_box.base.item {
         Item::HealthPack {health} => {
             if unit.health() >= properties.unit_max_health {
                 false
@@ -1156,10 +1156,14 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
             }
         },
         Item::Weapon {weapon_type} => {
-            if unit.action.swap_weapon || unit.weapon().is_none() {
+            if unit.weapon().is_none() {
                 unit.base.weapon = Some(make_weapon(weapon_type.clone(), properties));
                 loot_box.used = true;
                 true
+            } else if unit.action.swap_weapon {
+                *weapon_type = unit.base.weapon.as_ref().unwrap().typ.clone();
+                unit.base.weapon = Some(make_weapon(weapon_type.clone(), properties));
+                false
             } else {
                 false
             }
