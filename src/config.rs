@@ -44,7 +44,7 @@ impl Config {
             plan_max_iterations: 100,
             plan_min_ticks_per_transition: 1,
             plan_max_ticks_per_transition: 1,
-            plan_microticks_per_tick: 3,
+            plan_microticks_per_tick: 9,
             plan_min_state_depth: 3,
             plan_max_state_depth: 30,
             plan_distance_score_weight: 0.25,
