@@ -1015,7 +1015,7 @@ impl MineExt {
         Vec2::from_model(&self.base.position) + Vec2::only_y(self.base.size.y / 2.0)
     }
 
-    pub fn trigger_rect(&self, is_me: bool) -> Rect {
+    pub fn trigger_rect(&self) -> Rect {
         Rect::new(self.center(), Vec2::new(self.base.trigger_radius, self.base.trigger_radius))
     }
 
@@ -1185,7 +1185,7 @@ fn activate(properties: &Properties, mine: &mut MineExt, unit: &mut UnitExt) -> 
     if mine.base.state != MineState::Idle {
         return false;
     }
-    if !mine.trigger_rect(unit.is_me).has_collision(&unit.holding_rect()) {
+    if !mine.trigger_rect().has_collision(&unit.holding_rect()) {
         return false;
     }
     mine.base.state = MineState::Triggered;
