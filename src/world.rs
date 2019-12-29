@@ -42,6 +42,7 @@ pub struct World {
     backtracks: Vec<(i32, Vec<usize>)>,
     distances: Vec<(i32, Vec<f64>)>,
     has_opponent_unit: Vec<(i32, Vec<bool>)>,
+    has_teammate_unit: Vec<(i32, Vec<bool>)>,
     has_mine: Vec<(i32, Vec<bool>)>,
     unit_index: Vec<i32>,
     max_distance: f64,
@@ -71,6 +72,7 @@ impl World {
             backtracks: game.units.iter().map(|v| (v.id, std::iter::repeat(0).take(level.size()).collect::<Vec<_>>())).collect(),
             distances: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
             has_opponent_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
+            has_teammate_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             has_mine: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             unit_index,
             number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
@@ -118,6 +120,7 @@ impl World {
             self.backtracks.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.distances.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.has_opponent_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.has_teammate_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.has_mine.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
         }
 
@@ -245,6 +248,7 @@ impl World {
             Some(TilePathInfo {
                 distance,
                 has_opponent_unit: self.has_opponent_unit[unit_index].1[tile_index],
+                has_teammate_unit: self.has_teammate_unit[unit_index].1[tile_index],
                 has_mine: self.has_mine[unit_index].1[tile_index],
             })
         } else {
@@ -256,6 +260,14 @@ impl World {
         let location_rect = make_location_rect(location);
         self.units.iter()
             .filter(|v| self.is_opponent_unit(v))
+            .find(|v| v.rect().has_collision(&location_rect))
+            .is_some()
+    }
+
+    pub fn has_teammate_unit(&self, unit_id: i32, location: Location) -> bool {
+        let location_rect = make_location_rect(location);
+        self.units.iter()
+            .filter(|v| v.id != unit_id && self.is_teammate_unit(v))
             .find(|v| v.rect().has_collision(&location_rect))
             .is_some()
     }
@@ -363,6 +375,7 @@ impl World {
             self.backtracks[unit_index].1[i] = i;
             self.distances[unit_index].1[i] = std::f64::MAX;
             self.has_opponent_unit[unit_index].1[i] = false;
+            self.has_teammate_unit[unit_index].1[i] = false;
             self.has_mine[unit_index].1[i] = false;
         }
 
@@ -385,6 +398,8 @@ impl World {
             // (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
         ];
 
+        let unit_id = self.unit_index[unit_index];
+
         while let Some((_, node_location)) = ordered.pop() {
             let node_index = self.level.get_tile_index(node_location);
             destinations[node_index] = false;
@@ -399,6 +414,7 @@ impl World {
                 if new_distance < self.distances[unit_index].1[neighbor_index] {
                     self.distances[unit_index].1[neighbor_index] = new_distance;
                     self.has_opponent_unit[unit_index].1[neighbor_index] = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
+                    self.has_teammate_unit[unit_index].1[neighbor_index] = self.has_teammate_unit[unit_index].1[node_index] || self.has_teammate_unit(unit_id, neighbor_location);
                     self.has_mine[unit_index].1[neighbor_index] = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
                     self.backtracks[unit_index].1[neighbor_index] = node_index;
                     if !destinations[neighbor_index] {
@@ -421,6 +437,7 @@ impl World {
 #[derive(Clone, Debug)]
 pub struct TilePathInfo {
     has_opponent_unit: bool,
+    has_teammate_unit: bool,
     has_mine: bool,
     distance: f64,
 }
@@ -429,6 +446,11 @@ impl TilePathInfo {
     #[inline(always)]
     pub fn has_opponent_unit(&self) -> bool {
         self.has_opponent_unit
+    }
+
+    #[inline(always)]
+    pub fn has_teammate_unit(&self) -> bool {
+        self.has_teammate_unit
     }
 
     #[inline(always)]
