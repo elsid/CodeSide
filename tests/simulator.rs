@@ -464,6 +464,7 @@ fn test_simulator_bullet_explode_on_hit_wall() {
     assert_eq!(simulator.player().score, 0);
 }
 
+#[cfg(feature = "simulator_pickup_weapon")]
 #[test]
 fn test_simulator_unit_pickup_weapon() {
     let world = with_loot_box(example_world(), Item::Weapon {weapon_type: WeaponType::RocketLauncher}, Vec2::new(36.5, 1.0));
@@ -517,6 +518,7 @@ fn test_simulator_unit_pickup_health_pack() {
     assert_eq!(simulator.unit().health(), 100);
 }
 
+#[cfg(feature = "simulator_pickup_mine")]
 #[test]
 fn test_simulator_unit_pickup_mine() {
     let world = with_loot_box(example_world(), Item::Mine {}, Vec2::new(36.5, 1.0));

@@ -1155,6 +1155,7 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
                 true
             }
         },
+        #[cfg(feature = "simulator_pickup_weapon")]
         Item::Weapon {weapon_type} => {
             if unit.weapon().is_none() {
                 unit.base.weapon = Some(make_weapon(weapon_type.clone(), properties));
@@ -1168,11 +1169,14 @@ fn pickup(properties: &Properties, loot_box: &mut LootBoxExt, unit: &mut UnitExt
                 false
             }
         },
+        #[cfg(feature = "simulator_pickup_mine")]
         Item::Mine {} => {
             unit.base.mines += 1;
             loot_box.used = true;
             true
         },
+        #[cfg(any(not(feature = "simulator_pickup_weapon"), not(feature = "simulator_pickup_mine")))]
+        _ => false,
     }
 }
 
