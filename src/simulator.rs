@@ -82,6 +82,7 @@ impl<'r> Simulator<'r> {
             })
             .collect();
         let loot_boxes: Vec<LootBoxExt> = world.loot_boxes().iter()
+            .filter(|v| is_loot_box_enabled(v))
             .map(|v| LootBoxExt::new(v.clone()))
             .collect();
         let mines: Vec<MineExt> = world.mines().iter()
@@ -1275,4 +1276,16 @@ fn shoot(unit: &mut UnitExt) -> Option<BulletExt> {
     }
 
     Some(BulletExt::new(base, unit.player_index))
+}
+
+fn is_loot_box_enabled(loot_box: &LootBox) -> bool {
+    match &loot_box.item {
+        Item::HealthPack { .. } => true,
+        #[cfg(feature = "simulator_pickup_weapon")]
+        Item::Weapon { .. } => true,
+        #[cfg(feature = "simulator_pickup_mine")]
+        Item::Mine { } => true,
+        #[cfg(any(not(feature = "simulator_pickup_weapon"), not(feature = "simulator_pickup_mine")))]
+        _ => false,
+    }
 }
