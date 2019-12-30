@@ -142,7 +142,7 @@ impl MyStrategyImpl {
         let action = self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1.clone();
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
-        debug.log(format!("[{}] action: {:?}", current_unit.id, action));
+        debug.log(format!("[{}][{}] action: {:?}", current_unit.id, game.current_tick, action));
 
         action
     }

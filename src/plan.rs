@@ -188,7 +188,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             color: ColorF32 { r: 0.25, g: 0.25, b: 0.75, a: 0.25 },
         });
 
-        log!(self.current_tick, "transition_id={} kind={:?}", transition.id, transition.kind);
+        log!(self.current_tick, "transition_id={} kind={:?} prev={} next={}", transition.id, transition.kind, state.id, next.id);
         log!(self.current_tick, "state={:?}", next);
 
         next
@@ -244,7 +244,9 @@ impl<'c, 's> State<'c, 's> {
 
 impl<'c, 's> std::fmt::Debug for State<'c, 's> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "id={} position={:?} score={:?}", self.id, self.planner.simulator.unit().position(), self.planner.get_score_components())
+        write!(f, "id={} depth={} position={:?} score={} {:?}",
+            self.id, self.depth, self.planner.simulator.unit().position(), self.planner.get_score(),
+            self.planner.get_score_components())
     }
 }
 
