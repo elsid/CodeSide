@@ -173,7 +173,7 @@ impl MyStrategyImpl {
                     Role::Shooter => {
                         self.optimal_locations[i].1 = get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1);
                     },
-                    Role::Miner { .. } => {
+                    Role::Dodger | Role::Miner { .. } => {
                         self.optimal_locations[i].1 = None;
                     },
                 }
@@ -190,7 +190,7 @@ impl MyStrategyImpl {
                     Role::Shooter => {
                         self.optimal_destinations[i].1 = get_optimal_destination(unit, &self.optimal_locations[i].1, &self.world);
                     },
-                    Role::Miner { .. } => {
+                    Role::Dodger | Role::Miner { .. } => {
                         self.optimal_destinations[i].1 = unit.position();
                     },
                 }
@@ -204,7 +204,7 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
-                    Role::Shooter => {
+                    Role::Shooter | Role::Dodger => {
                         self.optimal_targets[i].1 = get_optimal_target(unit, &self.world, debug);
                     },
                     Role::Miner { .. } => {
@@ -221,7 +221,7 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
-                    Role::Shooter => {
+                    Role::Shooter | Role::Dodger => {
                         let destination = self.optimal_destinations[i].1;
                         self.optimal_plans[i].1 = get_optimal_plan(unit, destination, &self.world, &mut self.rng, debug);
                     },
@@ -239,7 +239,7 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
-                    Role::Shooter => {
+                    Role::Shooter | Role::Dodger => {
                         let plan = &self.optimal_plans[i].1;
                         let target = self.optimal_targets[i].1;
                         self.optimal_actions[i].1 = get_shooter_action(unit, plan, target, &self.world, debug);
