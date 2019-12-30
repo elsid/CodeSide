@@ -271,14 +271,36 @@ impl Drop for MyStrategyImpl {
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_unit"))]
 fn render_unit(unit: &Unit, role: &Role, debug: &mut Debug) {
-    let weapon = unit.weapon.as_ref().map(|v| format!("{:?}\n{:?}", v.fire_timer, v.last_angle)).unwrap_or(String::new());
     debug.draw(CustomData::PlacedText {
-        text: format!("{}\n{:?}\n{}", unit.id, role, weapon),
+        text: format!("{}", unit.id),
         pos: (unit.position() + Vec2::only_y(unit.size.y)).as_debug(),
         alignment: TextAlignment::Center,
-        size: 40.0,
+        size: 36.0,
         color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
     });
+    debug.draw(CustomData::PlacedText {
+        text: format!("{:?}", role),
+        pos: (unit.position() + Vec2::only_y(unit.size.y + 0.38)).as_debug(),
+        alignment: TextAlignment::Center,
+        size: 36.0,
+        color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+    });
+    if let Some(weapon) = unit.weapon.as_ref() {
+        debug.draw(CustomData::PlacedText {
+            text: format!("{:?}", weapon.fire_timer),
+            pos: (unit.position() + Vec2::only_y(unit.size.y + 2.0 * 0.38)).as_debug(),
+            alignment: TextAlignment::Center,
+            size: 36.0,
+            color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+        });
+        debug.draw(CustomData::PlacedText {
+            text: format!("{:?}", weapon.last_angle),
+            pos: (unit.position() + Vec2::only_y(unit.size.y + 3.0 * 0.38)).as_debug(),
+            alignment: TextAlignment::Center,
+            size: 36.0,
+            color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+        });
+    }
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
