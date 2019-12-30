@@ -11,7 +11,6 @@ use model::{
 };
 
 use crate::my_strategy::{
-    Clamp1,
     Config,
     Debug,
     IdGenerator,
