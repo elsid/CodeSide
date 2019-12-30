@@ -2,6 +2,7 @@ use model::{
     Item,
     Unit,
     UnitAction,
+    Vec2F64,
 };
 
 use crate::my_strategy::{
@@ -40,16 +41,7 @@ pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: Option<Vec2>
     debug.log(format!("[{}] plan_score={}, transitions: {:?}", current_unit.id, plan.score, plan.transitions.iter().map(|v| (v.kind, v.id)).collect::<Vec<_>>()));
 
     let mut action = if plan.transitions.is_empty() {
-        UnitAction {
-            velocity: 0.0,
-            jump: false,
-            jump_down: false,
-            shoot: false,
-            aim: Vec2::zero().as_model(),
-            reload: false,
-            swap_weapon: false,
-            plant_mine: false,
-        }
+        default_action()
     } else {
         plan.transitions[0].action.clone()
     };
@@ -74,5 +66,18 @@ fn should_swap_weapon(current_unit: &Unit, should_shoot: bool, world: &World) ->
         }
     } else {
         false
+    }
+}
+
+pub const fn default_action() -> UnitAction {
+    UnitAction {
+        velocity: 0.0,
+        jump: false,
+        jump_down: false,
+        shoot: false,
+        aim: Vec2F64 { x: 0.0, y: 0.0 },
+        reload: false,
+        swap_weapon: false,
+        plant_mine: false,
     }
 }

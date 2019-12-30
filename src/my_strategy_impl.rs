@@ -2,7 +2,6 @@ use model::{
     Game,
     Unit,
     UnitAction,
-    Vec2F64,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -24,13 +23,14 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
+    default_action,
     get_miner_action,
-    get_shooter_action,
     get_optimal_destination,
     get_optimal_location,
     get_optimal_plan,
     get_optimal_target,
     get_role,
+    get_shooter_action,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -59,16 +59,6 @@ impl MyStrategyImpl {
         let world = World::new(config, current_unit.player_id, game);
         #[cfg(feature = "dump_level")]
         println!("{}", dump_level(world.level()));
-        let default_action = UnitAction {
-            velocity: 0.0,
-            jump: false,
-            jump_down: false,
-            aim: Vec2F64 { x: 0.0, y: 0.0 },
-            shoot: false,
-            reload: false,
-            swap_weapon: false,
-            plant_mine: false,
-        };
         Self {
             rng: XorShiftRng::from_seed([
                 3918248293,
@@ -81,7 +71,7 @@ impl MyStrategyImpl {
             optimal_destinations: world.units().iter().map(|v| (v.id, v.position())).collect(),
             optimal_targets: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_plans: world.units().iter().map(|v| (v.id, Plan::default())).collect(),
-            optimal_actions: world.units().iter().map(|v| (v.id, default_action.clone())).collect(),
+            optimal_actions: world.units().iter().map(|v| (v.id, default_action())).collect(),
             world,
             last_tick: -1,
         }
@@ -142,7 +132,11 @@ impl MyStrategyImpl {
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
         debug.log(format!("[{}][{}] action: {:?}", current_unit.id, game.current_tick, action));
 
-        action
+        #[cfg(not(feature = "spectator"))]
+        return action;
+
+        #[cfg(feature = "spectator")]
+        return default_action();
     }
 
     fn assign_roles(&mut self, debug: &mut Debug) {

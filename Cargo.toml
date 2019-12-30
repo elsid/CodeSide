@@ -36,6 +36,7 @@ enable_debug_unit = []
 simulator_pickup_weapon = []
 simulator_pickup_mine = []
 max_tick = []
+spectator = []
 
 [[bench]]
 name = "simulator"
