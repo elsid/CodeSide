@@ -1,6 +1,5 @@
 use model::{
     Mine,
-    MineState,
 };
 use crate::my_strategy::{
     Positionable,
@@ -17,12 +16,7 @@ impl Positionable for Mine {
 
 impl Rectangular for Mine {
     fn rect(&self) -> Rect {
-        let size = if self.state == MineState::Idle {
-            Vec2::new(self.trigger_radius, self.trigger_radius)
-        } else {
-            Vec2::from_model(&self.size) / 2.0
-        };
-        Rect::new(self.center(), size)
+        Rect::new(self.center(), Vec2::from_model(&self.size) / 2.0)
     }
 
     fn center(&self) -> Vec2 {
