@@ -31,7 +31,6 @@ use crate::my_strategy::{
     get_optimal_plan,
     get_optimal_target,
     get_role,
-    is_shooter,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -106,13 +105,11 @@ impl MyStrategyImpl {
 
             self.assign_roles(debug);
 
-            self.set_shooters_locations(debug);
-            self.set_shooters_destinatons();
-            self.set_shooters_targets(debug);
-            self.set_shooters_plans(debug);
-            self.set_shooters_actions(debug);
-
-            self.set_miners_actions();
+            self.set_locations(debug);
+            self.set_destinatons();
+            self.set_targets(debug);
+            self.set_plans(debug);
+            self.set_actions(debug);
 
             self.update_roles();
 
@@ -172,66 +169,89 @@ impl MyStrategyImpl {
         }
     }
 
-    fn set_shooters_locations(&mut self, debug: &mut Debug) {
+    fn set_locations(&mut self, debug: &mut Debug) {
         for i in 0 .. self.optimal_locations.len() {
             let unit_id = self.optimal_locations[i].0;
             let unit = self.world.get_unit(unit_id);
-            if is_shooter(&self.roles[i].1) && self.world.is_teammate_unit(unit) {
-                self.optimal_locations[i] = (unit_id, get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1));
+            if self.world.is_teammate_unit(unit) {
+                match &self.roles[i].1 {
+                    Role::Shooter => {
+                        self.optimal_locations[i].1 = get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1);
+                    },
+                    Role::Miner { .. } => {
+                        self.optimal_locations[i].1 = None;
+                    },
+                }
             }
         }
     }
 
-    fn set_shooters_destinatons(&mut self) {
+    fn set_destinatons(&mut self) {
         for i in 0 .. self.optimal_destinations.len() {
             let unit_id = self.optimal_destinations[i].0;
             let unit = self.world.get_unit(unit_id);
-            if is_shooter(&self.roles[i].1) && self.world.is_teammate_unit(unit) {
-                self.optimal_destinations[i] = (unit_id, get_optimal_destination(unit, &self.optimal_locations[i].1, &self.world));
+            if self.world.is_teammate_unit(unit) {
+                match &self.roles[i].1 {
+                    Role::Shooter => {
+                        self.optimal_destinations[i].1 = get_optimal_destination(unit, &self.optimal_locations[i].1, &self.world);
+                    },
+                    Role::Miner { .. } => {
+                        self.optimal_destinations[i].1 = unit.position();
+                    },
+                }
             }
         }
     }
 
-    fn set_shooters_targets(&mut self, debug: &mut Debug) {
+    fn set_targets(&mut self, debug: &mut Debug) {
         for i in 0 .. self.optimal_targets.len() {
             let unit_id = self.optimal_targets[i].0;
             let unit = self.world.get_unit(unit_id);
-            if is_shooter(&self.roles[i].1) && self.world.is_teammate_unit(unit) {
-                self.optimal_targets[i] = (unit_id, get_optimal_target(unit, &self.world, debug));
+            if self.world.is_teammate_unit(unit) {
+                match &self.roles[i].1 {
+                    Role::Shooter => {
+                        self.optimal_targets[i].1 = get_optimal_target(unit, &self.world, debug);
+                    },
+                    Role::Miner { .. } => {
+                        self.optimal_targets[i].1 = None;
+                    }
+                }
             }
         }
     }
 
-    fn set_shooters_plans(&mut self, debug: &mut Debug) {
+    fn set_plans(&mut self, debug: &mut Debug) {
         for i in 0 .. self.optimal_plans.len() {
             let unit_id = self.optimal_plans[i].0;
             let unit = self.world.get_unit(unit_id);
-            if is_shooter(&self.roles[i].1) && self.world.is_teammate_unit(unit) {
-                let destination = self.optimal_destinations[i].1;
-                self.optimal_plans[i] = (unit_id, get_optimal_plan(unit, destination, &self.world, &mut self.rng, debug));
+            if self.world.is_teammate_unit(unit) {
+                match &self.roles[i].1 {
+                    Role::Shooter => {
+                        let destination = self.optimal_destinations[i].1;
+                        self.optimal_plans[i].1 = get_optimal_plan(unit, destination, &self.world, &mut self.rng, debug);
+                    },
+                    Role::Miner { .. } => {
+                        self.optimal_plans[i].1 = Plan::default();
+                    }
+                }
             }
         }
     }
 
-    fn set_shooters_actions(&mut self, debug: &mut Debug) {
-        for i in 0 .. self.optimal_actions.len() {
-            let unit_id = self.optimal_actions[i].0;
-            let unit = self.world.get_unit(unit_id);
-            if is_shooter(&self.roles[i].1) && self.world.is_teammate_unit(unit) {
-                let plan = &self.optimal_plans[i].1;
-                let target = self.optimal_targets[i].1;
-                self.optimal_actions[i] = (unit_id, get_shooter_action(unit, plan, target, &self.world, debug));
-            }
-        }
-    }
-
-    fn set_miners_actions(&mut self) {
+    fn set_actions(&mut self, debug: &mut Debug) {
         for i in 0 .. self.optimal_actions.len() {
             let unit_id = self.optimal_actions[i].0;
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
-                if let Role::Miner { plant_mines } = &self.roles[i].1 {
-                    self.optimal_actions[i] = (unit_id, get_miner_action(unit, *plant_mines));
+                match &self.roles[i].1 {
+                    Role::Shooter => {
+                        let plan = &self.optimal_plans[i].1;
+                        let target = self.optimal_targets[i].1;
+                        self.optimal_actions[i].1 = get_shooter_action(unit, plan, target, &self.world, debug);
+                    },
+                    Role::Miner { plant_mines } => {
+                        self.optimal_actions[i].1 = get_miner_action(unit, *plant_mines);
+                    }
                 }
             }
         }

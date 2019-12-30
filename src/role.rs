@@ -18,13 +18,6 @@ pub enum Role {
     }
 }
 
-pub fn is_shooter(role: &Role) -> bool {
-    match role {
-        Role::Shooter => true,
-        _ => false,
-    }
-}
-
 pub fn get_role(current_unit: &Unit, prev: &Role, world: &World) -> Role {
     match prev {
         Role::Shooter => {
