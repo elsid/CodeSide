@@ -115,7 +115,8 @@ impl MyStrategyImpl {
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
             for unit in self.world.units().iter() {
-                render_unit(unit, debug);
+                let role = &self.roles.iter().find(|(id, _)| *id == unit.id).unwrap().1;
+                render_unit(unit, role, debug);
                 if unit.id == current_unit.id {
                     render_backtrack(self.world.get_backtrack(unit.id), self.world.level(), debug);
                 }
@@ -269,10 +270,10 @@ impl Drop for MyStrategyImpl {
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_unit"))]
-fn render_unit(unit: &Unit, debug: &mut Debug) {
+fn render_unit(unit: &Unit, role: &Role, debug: &mut Debug) {
     let weapon = unit.weapon.as_ref().map(|v| v.fire_timer.map(|v| format!("{}", v)).unwrap_or(String::new())).unwrap_or(String::new());
     debug.draw(CustomData::PlacedText {
-        text: format!("{} {}", unit.id, weapon),
+        text: format!("{}\n{:?}\n{}", unit.id, role, weapon),
         pos: (unit.position() + Vec2::only_y(unit.size.y)).as_debug(),
         alignment: TextAlignment::Center,
         size: 40.0,
