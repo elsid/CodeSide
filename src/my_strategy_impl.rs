@@ -162,8 +162,8 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 self.roles[i].1 = match &self.roles[i].1 {
-                    Role::Shooter => Role::Shooter,
-                    Role::Miner { plant_mines } => Role::Miner { plant_mines: *plant_mines - self.optimal_actions[i].1.plant_mine as usize }
+                    Role::Miner { plant_mines } => Role::Miner { plant_mines: *plant_mines - self.optimal_actions[i].1.plant_mine as usize },
+                    v => v.clone(),
                 }
             }
         }
