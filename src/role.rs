@@ -18,24 +18,19 @@ pub enum Role {
     }
 }
 
-pub fn get_role(current_unit: &Unit, prev: &Role, world: &World) -> Role {
-    match prev {
-        Role::Shooter => {
-            let plant_mines = get_mines_to_plant(current_unit, world);
-            if plant_mines > 0 {
-                Role::Miner { plant_mines }
-            } else {
-                Role::Shooter
-            }
-        },
-        Role::Miner { plant_mines } => {
-            if *plant_mines > 0 || has_collision_with_teammate_mine(current_unit, world) {
-                prev.clone()
-            } else {
-                Role::Shooter
-            }
+pub fn get_role(unit: &Unit, prev: &Role, world: &World) -> Role {
+    if let Role::Miner { plant_mines } = prev {
+        if *plant_mines > 0 || has_collision_with_teammate_mine(unit, world) {
+            return prev.clone();
+        }
+    } else {
+        let plant_mines = get_mines_to_plant(unit, world);
+        if plant_mines > 0 {
+            return Role::Miner { plant_mines };
         }
     }
+
+    Role::Shooter
 }
 
 fn get_mines_to_plant(current_unit: &Unit, world: &World) -> usize {
