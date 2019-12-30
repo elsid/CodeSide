@@ -242,11 +242,19 @@ pub struct MyStrategy {
     strategy_impl: Option<MyStrategyImpl>,
     last_tick: i32,
     debug_next_y: f32,
+    #[cfg(feature = "max_tick")]
+    max_tick: i32,
 }
 
 impl MyStrategy {
     pub fn new() -> Self {
-        Self { strategy_impl: None, last_tick: -1, debug_next_y: 0.0 }
+        Self {
+            strategy_impl: None,
+            last_tick: -1,
+            debug_next_y: 0.0,
+            #[cfg(feature = "max_tick")]
+            max_tick: std::env::var("MAX_TICK").map(|v| v.parse::<i32>().unwrap_or(std::i32::MAX)).unwrap_or(std::i32::MAX),
+        }
     }
 
     pub fn get_action(
@@ -255,6 +263,12 @@ impl MyStrategy {
         game: &model::Game,
         debug: &mut crate::Debug,
     ) -> model::UnitAction {
+        #[cfg(feature = "max_tick")]
+        {
+            if game.current_tick > self.max_tick {
+                std::process::exit(0);
+            }
+        }
         if self.last_tick != game.current_tick {
             self.last_tick = game.current_tick;
             self.debug_next_y = 0.0;
