@@ -271,7 +271,7 @@ impl Drop for MyStrategyImpl {
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_unit"))]
 fn render_unit(unit: &Unit, role: &Role, debug: &mut Debug) {
-    let weapon = unit.weapon.as_ref().map(|v| v.fire_timer.map(|v| format!("{}", v)).unwrap_or(String::new())).unwrap_or(String::new());
+    let weapon = unit.weapon.as_ref().map(|v| format!("{:?}\n{:?}", v.fire_timer, v.last_angle)).unwrap_or(String::new());
     debug.draw(CustomData::PlacedText {
         text: format!("{}\n{:?}\n{}", unit.id, role, weapon),
         pos: (unit.position() + Vec2::only_y(unit.size.y)).as_debug(),
