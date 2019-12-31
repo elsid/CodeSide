@@ -46,6 +46,10 @@ impl HitTarget {
         Self { id: unit.id, rect: unit.rect() }
     }
 
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+
     pub fn rect(&self) -> &Rect {
         &self.rect
     }
@@ -146,8 +150,8 @@ pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &HitT
     for i in 0 .. number_of_directions {
         let angle = normalize_angle(((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * spread);
         let far_destination = source + to_target.rotated(angle);
-        let destination = source + (far_destination - source)
-            * world.rect().get_intersection_with_line(source, far_destination).unwrap();
+        let factor = world.rect().get_intersection_with_line(source, far_destination);
+        let destination = source + (far_destination - source) * factor.unwrap();
         let (src, dst) = if i == 0 {
             (source + right, destination + right)
         } else if i == number_of_directions - 1 {
@@ -338,7 +342,11 @@ pub fn get_hit_probability_by_spread(source: Vec2, target: &Rect, spread: f64, b
 }
 
 pub fn get_hit_probability_by_spread_with_destination(source: Vec2, destination: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
-    Sector::from_direction_and_spread(destination - source, spread + bullet_size / source.distance(target.center()))
+    get_hit_probability_by_spread_with_direction(source, destination - source, target, spread, bullet_size)
+}
+
+pub fn get_hit_probability_by_spread_with_direction(source: Vec2, direction: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
+    Sector::from_direction_and_spread(direction, spread + bullet_size / source.distance(target.center()))
         .get_intersection_fraction(Sector::from_source_and_rect(source, target))
 }
 

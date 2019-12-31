@@ -285,7 +285,7 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
     let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(),
         get_mean_spread(weapon), weapon.params.bullet.size);
 
-    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+    if hit_probability_by_spread < world.config().optimal_location_min_hit_probability_by_spread_to_shoot {
         return false;
     }
 

@@ -100,7 +100,7 @@ fn get_target_score_components(current_unit: &Unit, target: &Unit, weapon: &Weap
 fn get_shoot_score(current_unit_id: i32, current_unit_center: Vec2, current_unit_direction: Vec2, spread: f64, opponent: &Unit, weapon: &Weapon, world: &World) -> f64 {
     let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(), weapon.spread, weapon.params.bullet.size);
 
-    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+    if hit_probability_by_spread == 0.0 {
         return 0.0;
     }
 
