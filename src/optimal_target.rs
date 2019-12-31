@@ -1,6 +1,5 @@
 use model::{
     Unit,
-    Weapon,
 };
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
@@ -15,11 +14,8 @@ use crate::my_strategy::{
     Positionable,
     Rectangular,
     Target,
-    Vec2,
     World,
     as_score,
-    get_hit_probabilities,
-    get_hit_probability_by_spread,
 };
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
@@ -31,7 +27,7 @@ use crate::my_strategy::{
 };
 
 pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Target> {
-    if let Some(weapon) = current_unit.weapon.as_ref() {
+    if current_unit.weapon.is_some() {
         let mine = world.mines().iter()
             .find(|mine| world.is_teammate_mine(mine) && mine.position().distance(current_unit.position()) < 2.0 * current_unit.size.x)
             .map(|mine| mine.rect());
@@ -41,10 +37,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
         }
 
         let unit = world.units().iter()
-            .filter(|unit| {
-                world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world)
-            })
+            .filter(|unit| world.is_opponent_unit(unit))
             .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
@@ -58,28 +51,6 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
     } else {
         None
     }
-}
-
-fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
-    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(), weapon.spread, weapon.params.bullet.size);
-
-    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
-        return false;
-    }
-
-    let direction = (opponent.center() - current_unit_center).normalized();
-    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        &Target::from_unit(opponent), weapon.spread, weapon.params.bullet.size, world,
-        world.config().optimal_action_number_of_directions);
-
-    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
-        if min_distance < explosion.radius + 2.0 {
-            return false;
-        }
-    }
-
-    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
-    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]

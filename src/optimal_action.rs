@@ -19,6 +19,7 @@ use crate::my_strategy::{
     get_hit_probability_by_spread,
     get_weapon_score,
     minimize1d,
+    should_shoot,
 };
 
 pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
@@ -40,19 +41,24 @@ pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: &Option<Targ
     let (shoot, aim) = if let (Some(target), Some(weapon)) = (target, current_unit.weapon.as_ref()) {
         let required_direction = target.rect().center() - current_unit.center();
         let tick_time = world.tick_time_interval();
-        let aim_direction = if let Some(last_angle) = weapon.last_angle {
+
+        let (aim_direction, rotation) = if let Some(last_angle) = weapon.last_angle {
             let current_direction = Vec2::i().rotated(last_angle);
             let required_rotation = required_direction.rotation(current_direction);
             let max_rotation = minimize1d(1e-3, required_rotation, 10,
                 |v| -get_hit_rate(v, required_rotation, current_unit.center(), target.rect(), weapon, tick_time)
             );
+            let aim_direction = limit_rotation_to(required_direction, current_direction, max_rotation);
 
-            limit_rotation_to(required_direction, current_direction, max_rotation)
+            (aim_direction, aim_direction.rotation(current_direction))
         } else {
-            required_direction
+            (required_direction, 0.0)
         };
 
-        if aim_direction.rotation(required_direction) < 1e-3 {
+        let spread = get_spread(rotation, tick_time, weapon);
+
+        if aim_direction.rotation(required_direction) < 1e-3
+            && should_shoot(current_unit.id, current_unit.center(), aim_direction, spread, target, weapon, &world) {
             (true, aim_direction)
         } else {
             (false, aim_direction)
@@ -137,4 +143,10 @@ fn get_hit_rate(rotation: f64, required_rotation: f64, source: Vec2, target: &Re
     ).clamp1(weapon.params.min_spread, weapon.params.max_spread);
 
     get_hit_probability_by_spread(source, target, spread, weapon.params.bullet.size) / (time + time * time / 3.0)
+}
+
+fn get_spread(rotation: f64, tick_time_interval: f64, weapon: &Weapon) -> f64 {
+    (
+        weapon.spread + tick_time_interval * (rotation - weapon.params.aim_speed)
+    ).clamp1(weapon.params.min_spread, weapon.params.max_spread)
 }

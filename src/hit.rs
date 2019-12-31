@@ -1,6 +1,7 @@
 use model::{
     Tile,
     Unit,
+    Weapon,
 };
 use crate::my_strategy::{
     Level,
@@ -180,7 +181,11 @@ pub fn get_hit_probability_by_spread(source: Vec2, target: &Rect, spread: f64, b
 }
 
 pub fn get_hit_probability_by_spread_with_destination(source: Vec2, destination: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
-    Sector::from_direction_and_spread(destination - source, spread + bullet_size / source.distance(target.center()))
+    get_hit_probability_by_spread_with_direction(source, destination - source, target, spread, bullet_size)
+}
+
+pub fn get_hit_probability_by_spread_with_direction(source: Vec2, direction: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
+    Sector::from_direction_and_spread(direction, spread + bullet_size / source.distance(target.center()))
         .get_intersection_fraction(Sector::from_source_and_rect(source, target))
 }
 
@@ -281,4 +286,26 @@ fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &
         })
         .min_by_key(|&(distance, _)| as_score(distance))
         .map(|(distance, is_teammate)| MineHit { distance, is_teammate })
+}
+
+pub fn should_shoot(current_unit_id: i32, source: Vec2, direction: Vec2, spread: f64, target: &Target, weapon: &Weapon, world: &World) -> bool {
+    let hit_probability_by_spread = get_hit_probability_by_spread_with_direction(source, direction, target.rect(), spread, weapon.params.bullet.size);
+
+    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+        return false;
+    }
+
+    let direction = (target.rect().center() - source).normalized();
+    let hit_probabilities = get_hit_probabilities(current_unit_id, source, direction,
+        target, spread, weapon.params.bullet.size, world,
+        world.config().optimal_action_number_of_directions);
+
+    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
+        if min_distance < explosion.radius + 2.0 {
+            return false;
+        }
+    }
+
+    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
+    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }
