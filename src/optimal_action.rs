@@ -16,7 +16,11 @@ use crate::my_strategy::{
     Target,
     Vec2,
     World,
+    get_hit_damage,
     get_hit_probability_by_spread,
+    get_hit_probability_by_spread_with_direction,
+    get_opponent_score_for_hit,
+    get_player_score_for_hit,
     get_weapon_score,
     minimize1d,
 };
@@ -41,22 +45,27 @@ pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: &Option<Targ
         if weapon.params.explosion.is_some() {
             let required_direction = target.rect().center() - current_unit.center();
             let tick_time = world.tick_time_interval();
-            let aim_direction = if let Some(last_angle) = weapon.last_angle {
+
+            let (aim_direction, rotation) = if let Some(last_angle) = weapon.last_angle {
                 let current_direction = Vec2::i().rotated(last_angle);
                 let required_rotation = required_direction.rotation(current_direction);
                 let max_rotation = minimize1d(1e-3, required_rotation, 10,
                     |v| -get_hit_rate(v, required_rotation, current_unit.center(), target.rect(), weapon, tick_time)
                 );
+                let aim_direction = limit_rotation_to(required_direction, current_direction, max_rotation);
 
-                limit_rotation_to(required_direction, current_direction, max_rotation)
+                (aim_direction, aim_direction.rotation(current_direction))
             } else {
-                required_direction
+                (required_direction, 0.0)
             };
 
-            if aim_direction.rotation(required_direction) < 1e-3 {
+            let spread = get_spread(rotation, tick_time, weapon);
+
+            if aim_direction.rotation(required_direction) < 1e-3
+                && should_shoot(current_unit.id, current_unit.center(), aim_direction, spread, target, weapon, &world) {
                 (true, aim_direction)
             } else {
-                (false, aim_direction)
+                (true, target.rect().center() - current_unit.center())
             }
         } else {
             (true, target.rect().center() - current_unit.center())
@@ -141,4 +150,27 @@ fn get_hit_rate(rotation: f64, required_rotation: f64, source: Vec2, target: &Re
     ).clamp1(weapon.params.min_spread, weapon.params.max_spread);
 
     get_hit_probability_by_spread(source, target, spread, weapon.params.bullet.size) / (time + time * time / 3.0)
+}
+
+fn get_spread(rotation: f64, tick_time_interval: f64, weapon: &Weapon) -> f64 {
+    (
+        weapon.spread + tick_time_interval * (rotation - weapon.params.aim_speed)
+    ).clamp1(weapon.params.min_spread, weapon.params.max_spread)
+}
+
+fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, direction: Vec2, spread: f64, target: &Target,
+        weapon: &Weapon, world: &World) -> bool {
+    let hit_probability_by_spread = get_hit_probability_by_spread_with_direction(current_unit_center, direction,
+        target.rect(), spread, weapon.params.bullet.size);
+
+    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+        return false;
+    }
+
+    let number_of_directions = world.config().optimal_action_number_of_directions;
+    let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, target,
+        weapon.spread, &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
+
+    get_player_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+        > get_opponent_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
 }

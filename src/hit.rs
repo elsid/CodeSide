@@ -3,6 +3,7 @@ use model::{
     ExplosionParams,
     Tile,
     Unit,
+    Weapon,
 };
 
 use crate::my_strategy::{
@@ -326,7 +327,11 @@ pub fn get_hit_probability_by_spread(source: Vec2, target: &Rect, spread: f64, b
 }
 
 pub fn get_hit_probability_by_spread_with_destination(source: Vec2, destination: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
-    Sector::from_direction_and_spread(destination - source, spread + bullet_size / source.distance(target.center()))
+    get_hit_probability_by_spread_with_direction(source, destination - source, target, spread, bullet_size)
+}
+
+pub fn get_hit_probability_by_spread_with_direction(source: Vec2, direction: Vec2, target: &Rect, spread: f64, bullet_size: f64) -> f64 {
+    Sector::from_direction_and_spread(direction, spread + bullet_size / source.distance(target.center()))
         .get_intersection_fraction(Sector::from_source_and_rect(source, target))
 }
 

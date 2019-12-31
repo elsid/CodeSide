@@ -44,8 +44,10 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
 
         let unit = world.units().iter()
             .filter(|unit| {
-                world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world)
+                world.is_opponent_unit(unit) && (
+                    weapon.params.explosion.is_some()
+                    || should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world)
+                )
             })
             .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
 
