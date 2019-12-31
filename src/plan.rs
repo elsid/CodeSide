@@ -177,6 +177,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         next.depth += 1;
         *next.planner.simulator.unit_mut().action_mut() = transition.action.clone();
         next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut None);
+        next.score_sum = self.get_score(state);
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_plan"))]
         self.debug.draw(CustomData::Line {
@@ -197,7 +198,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
     }
 
     fn get_score(&self, state: &State) -> i32 {
-        state.get_score()
+        ((state.score_sum + state.get_score()) as f64 * state.planner.config.plan_state_score_sum_factor) as i32
     }
 }
 
@@ -207,6 +208,7 @@ pub struct State<'c, 's> {
     score: i32,
     planner: Planner<'c, 's>,
     depth: usize,
+    score_sum: i32,
 }
 
 impl<'c, 's> State<'c, 's> {
@@ -216,6 +218,7 @@ impl<'c, 's> State<'c, 's> {
             score: 0,
             planner,
             depth: 0,
+            score_sum: 0,
         }
     }
 
