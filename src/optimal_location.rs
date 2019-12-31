@@ -1,5 +1,6 @@
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
 use model::{
+    ColorF32,
     CustomData,
     Vec2F32,
 };
@@ -53,7 +54,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 continue;
             }
             if let Some(path_info) = world.get_path_info(unit_index, location) {
-                let candidate_score = get_location_score(location, unit, world, &path_info);
+                let candidate_score = get_location_score(location, unit, world, &path_info, debug);
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
@@ -85,10 +86,12 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
         {
             if let Some((score, location)) = optimal {
                 let path_info = world.get_path_info(unit_index, location).unwrap();
-                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
+                let components = get_location_score_components(location, unit, world, &path_info, debug);
+                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, components));
                 if let Some(v) = optimal_locations.iter().find(|(id, _)| *id == unit.id).unwrap().1 {
                     let path_info = world.get_path_info(unit_index, v).unwrap();
-                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, world, &path_info)));
+                    let components = get_location_score_components(v, unit, world, &path_info, debug);
+                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, components));
                 }
             }
         }
@@ -125,11 +128,11 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
         .is_some()
 }
 
-pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
-    get_location_score_components(location, current_unit, world, path_info).iter().sum()
+pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo, debug: &mut Debug) -> f64 {
+    get_location_score_components(location, current_unit, world, path_info, debug).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo, debug: &mut Debug) -> [f64; 17] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -207,7 +210,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         0.0
     };
     let height_score = location.y() as f64 / world.size().y();
-    let over_ground_score = (world.get_tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
+    let bottom_tile = world.get_tile(location + Vec2i::new(0, -1));
+    let over_ground_score = (bottom_tile != Tile::Empty) as i32 as f64;
     let number_of_bullets = world.bullets().iter()
         .filter(|v| v.unit_id != current_unit.id)
         .count();
@@ -249,6 +253,23 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         0.0
     };
+    let mine_explosion_score = if current_unit.mines >= 2 && world.number_of_teammates() > 0
+            && bottom_tile == Tile::Wall || bottom_tile == Tile::Platform {
+        let radius = world.properties().mine_explosion_params.radius;
+        let explosion_rect = Rect::new(location.bottom(), Vec2::new(radius, radius));
+        let units_to_explode = world.units().iter()
+            .filter(|v| world.is_opponent_unit(v) && v.rect().has_collision(&explosion_rect))
+            .count();
+        if units_to_explode >= 2 {
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
+            debug.cross_at_location(location, ColorF32 { a: 0.66, r: 1.0, g: 0.0, b: 0.0 });
+            1.0 - distance_to_position_score
+        } else {
+            0.0
+        }
+    } else {
+        0.0
+    };
 
     [
         distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
@@ -267,6 +288,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         hit_teammates_score * world.config().optimal_location_hit_teammates_score_weight,
         teammate_obstacle_score * world.config().optimal_location_teammate_obstacle_score_weight,
         bullet_obstacle_score * world.config().optimal_location_bullet_obstacle_score_weight,
+        mine_explosion_score * world.config().optimal_location_mine_explosion_score_weight,
     ]
 }
 

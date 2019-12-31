@@ -7,7 +7,11 @@ use model::{
 };
 
 #[cfg(feature = "enable_debug")]
-use crate::my_strategy::Clamp1;
+use crate::my_strategy::{
+    Clamp1,
+    Location,
+    Vec2,
+};
 
 pub struct Debug<'r, 'd> {
     base: &'r mut crate::Debug<'d>,
@@ -42,6 +46,22 @@ impl<'r, 'd> Debug<'r, 'd> {
             alignment: TextAlignment::Left,
             size: 20.5,
             color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+        });
+    }
+
+    #[cfg(feature = "enable_debug")]
+    pub fn cross_at_location(&mut self, location: Location, color: ColorF32) {
+        self.base.draw(CustomData::Line {
+            p1: (location.center() + Vec2::new(-0.5, -0.5)).as_debug(),
+            p2: (location.center() + Vec2::new(0.5, 0.5)).as_debug(),
+            width: 0.05,
+            color: color.clone(),
+        });
+        self.base.draw(CustomData::Line {
+            p1: (location.center() + Vec2::new(0.5, -0.5)).as_debug(),
+            p2: (location.center() + Vec2::new(-0.5, 0.5)).as_debug(),
+            width: 0.05,
+            color,
         });
     }
 }
