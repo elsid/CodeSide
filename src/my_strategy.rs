@@ -205,11 +205,16 @@ pub mod my_strategy_jump;
 #[path = "my_strategy_check_simulator.rs"]
 pub mod my_strategy_check_simulator;
 
+#[cfg(feature = "test")]
+#[path = "my_strategy_test.rs"]
+pub mod my_strategy_test;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
     not(feature = "dump_properties_json"),
     not(feature = "jump"),
+    not(feature = "test"),
 ))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
@@ -229,12 +234,16 @@ pub use self::my_strategy_jump::MyStrategyImpl;
 #[cfg(feature = "check_simulator")]
 pub use self::my_strategy_check_simulator::MyStrategyImpl;
 
+#[cfg(feature = "test")]
+pub use self::my_strategy_test::MyStrategyImpl;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
     not(feature = "dump_properties_json"),
     not(feature = "jump"),
     not(feature = "check_simulator"),
+    not(feature = "test"),
 ))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
@@ -283,6 +292,7 @@ impl MyStrategy {
                     not(feature = "dump_opponent"),
                     not(feature = "dump_properties_json"),
                     not(feature = "jump"),
+                    not(feature = "test"),
                 ),
                 feature = "check_simulator",
             ))]
@@ -294,6 +304,7 @@ impl MyStrategy {
                 feature = "dump_opponent",
                 feature = "dump_properties_json",
                 feature = "jump",
+                feature = "test",
             ))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new());
