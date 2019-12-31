@@ -257,7 +257,7 @@ impl Drop for MyStrategyImpl {
     fn drop(&mut self) {
         #[cfg(not(feature = "disable_output"))]
         eprintln!(
-            "{}",
+            "result {}",
             self.world.current_tick()
         );
     }

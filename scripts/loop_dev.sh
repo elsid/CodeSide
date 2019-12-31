@@ -22,7 +22,7 @@ cp target/release/aicup2019 ${BIN}
     try=0
     while [[ ${try} -lt 10 ]]; do
         echo "date $(date) ${number}"
-        env CONFIG=${CONFIG} ${BIN} 127.0.0.1 ${PORT} && {
+        env CONFIG=${CONFIG} /usr/bin/time -v ${BIN} 127.0.0.1 ${PORT} && {
             try=1
         } || {
             try=$(( try + 1 ))
