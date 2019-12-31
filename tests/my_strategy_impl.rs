@@ -65,7 +65,7 @@ fn test_my_strategy_impl_get_action_with_assault_rifle() {
         jump: true,
         jump_down: false,
         aim: model::Vec2F64 {
-            x: -35.0,
+            x: -1.0,
             y: 0.0
         },
         shoot: false,
@@ -90,7 +90,7 @@ fn test_my_strategy_impl_get_action_with_assault_rifle_nearby_opponent() {
         jump: false,
         jump_down: true,
         aim: model::Vec2F64 {
-            x: -2.0,
+            x: -1.0,
             y: 0.0
         },
         shoot: true,
