@@ -103,20 +103,20 @@ impl MyStrategyImpl {
 
             self.update_roles();
 
-            #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
-            for unit in self.world.units().iter() {
-                let role = &self.roles.iter().find(|(id, _)| *id == unit.id).unwrap().1;
-                render_unit(unit, role, debug);
-                if unit.id == current_unit.id {
-                    render_backtrack(self.world.get_backtrack(unit.id), self.world.level(), debug);
-                }
-            }
-
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
             for &(id, v) in self.optimal_locations.iter() {
                 if let Some(location) = v {
                     render_optimal_location(location, self.world.get_unit(id), debug);
                 }
+            }
+
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
+            render_backtrack(self.world.get_backtrack(current_unit.id), self.world.level(), debug);
+
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_unit"))]
+            for unit in self.world.units().iter() {
+                let role = &self.roles.iter().find(|(id, _)| *id == unit.id).unwrap().1;
+                render_unit(unit, role, debug);
             }
         }
 
