@@ -15,6 +15,7 @@ use crate::my_strategy::{
     Debug,
     IdGenerator,
     Identifiable,
+    Rng,
     Search,
     Simulator,
     UnitActionWrapper,
@@ -166,6 +167,8 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
         result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
         result.push(Transition::jump_down(self.transition_id_generator.next()));
+
+        self.rng.shuffle(&mut result[..]);
 
         result
     }
