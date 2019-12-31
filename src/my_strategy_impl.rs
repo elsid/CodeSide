@@ -20,6 +20,7 @@ use crate::my_strategy::{
     Positionable,
     Role,
     SeedableRng,
+    Target,
     Vec2,
     World,
     XorShiftRng,
@@ -48,7 +49,7 @@ pub struct MyStrategyImpl {
     roles: Vec<(i32, Role)>,
     optimal_locations: Vec<(i32, Option<Location>)>,
     optimal_destinations: Vec<(i32, Vec2)>,
-    optimal_targets: Vec<(i32, Option<Vec2>)>,
+    optimal_targets: Vec<(i32, Option<Target>)>,
     optimal_plans: Vec<(i32, Plan)>,
     optimal_actions: Vec<(i32, UnitAction)>,
     last_tick: i32,
@@ -241,7 +242,7 @@ impl MyStrategyImpl {
                 match &self.roles[i].1 {
                     Role::Shooter => {
                         let plan = &self.optimal_plans[i].1;
-                        let target = self.optimal_targets[i].1;
+                        let target = &self.optimal_targets[i].1;
                         self.optimal_actions[i].1 = get_shooter_action(unit, plan, target, &self.world, debug);
                     },
                     Role::Miner { plant_mines } => {
