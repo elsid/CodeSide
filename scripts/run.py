@@ -54,6 +54,7 @@ def run_game(number, session_path, opponent_type, game_type, player_port, other_
     os.makedirs(game_path, exist_ok=False)
     config_path = os.path.join(game_path, 'config.json')
     result_path = os.path.join(game_path, 'result.json')
+    replay_path = os.path.join(game_path, 'replay.log')
     swap = number % 2 == 1
     config = generate_config(
         config_template=config_template,
@@ -70,16 +71,18 @@ def run_game(number, session_path, opponent_type, game_type, player_port, other_
         aicup_bin=aicup_bin,
         config_path=config_path,
         result_path=result_path,
+        replay_path=replay_path,
         player_names=player_names,
     )
 
 
-def run_aicup(aicup_bin, config_path, result_path, player_names):
+def run_aicup(aicup_bin, config_path, result_path, replay_path, player_names):
     subprocess.run([
         aicup_bin,
         '--batch-mode',
         '--config', config_path,
         '--save-results', result_path,
+        '--save-replay', replay_path,
         '--player-names', *[str(v) for v in player_names],
     ])
 
