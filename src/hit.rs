@@ -41,6 +41,14 @@ impl Target {
     pub fn from_unit(unit: &Unit) -> Self {
         Self { id: unit.id, rect: unit.rect() }
     }
+
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+
+    pub fn rect(&self) -> &Rect {
+        &self.rect
+    }
 }
 
 #[inline(never)]
