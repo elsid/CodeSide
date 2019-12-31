@@ -30,7 +30,7 @@ def check_game(game):
     scores = frozenset(v['score'] for v in results.values())
     min_score = min(scores)
     if len(scores) != 1 and 'Tcp_310' in results and results['Tcp_310']['score'] == min_score:
-        print('loss', seed)
+        print('loss', seed, results['Tcp_310']['position'])
     for k, v in results.items():
         if v['crashed']:
             print('crashed', k, seed)
