@@ -35,7 +35,18 @@ pub fn is_allowed_to_shoot(unit_id: i32, source: Vec2, spread: f64, opponent: &U
     get_shoot_score(unit_id, source, spread, opponent, weapon, world, number_of_directions, debug) > 0
 }
 
+pub fn is_allowed_to_shoot_with_direction(unit_id: i32, source: Vec2, direction: Vec2, spread: f64, opponent: &Unit,
+        weapon: &Weapon, world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> bool {
+    get_shoot_score_with_direction(unit_id, source, direction, spread, opponent, weapon, world, number_of_directions, debug) > 0
+}
+
 pub fn get_shoot_score(unit_id: i32, source: Vec2, spread: f64, opponent: &Unit,
+        weapon: &Weapon, world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> i32 {
+    let direction = (opponent.center() - source).normalized();
+    get_shoot_score_with_direction(unit_id, source, direction, spread, opponent, weapon, world, number_of_directions, debug)
+}
+
+pub fn get_shoot_score_with_direction(unit_id: i32, source: Vec2, direction: Vec2, spread: f64, opponent: &Unit,
         weapon: &Weapon, world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> i32 {
     let hit_probability_by_spread = get_hit_probability_by_spread(source, &opponent.rect(), spread, weapon.params.bullet.size);
 
@@ -43,7 +54,6 @@ pub fn get_shoot_score(unit_id: i32, source: Vec2, spread: f64, opponent: &Unit,
         return 0;
     }
 
-    let direction = (opponent.center() - source).normalized();
     let shoot_result = simulate_shoot(unit_id, source, direction, opponent.id, opponent.position(), spread, &weapon.typ,
         &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions, debug);
     let max_damage = weapon.params.bullet.damage + weapon.params.explosion.as_ref().map(|v| v.damage).unwrap_or(0);

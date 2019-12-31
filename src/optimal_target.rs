@@ -49,7 +49,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
 
         let target_by_score = world.units().iter()
             .filter(|unit| world.is_opponent_unit(unit))
-            .map(|unit| (unit.id, get_target_score(current_unit.id, current_unit.center(), &unit, weapon, &world, debug)))
+            .map(|unit| (unit.id, get_target_score(current_unit.id, current_unit.center(), &unit, weapon, &world)))
             .max_by_key(|(_, score)| *score);
 
         if let Some((unit_id, score)) = target_by_score {
@@ -78,7 +78,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
     }
 }
 
-fn get_target_score(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, debug: &mut Debug) -> i32 {
+fn get_target_score(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> i32 {
     let spread = if let Some(last_angle) = weapon.last_angle {
         let current_direction = Vec2::i().rotated(last_angle);
         let required_direction = opponent.center() - current_unit_center;
@@ -91,7 +91,7 @@ fn get_target_score(current_unit_id: i32, current_unit_center: Vec2, opponent: &
     };
 
     get_shoot_score(current_unit_id, current_unit_center, spread, opponent, weapon,
-        world, world.config().optimal_action_number_of_directions, &mut Some(debug))
+        world, world.config().optimal_action_number_of_directions, &mut None)
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
