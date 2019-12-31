@@ -3,16 +3,22 @@ use model::{
     Unit,
     UnitAction,
     Vec2F64,
+    Weapon,
 };
 
 use crate::my_strategy::{
+    Clamp1,
     Debug,
     Plan,
     Positionable,
+    Rect,
     Rectangular,
+    Target,
     Vec2,
     World,
+    get_hit_probability_by_spread,
     get_weapon_score,
+    minimize1d,
 };
 
 pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
@@ -29,10 +35,32 @@ pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
 }
 
 #[inline(never)]
-pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: Option<Vec2>, world: &World,
+pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: &Option<Target>, world: &World,
         debug: &mut Debug) -> UnitAction {
-    let (shoot, aim) = if let Some(position) = target {
-        (true, position - current_unit.center())
+    let (shoot, aim) = if let (Some(target), Some(weapon)) = (target, current_unit.weapon.as_ref()) {
+        if weapon.params.explosion.is_some() {
+            let required_direction = target.rect().center() - current_unit.center();
+            let tick_time = world.tick_time_interval();
+            let aim_direction = if let Some(last_angle) = weapon.last_angle {
+                let current_direction = Vec2::i().rotated(last_angle);
+                let required_rotation = required_direction.rotation(current_direction);
+                let max_rotation = minimize1d(1e-3, required_rotation, 10,
+                    |v| -get_hit_rate(v, required_rotation, current_unit.center(), target.rect(), weapon, tick_time)
+                );
+
+                limit_rotation_to(required_direction, current_direction, max_rotation)
+            } else {
+                required_direction
+            };
+
+            if aim_direction.rotation(required_direction) < 1e-3 {
+                (true, aim_direction)
+            } else {
+                (false, aim_direction)
+            }
+        } else {
+            (true, target.rect().center() - current_unit.center())
+        }
     } else {
         (false, Vec2::zero())
     };
@@ -80,4 +108,37 @@ pub const fn default_action() -> UnitAction {
         swap_weapon: false,
         plant_mine: false,
     }
+}
+
+pub fn limit_rotation_to(required_direction: Vec2, current_direction: Vec2, max_rotation: f64) -> Vec2 {
+    let rotation = min_abs(sub_angle(required_direction.atan(), current_direction.atan()), max_rotation);
+    current_direction.rotated(rotation)
+}
+
+fn sub_angle(lhs: f64, rhs: f64) -> f64 {
+    let sub = lhs - rhs;
+    if sub >= std::f64::consts::PI {
+        sub - 2.0 * std::f64::consts::PI
+    } else if sub <= -std::f64::consts::PI {
+        sub + 2.0 * std::f64::consts::PI
+    } else {
+        sub
+    }
+}
+
+fn min_abs(value: f64, min_abs: f64) -> f64 {
+    value.abs().min(min_abs).copysign(value)
+}
+
+fn get_hit_rate(rotation: f64, required_rotation: f64, source: Vec2, target: &Rect, weapon: &Weapon, tick_time_interval: f64) -> f64 {
+    let aim_time = required_rotation / rotation;
+    let next_shoot_time = weapon.fire_timer.unwrap_or(0.0).min(tick_time_interval);
+    let time = aim_time.max(next_shoot_time);
+    let spread = (
+        weapon.spread
+        + aim_time.max(tick_time_interval) * (rotation - weapon.params.aim_speed)
+        - weapon.params.aim_speed * (time - aim_time).max(0.0)
+    ).clamp1(weapon.params.min_spread, weapon.params.max_spread);
+
+    get_hit_probability_by_spread(source, target, spread, weapon.params.bullet.size) / (time + time * time / 3.0)
 }

@@ -29,6 +29,12 @@ pub mod common;
 #[allow(unused_imports)]
 pub use common::*;
 
+#[path = "optimization.rs"]
+pub mod optimization;
+
+#[allow(unused_imports)]
+pub use optimization::*;
+
 #[path = "debug.rs"]
 pub mod debug;
 
