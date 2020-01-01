@@ -17,7 +17,6 @@ use crate::my_strategy::{
     Identifiable,
     Search,
     Simulator,
-    UnitActionWrapper,
     UnitExt,
     Vec2,
     Visitor,
@@ -158,14 +157,20 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             return Vec::new();
         }
 
-        let mut result = Vec::with_capacity(6);
+        let transitions = [
+            TransitionKind::Jump,
+            TransitionKind::JumpLeft,
+            TransitionKind::JumpRight,
+            TransitionKind::Left,
+            TransitionKind::Right,
+            TransitionKind::JumpDown,
+        ];
 
-        result.push(Transition::jump(self.transition_id_generator.next()));
-        result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
-        result.push(Transition::jump_right(self.transition_id_generator.next(), state.properties()));
-        result.push(Transition::left(self.transition_id_generator.next(), state.properties()));
-        result.push(Transition::right(self.transition_id_generator.next(), state.properties()));
-        result.push(Transition::jump_down(self.transition_id_generator.next()));
+        let mut result = Vec::with_capacity(transitions.len());
+
+        for kind in &transitions {
+            result.push(Transition { id: self.transition_id_generator.next(), kind: *kind });
+        }
 
         result
     }
@@ -173,9 +178,10 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
     fn apply(&mut self, iteration: usize, state: &State<'c, 's>, transition: &Transition) -> State<'c, 's> {
         let mut next = state.clone();
         let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
+        next.prev_id = next.id;
         next.id = self.state_id_generator.next();
         next.depth += 1;
-        *next.planner.simulator.unit_mut().action_mut() = transition.action.clone();
+        *next.planner.simulator.unit_mut().action_mut() = transition.get_action(state.properties());
         next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut None);
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_plan"))]
@@ -204,6 +210,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
 #[derive(Clone)]
 pub struct State<'c, 's> {
     id: i32,
+    prev_id: i32,
     score: i32,
     planner: Planner<'c, 's>,
     depth: usize,
@@ -213,6 +220,7 @@ impl<'c, 's> State<'c, 's> {
     pub fn initial(id: i32, planner: Planner<'c, 's>) -> Self {
         Self {
             id,
+            prev_id: 0,
             score: 0,
             planner,
             depth: 0,
@@ -254,19 +262,16 @@ impl<'c, 's> Identifiable for State<'c, 's> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Transition {
     pub id: i32,
     pub kind: TransitionKind,
-    pub action: UnitAction,
 }
 
 impl Transition {
-    pub fn left(id: i32, properties: &Properties) -> Self {
-        Self {
-            id,
-            kind: TransitionKind::Left,
-            action: UnitAction {
+    pub fn get_action(&self, properties: &Properties) -> UnitAction {
+        match &self.kind {
+            TransitionKind::Left => UnitAction {
                 velocity: -properties.unit_max_horizontal_speed,
                 jump: false,
                 jump_down: false,
@@ -278,15 +283,8 @@ impl Transition {
                 reload: false,
                 swap_weapon: false,
                 plant_mine: false,
-            }
-        }
-    }
-
-    pub fn right(id: i32, properties: &Properties) -> Self {
-        Self {
-            id,
-            kind: TransitionKind::Right,
-            action: UnitAction {
+            },
+            TransitionKind::Right => UnitAction {
                 velocity: properties.unit_max_horizontal_speed,
                 jump: false,
                 jump_down: false,
@@ -298,55 +296,8 @@ impl Transition {
                 reload: false,
                 swap_weapon: false,
                 plant_mine: false,
-            }
-        }
-    }
-
-    pub fn jump_left(id: i32, properties: &Properties) -> Self {
-        Self {
-            id,
-            kind: TransitionKind::JumpLeft,
-            action: UnitAction {
-                velocity: -properties.unit_max_horizontal_speed,
-                jump: true,
-                jump_down: false,
-                aim: Vec2F64 {
-                    x: 0.0,
-                    y: 0.0
-                },
-                shoot: false,
-                reload: false,
-                swap_weapon: false,
-                plant_mine: false,
-            }
-        }
-    }
-
-    pub fn jump_right(id: i32, properties: &Properties) -> Self {
-        Self {
-            id,
-            kind: TransitionKind::JumpRight,
-            action: UnitAction {
-                velocity: properties.unit_max_horizontal_speed,
-                jump: true,
-                jump_down: false,
-                aim: Vec2F64 {
-                    x: 0.0,
-                    y: 0.0
-                },
-                shoot: false,
-                reload: false,
-                swap_weapon: false,
-                plant_mine: false,
-            }
-        }
-    }
-
-    pub fn jump(id: i32) -> Self {
-        Self {
-            id,
-            kind: TransitionKind::Jump,
-            action: UnitAction {
+            },
+            TransitionKind::Jump => UnitAction {
                 velocity: 0.0,
                 jump: true,
                 jump_down: false,
@@ -358,15 +309,34 @@ impl Transition {
                 reload: false,
                 swap_weapon: false,
                 plant_mine: false,
-            }
-        }
-    }
-
-    pub fn jump_down(id: i32) -> Self {
-        Self {
-            id,
-            kind: TransitionKind::JumpDown,
-            action: UnitAction {
+            },
+            TransitionKind::JumpLeft => UnitAction {
+                velocity: -properties.unit_max_horizontal_speed,
+                jump: true,
+                jump_down: false,
+                aim: Vec2F64 {
+                    x: 0.0,
+                    y: 0.0
+                },
+                shoot: false,
+                reload: false,
+                swap_weapon: false,
+                plant_mine: false,
+            },
+            TransitionKind::JumpRight => UnitAction {
+                velocity: properties.unit_max_horizontal_speed,
+                jump: true,
+                jump_down: false,
+                aim: Vec2F64 {
+                    x: 0.0,
+                    y: 0.0
+                },
+                shoot: false,
+                reload: false,
+                swap_weapon: false,
+                plant_mine: false,
+            },
+            TransitionKind::JumpDown => UnitAction {
                 velocity: 0.0,
                 jump: false,
                 jump_down: true,
@@ -378,26 +348,17 @@ impl Transition {
                 reload: false,
                 swap_weapon: false,
                 plant_mine: false,
-            }
+            },
         }
     }
 }
 
-impl PartialEq for Transition {
-    fn eq(&self, other: &Self) -> bool {
-        UnitActionWrapper(&self.action).eq(&UnitActionWrapper(&other.action))
-    }
-}
-
-impl Eq for Transition {}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(usize)]
 pub enum TransitionKind {
-    Left = 1,
-    Right = 2,
-    Jump = 3,
-    JumpLeft = 4,
-    JumpRight = 5,
-    JumpDown = 6,
+    Left,
+    Right,
+    Jump,
+    JumpLeft,
+    JumpRight,
+    JumpDown,
 }

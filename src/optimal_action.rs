@@ -43,7 +43,7 @@ pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: Option<Vec2>
     let mut action = if plan.transitions.is_empty() {
         default_action()
     } else {
-        plan.transitions[0].action.clone()
+        plan.transitions[0].get_action(world.properties())
     };
 
     action.shoot = shoot;

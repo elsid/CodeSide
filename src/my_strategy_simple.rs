@@ -74,7 +74,7 @@ impl MyStrategyImpl {
             })
             .min_by_key(|center| as_score(center.distance(current_unit.center())));
         let mut action = if let Some(transition) = plan.transitions.first() {
-            transition.action.clone()
+            transition.get_action(&game.properties)
         } else {
             default_action()
         };
