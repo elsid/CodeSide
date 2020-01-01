@@ -17,6 +17,7 @@ use aicup2019::{
         EXAMPLE_MY_UNIT_ID,
     },
     my_strategy::{
+        Level,
         Rect,
         UnitExt,
         Vec2,
@@ -186,4 +187,10 @@ pub fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {
         weapon: None,
     };
     UnitExt::new(base, false, false, 0)
+}
+
+pub fn with_level(world: World, level: Level) -> World {
+    let mut game = world.game().clone();
+    game.level = level.as_model();
+    World::new(world.config().clone(), world.player_id(), game)
 }

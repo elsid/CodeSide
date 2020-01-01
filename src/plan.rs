@@ -123,12 +123,23 @@ impl<'c, 's> Planner<'c, 's> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UnitState {
+    transition: TransitionKind,
+    x: i32,
+    y: i32,
+    jump_ticks_left: i32,
+    health: i32,
+    tick: i32,
+}
+
 pub struct VisitorImpl<'r, 'd1, 'd2> {
     current_tick: i32,
     rng: &'r mut XorShiftRng,
     debug: &'r mut Debug<'d1, 'd2>,
     state_id_generator: IdGenerator,
     transition_id_generator: IdGenerator,
+    applied: std::collections::BTreeSet<UnitState>,
 }
 
 impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
@@ -139,6 +150,7 @@ impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
             debug,
             state_id_generator: IdGenerator::new(),
             transition_id_generator: IdGenerator::new(),
+            applied: std::collections::BTreeSet::new(),
         }
     }
 
@@ -168,8 +180,18 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
 
         let mut result = Vec::with_capacity(transitions.len());
 
+        let unit = state.planner.simulator.unit();
+        let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
+        let x = (unit.base().position.x * 1000.0).round() as i32;
+        let y = (unit.base().position.y * 1000.0).round() as i32;
+        let jump_ticks_left = (unit.base().jump_state.max_time / time_interval).ceil() as i32;
+        let health = unit.base().health;
+        let tick = state.planner.simulator.current_tick();
+
         for kind in &transitions {
-            result.push(Transition { id: self.transition_id_generator.next(), kind: *kind });
+            if !self.applied.contains(&UnitState { transition: *kind, x, y, jump_ticks_left, health, tick }) {
+                result.push(Transition { id: self.transition_id_generator.next(), kind: *kind });
+            }
         }
 
         result
@@ -184,6 +206,20 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         *next.planner.simulator.unit_mut().action_mut() = transition.get_action(state.properties());
         next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut None);
 
+        let unit = state.planner.simulator.unit();
+        let unit_state = UnitState {
+            transition: transition.kind,
+            x: (unit.base().position.x * 1000.0).round() as i32,
+            y: (unit.base().position.y * 1000.0).round() as i32,
+            jump_ticks_left: (unit.base().jump_state.max_time / time_interval).ceil() as i32,
+            health: unit.base().health,
+            tick: state.planner.simulator.current_tick(),
+        };
+
+        log!(self.current_tick, "[{}][{} -> {}] transition_id={} {:?}", next.depth, state.id, next.id, transition.id, unit_state);
+
+        self.applied.insert(unit_state);
+
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_plan"))]
         self.debug.draw(CustomData::Line {
             p1: state.unit().position().as_debug(),
@@ -191,9 +227,6 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             width: 0.1,
             color: ColorF32 { r: 0.25, g: 0.25, b: 0.75, a: 0.25 },
         });
-
-        log!(self.current_tick, "transition_id={} kind={:?} prev={} next={}", transition.id, transition.kind, state.id, next.id);
-        log!(self.current_tick, "state={:?}", next);
 
         next
     }
@@ -353,7 +386,7 @@ impl Transition {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TransitionKind {
     Left,
     Right,
