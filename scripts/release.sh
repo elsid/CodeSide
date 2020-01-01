@@ -42,11 +42,13 @@ cp src/vec2i.rs ${DIR}/src
 cp src/walk_grid.rs ${DIR}/src
 cp src/world.rs ${DIR}/src
 
-cp ${SRC}/raic/clients/rust/Cargo.toml ${DIR}/
-cp -r ${SRC}/raic/clients/rust/src/main.rs ${DIR}/src/
-cp -r ${SRC}/raic/clients/rust/model ${DIR}/
+git clone ${SRC}/raic ${DIR}/raic
+cd ${DIR}/raic
+git checkout master
 
-rm -rf ${DIR}/model/target
+cp ${DIR}/raic/clients/rust/Cargo.toml ${DIR}/
+cp ${DIR}/raic/clients/rust/src/main.rs ${DIR}/src/
+cp -r ${DIR}/raic/clients/rust/model ${DIR}/
 
 cd ${DIR}/
 
