@@ -7,6 +7,7 @@ use aicup2019::{
         Level,
         Location,
         dump_level,
+        parse_level,
     }
 };
 
@@ -76,4 +77,21 @@ fn test_get_tile_location() {
     assert_eq!(Level::from_model(&example_level()).get_tile_location(29), Location::new(0, 29));
     assert_eq!(Level::from_model(&example_level()).get_tile_location(1199), Location::new(39, 29));
     assert_eq!(Level::from_model(&example_level()).get_tile_location(310), Location::new(10, 10));
+}
+
+#[test]
+fn test_parse_level() {
+    assert_eq!(
+        parse_level("\
+            ####\n\
+            T.^H\n\
+            ####\
+        "),
+        Level::new(4, 3, vec![
+            Tile::Wall, Tile::JumpPad, Tile::Wall,
+            Tile::Wall, Tile::Empty, Tile::Wall,
+            Tile::Wall, Tile::Platform, Tile::Wall,
+            Tile::Wall, Tile::Ladder, Tile::Wall,
+        ])
+    );
 }

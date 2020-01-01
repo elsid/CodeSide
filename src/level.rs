@@ -5,7 +5,7 @@ use crate::my_strategy::{
     Location,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Level {
     size_x: usize,
     size_y: usize,
@@ -13,6 +13,10 @@ pub struct Level {
 }
 
 impl Level {
+    pub fn new(size_x: usize, size_y: usize, tiles: Vec<Tile>) -> Self {
+        Self { size_x, size_y, tiles }
+    }
+
     pub fn from_model(level: &model::Level) -> Self {
         let size_x = level.tiles.len();
         let size_y = level.tiles[0].len();
@@ -88,4 +92,28 @@ pub fn dump_level(level: &Level) -> String {
         }
     }
     String::from_utf8(buffer).unwrap()
+}
+
+pub fn parse_level(text: &str) -> Level {
+    let size_x = text.find('\n').unwrap();
+    let size_y = text.lines().count();
+    let mut tiles = std::iter::repeat(Tile::Wall).take(size_x * size_y).collect::<Vec<_>>();
+    let mut x = 0;
+    let mut y = size_y - 1;
+    for line in text.lines() {
+        for symbol in line.chars() {
+            tiles[y + x * size_y] = match symbol {
+                '.' => Tile::Empty,
+                '#' => Tile::Wall,
+                'H' => Tile::Ladder,
+                'T' => Tile::JumpPad,
+                '^' => Tile::Platform,
+                _ => Tile::Empty,
+            };
+            x += 1
+        }
+        x = 0;
+        y -= 1;
+    }
+    Level::new(size_x, size_y, tiles)
 }
