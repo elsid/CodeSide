@@ -20,6 +20,7 @@ use crate::my_strategy::{
     as_score,
     default_action,
     get_nearest_hit,
+    get_optimal_plan,
     is_health_pack_item,
     is_weapon_item,
 };
@@ -55,7 +56,7 @@ impl MyStrategyImpl {
             self.world.update(game);
         }
         let destination = self.get_destination(current_unit);
-        let plan = self.get_plan(current_unit.id, destination, debug);
+        let plan = get_optimal_plan(current_unit, destination, &self.world, &mut self.rng, debug);
         let nearest_opponent_unit_center = self.world.units().iter()
             .filter_map(|v| {
                 if self.world.is_opponent_unit(v) {
@@ -116,12 +117,6 @@ impl MyStrategyImpl {
         }
 
         current_unit.position()
-    }
-
-    fn get_plan(&mut self, current_unit_id: i32, destination: Vec2, debug: &mut Debug) -> Plan {
-        let simulator = Simulator::new(&self.world, current_unit_id);
-        let planner = Planner::new(destination, self.world.config(), simulator, self.world.max_distance(), self.world.max_score());
-        planner.make(self.world.current_tick(), &mut self.rng, debug)
     }
 }
 
