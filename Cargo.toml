@@ -38,6 +38,7 @@ simulator_pickup_mine = []
 max_tick = []
 spectator = []
 test = []
+simple = []
 
 [[bench]]
 name = "simulator"
