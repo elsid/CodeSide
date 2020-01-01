@@ -35,7 +35,7 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(f64, Location)> {
+pub fn get_optimal_location(unit: &Unit, dodge: bool, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(f64, Location)> {
     let mut optimal: Option<(f64, Location)> = None;
 
     #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
@@ -53,7 +53,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 continue;
             }
             if let Some(path_info) = world.get_path_info(unit_index, location) {
-                let candidate_score = get_location_score(location, unit, world, &path_info);
+                let candidate_score = get_location_score(location, unit, dodge, world, &path_info);
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
@@ -85,10 +85,10 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
         {
             if let Some((score, location)) = optimal {
                 let path_info = world.get_path_info(unit_index, location).unwrap();
-                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
+                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, dodge, world, &path_info)));
                 if let Some(v) = optimal_locations.iter().find(|(id, _)| *id == unit.id).unwrap().1 {
                     let path_info = world.get_path_info(unit_index, v).unwrap();
-                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, world, &path_info)));
+                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, dodge, world, &path_info)));
                 }
             }
         }
@@ -125,11 +125,11 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
         .is_some()
 }
 
-pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
-    get_location_score_components(location, current_unit, world, path_info).iter().sum()
+pub fn get_location_score(location: Location, current_unit: &Unit, dodge: bool, world: &World, path_info: &TilePathInfo) -> f64 {
+    get_location_score_components(location, current_unit, dodge, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, dodge: bool, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -192,14 +192,18 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         None
     };
-    let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
-        if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer)
-                && !will_unit_shoot_soon(unit, world.config().optimal_location_min_fire_timer) {
-            let direction = (unit.center() - current_unit_center).normalized();
-            let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
-                world.config().optimal_location_number_of_directions);
-            (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
+    let hit_nearest_opponent_score = if !dodge {
+        if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
+            if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer)
+                    && !will_unit_shoot_soon(unit, world.config().optimal_location_min_fire_timer) {
+                let direction = (unit.center() - current_unit_center).normalized();
+                let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
+                    &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
+                    world.config().optimal_location_number_of_directions);
+                (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
+            } else {
+                0.0
+            }
         } else {
             0.0
         }

@@ -34,6 +34,7 @@ pub struct Config {
     pub max_teammates_hits_to_shoot: usize,
     pub min_target_hits_to_shoot: usize,
     pub optimal_action_number_of_directions: usize,
+    pub role_score_advantage_to_dodge: i32,
 }
 
 impl Config {
@@ -71,6 +72,7 @@ impl Config {
             max_teammates_hits_to_shoot: 1,
             min_target_hits_to_shoot: 1,
             optimal_action_number_of_directions: 11,
+            role_score_advantage_to_dodge: 50,
         }
     }
 
