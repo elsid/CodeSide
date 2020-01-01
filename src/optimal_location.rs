@@ -161,7 +161,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
-                if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+                if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer) {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
                         &target, get_mean_spread(weapon), weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
@@ -193,8 +193,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         None
     };
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
-        if (weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer)
-                && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
+        if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer)
+                && !will_unit_shoot_soon(unit, world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
             let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
                 &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
@@ -227,7 +227,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         0.0
     };
     let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (current_unit.weapon.as_ref(), nearest_opponent) {
-        if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+        if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer) {
             let opponent_rect = opponent.rect();
             world.units().iter()
                 .filter(|v| {
@@ -307,4 +307,14 @@ pub fn make_location_rect(location: Location) -> Rect {
 
 fn get_mean_spread(weapon: &Weapon) -> f64 {
     (weapon.params.max_spread + weapon.params.min_spread) / 2.0
+}
+
+fn will_unit_shoot_soon(unit: &Unit, min_fire_timer: f64) -> bool {
+    unit.weapon.as_ref()
+        .map(|v| will_weapon_shoot_soon(v, min_fire_timer))
+        .unwrap_or(false)
+}
+
+fn will_weapon_shoot_soon(weapon: &Weapon, min_fire_timer: f64) -> bool {
+    weapon.fire_timer.map(|v| v <= min_fire_timer).unwrap_or(true)
 }
