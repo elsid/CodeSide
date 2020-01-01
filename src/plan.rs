@@ -130,6 +130,7 @@ pub struct VisitorImpl<'r, 'd1, 'd2> {
     debug: &'r mut Debug<'d1, 'd2>,
     state_id_generator: IdGenerator,
     transition_id_generator: IdGenerator,
+    visited: std::collections::BTreeSet<(bool, bool, i32, i32, i32)>,
 }
 
 impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
@@ -140,6 +141,7 @@ impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
             debug,
             state_id_generator: IdGenerator::new(),
             transition_id_generator: IdGenerator::new(),
+            visited: std::collections::BTreeSet::new(),
         }
     }
 
@@ -155,6 +157,19 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
 
     fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
         if state.depth >= state.planner.config.plan_max_state_depth {
+            return Vec::new();
+        }
+
+        let unit = state.planner.simulator.unit();
+        let approximate_position = (
+            unit.action().jump,
+            unit.action().jump_down,
+            (unit.position().x() * 100.0).round() as i32,
+            (unit.position().y() * 100.0).round() as i32,
+            unit.action().velocity as i32,
+        );
+
+        if !self.visited.insert(approximate_position) {
             return Vec::new();
         }
 
