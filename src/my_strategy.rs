@@ -209,12 +209,17 @@ pub mod my_strategy_check_simulator;
 #[path = "my_strategy_test.rs"]
 pub mod my_strategy_test;
 
+#[cfg(feature = "simple")]
+#[path = "my_strategy_simple.rs"]
+pub mod my_strategy_simple;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
     not(feature = "dump_properties_json"),
     not(feature = "jump"),
     not(feature = "test"),
+    not(feature = "simple"),
 ))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
@@ -237,6 +242,9 @@ pub use self::my_strategy_check_simulator::MyStrategyImpl;
 #[cfg(feature = "test")]
 pub use self::my_strategy_test::MyStrategyImpl;
 
+#[cfg(feature = "simple")]
+pub use self::my_strategy_simple::MyStrategyImpl;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
@@ -244,6 +252,7 @@ pub use self::my_strategy_test::MyStrategyImpl;
     not(feature = "jump"),
     not(feature = "check_simulator"),
     not(feature = "test"),
+    not(feature = "simple"),
 ))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
@@ -295,6 +304,7 @@ impl MyStrategy {
                     not(feature = "test"),
                 ),
                 feature = "check_simulator",
+                feature = "simple",
             ))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, unit.clone(), game.clone()));

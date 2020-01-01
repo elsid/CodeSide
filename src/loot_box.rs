@@ -1,4 +1,8 @@
-use model::LootBox;
+use model::{
+    Item,
+    LootBox,
+};
+
 use crate::my_strategy::{
     Positionable,
     Vec2,
@@ -7,5 +11,19 @@ use crate::my_strategy::{
 impl Positionable for LootBox {
     fn position(&self) -> Vec2 {
         Vec2::from_model(&self.position)
+    }
+}
+
+pub fn is_weapon_item(item: &Item) -> bool {
+    match item {
+        Item::Weapon { .. } => true,
+        _ => false,
+    }
+}
+
+pub fn is_health_pack_item(item: &Item) -> bool {
+    match item {
+        Item::HealthPack { .. } => true,
+        _ => false,
     }
 }
