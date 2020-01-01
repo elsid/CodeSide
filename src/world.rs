@@ -53,6 +53,7 @@ pub struct World {
     is_complex_level: bool,
     my_player_index: usize,
     opponent_player_index: usize,
+    number_of_health_packs: usize,
 }
 
 impl World {
@@ -64,6 +65,7 @@ impl World {
         let level_size_x = level.size_x();
         let level_size_y = level.size_y();
         let size = Vec2::new(level_size_x as f64, level_size_y as f64);
+        let number_of_health_packs = game.loot_boxes.iter().filter(|v| is_health_pack(v)).count();
         Self {
             player_id,
             size,
@@ -93,10 +95,11 @@ impl World {
             max_score: (
                 game.properties.team_size
                 * (game.properties.kill_score + game.properties.unit_max_health)
-                + game.loot_boxes.iter().filter(|v| is_health_pack(v)).count() as i32 * game.properties.health_pack_health
+                + number_of_health_packs as i32 * game.properties.health_pack_health
             ),
             my_player_index: game.players.iter().position(|v| v.id == player_id).unwrap(),
             opponent_player_index: game.players.iter().position(|v| v.id != player_id).unwrap(),
+            number_of_health_packs,
         }
     }
 
@@ -116,6 +119,7 @@ impl World {
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count() - 1;
         self.my_player_index = self.players().iter().position(|v| v.id == self.player_id).unwrap();
         self.opponent_player_index = (self.my_player_index + 1) % 2;
+        self.number_of_health_packs = game.loot_boxes.iter().filter(|v| is_health_pack(v)).count();
 
         if self.unit_index.len() > self.units.len() {
             self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
@@ -210,6 +214,10 @@ impl World {
 
     pub fn is_complex_level(&self) -> bool {
         self.is_complex_level
+    }
+
+    pub fn number_of_health_packs(&self) -> usize {
+        self.number_of_health_packs
     }
 
     pub fn my_player(&self) -> &Player {
