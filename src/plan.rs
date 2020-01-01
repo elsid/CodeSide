@@ -158,7 +158,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             return Vec::new();
         }
 
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(6);
 
         result.push(Transition::jump(self.transition_id_generator.next()));
         result.push(Transition::jump_left(self.transition_id_generator.next(), state.properties()));
