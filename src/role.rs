@@ -20,6 +20,7 @@ pub enum Role {
         plant_mines: usize,
     },
     Pusher,
+    Dodger,
 }
 
 pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) -> Role {
@@ -32,6 +33,11 @@ pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) 
         if plant_mines > 0 {
             return Role::Miner { plant_mines };
         }
+    }
+
+    let score_advantage = world.get_player().score - world.get_opponent().score;
+    if score_advantage >= world.properties().kill_score {
+        return Role::Dodger;
     }
 
     if *prev == Role::Pusher {
