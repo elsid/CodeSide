@@ -159,16 +159,27 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         _ => false,
     }) as i32 as f64;
     let target = Target::new(current_unit.id, current_unit_rect.clone());
+    let max_player_score = world.units().iter()
+        .filter(|unit| world.is_opponent_unit(unit))
+        .map(|unit| unit.health + world.properties().kill_score)
+        .sum::<i32>();
+    let max_opponent_score = world.units().iter()
+        .filter(|unit| world.is_teammate_unit(unit))
+        .map(|unit| unit.health + world.properties().kill_score)
+        .sum::<i32>();
     let hit_by_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
-                    let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world,
-                        world.config().optimal_location_number_of_directions);
-                    (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
+                    let number_of_directions = world.config().optimal_location_number_of_directions;
+                    let hit_damage = get_hit_damage(unit.id, unit.center(), direction,
+                        &target, get_mean_spread(weapon), weapon.params.bullet.size, weapon.params.bullet.damage,
+                        &weapon.params.explosion, world, number_of_directions);
+
+                    get_opponent_with_target_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+                        / (max_opponent_score as f64)
                 } else {
                     0.0
                 }
@@ -199,10 +210,13 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         if (weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer)
                 && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
-            let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
-                world.config().optimal_location_number_of_directions);
-            (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
+            let number_of_directions = world.config().optimal_location_number_of_directions;
+            let hit_damage = get_hit_damage(current_unit.id, current_unit_center, direction,
+                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, weapon.params.bullet.damage,
+                &weapon.params.explosion, world, number_of_directions);
+
+            get_player_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+                / (max_player_score as f64)
         } else {
             0.0
         }
@@ -240,11 +254,15 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 })
                 .map(|v| {
                     let direction = (opponent.center() - current_unit_center).normalized();
-                    get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &Target::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
+                    get_hit_damage(current_unit.id, current_unit_center, direction,
+                        &Target::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size,
+                        weapon.params.bullet.damage, &weapon.params.explosion, world,
                         world.config().optimal_location_number_of_directions)
                 })
-                .map(|v| v.teammate_units as f64 / v.total as f64)
+                .map(|v| {
+                    get_opponent_score_for_hit(&v, world.properties().kill_score, world.config().optimal_location_number_of_directions)
+                        / (max_opponent_score as f64)
+                })
                 .sum::<f64>()
         } else {
             0.0
@@ -320,5 +338,13 @@ pub fn get_opponent_score_for_hit(hit_damage: &HitDamage, kill_score: i32, numbe
     (
         hit_damage.teammate_units_damage_from_opponent
         + hit_damage.teammate_units_kills as i32 * kill_score
+    ) as f64 / number_of_directions as f64
+}
+
+pub fn get_opponent_with_target_score_for_hit(hit_damage: &HitDamage, kill_score: i32, number_of_directions: usize) -> f64 {
+    (
+        hit_damage.target_damage_from_opponent
+        + hit_damage.teammate_units_damage_from_opponent
+        + (hit_damage.target_kills + hit_damage.teammate_units_kills) as i32 * kill_score
     ) as f64 / number_of_directions as f64
 }
