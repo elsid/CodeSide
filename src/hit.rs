@@ -12,6 +12,7 @@ use crate::my_strategy::{
     WalkGrid,
     World,
     as_score,
+    make_location_rect,
     normalize_angle,
 };
 
@@ -112,13 +113,14 @@ pub enum ObjectType {
 #[inline(never)]
 pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
     let to_destination = destination - source;
-    let mut max_distance = to_destination.norm();
+    let destination_distance = to_destination.norm();
+    let mut max_distance = destination_distance;
     let direction = to_destination / max_distance;
 
-    let mut hit = if let Some(distance) = target.rect.get_intersection_with_line(source, destination) {
-        max_distance = distance;
+    let mut hit = if let Some(factor) = target.rect.get_intersection_with_line(source, destination) {
+        max_distance = factor * destination_distance;
         Some(Hit {
-            distance,
+            distance: max_distance,
             object_type: ObjectType::Unit,
             is_target: true,
             is_teammate: false,
@@ -193,12 +195,20 @@ pub fn get_distance_to_nearest_hit_wall_by_vertical(begin: Vec2, end: Vec2, leve
     let direction = (end_y - y).signum();
     while y != end_y {
         if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-            return Some((y as f64 - begin.y()).abs());
+            if (y as f64) < begin.y() {
+                return Some(begin.y() - (y + 1) as f64);
+            } else {
+                return Some(y as f64 - begin.y());
+            }
         }
         y += direction;
     }
     if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-        Some((y as f64 - begin.y()).abs())
+        if (y as f64) < begin.y() {
+            return Some(begin.y() - (y + 1) as f64);
+        } else {
+            return Some(y as f64 - begin.y());
+        }
     } else {
         None
     }
@@ -211,12 +221,20 @@ pub fn get_distance_to_nearest_hit_wall_by_horizontal(begin: Vec2, end: Vec2, le
     let direction = (end_x - x).signum();
     while x != end_x {
         if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-            return Some((x as f64 - begin.x()).abs());
+            if (x as f64) < begin.x() {
+                return Some(begin.x() - (x + 1) as f64);
+            } else {
+                return Some(x as f64 - begin.x());
+            }
         }
         x += direction;
     }
     if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-        Some((x as f64 - begin.x()).abs())
+        if (x as f64) < begin.x() {
+            return Some(begin.x() - (x + 1) as f64);
+        } else {
+            return Some(x as f64 - begin.x());
+        }
     } else {
         None
     }
@@ -235,7 +253,10 @@ pub fn wall_or_jump_pad_on_the_way(begin: Vec2, end: Vec2, level: &Level) -> boo
 pub fn get_distance_to_nearest_hit_wall_by_line(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     for position in WalkGrid::new(begin, end) {
         if level.get_tile(position.as_location()) == Tile::Wall {
-            return Some(begin.distance(position));
+            let rect = make_location_rect(position.as_location());
+            let factor = rect.get_intersection_with_line(begin, end);
+            assert!(factor.is_some(), "{:?} {:?} {:?}", rect, begin, end);
+            return Some(factor.unwrap() * begin.distance(end));
         }
     }
     None
@@ -255,8 +276,8 @@ fn get_distance_to_nearest_hit_unit_by_line(unit_id: i32, target_id: i32, source
             unit.rect().get_intersection_with_line(source, target)
                 .map(|v| (unit.id, v, world.is_teammate_unit(unit)))
         })
-        .min_by_key(|&(_, distance, _)| as_score(distance))
-        .map(|(id, distance, is_teammate)| UnitHit { id, distance, is_teammate })
+        .min_by_key(|&(_, factor, _)| as_score(factor))
+        .map(|(id, factor, is_teammate)| UnitHit { id, distance: factor * target.distance(source), is_teammate })
 }
 
 #[derive(Debug)]
@@ -271,6 +292,6 @@ fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &
             mine.rect().get_intersection_with_line(source, target)
                 .map(|v| (v, world.is_teammate_mine(mine)))
         })
-        .min_by_key(|&(distance, _)| as_score(distance))
-        .map(|(distance, is_teammate)| MineHit { distance, is_teammate })
+        .min_by_key(|&(factor, _)| as_score(factor))
+        .map(|(factor, is_teammate)| MineHit { distance: factor * target.distance(source), is_teammate })
 }
