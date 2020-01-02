@@ -16,7 +16,7 @@ pub struct Debug<'r, 'd> {
 
 impl<'r, 'd> Debug<'r, 'd> {
     pub fn new(base: &'r mut crate::Debug<'d>) -> Self {
-        Self { base, next_y: 0.0 }
+        Self { base, next_y: 32.0 }
     }
 
     pub fn with_next_y(next_y: f32, base: &'r mut crate::Debug<'d>) -> Self {
@@ -35,13 +35,13 @@ impl<'r, 'd> Debug<'r, 'd> {
     #[cfg(feature = "enable_debug")]
     pub fn log(&mut self, text: String) {
         let y = self.next_y;
-        self.next_y += 0.45;
+        self.next_y -= 0.45;
         self.base.draw(CustomData::PlacedText {
             text,
             pos: Vec2F32 { x: -2.5, y },
             alignment: TextAlignment::Left,
             size: 20.5,
-            color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
+            color: ColorF32 { a: 0.8, r: 1.0, g: 1.0, b: 1.0 },
         });
     }
 }

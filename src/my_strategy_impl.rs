@@ -93,6 +93,11 @@ impl MyStrategyImpl {
 
             self.world.update(game);
 
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+            debug.log(format!("[{}] mines={} loot_boxes={} bullets={} units={}",
+                self.world.current_tick(), self.world.mines().len(), self.world.loot_boxes().len(),
+                self.world.bullets().len(), self.world.units().len()));
+
             self.assign_roles(debug);
 
             self.set_locations(debug);
@@ -100,6 +105,28 @@ impl MyStrategyImpl {
             self.set_targets(debug);
             self.set_plans(debug);
             self.set_actions(debug);
+
+            #[cfg(feature = "enable_debug")]
+            for unit in self.world.units().iter() {
+                #[cfg(feature = "enable_debug_log")]
+                debug.log(
+                    format!(
+                        "[{}] health={} mines={} weapon: {}",
+                        unit.id, unit.health, unit.mines,
+                        unit.weapon.as_ref()
+                            .map(|v| format!(
+                                "type={:?} magazine={} last_angle={:?} fire_timer={:?}",
+                                v.typ, v.magazine, v.last_angle, v.fire_timer
+                            ))
+                            .unwrap_or(format!("None"))
+                    )
+                );
+                #[cfg(feature = "enable_debug_unit")]
+                {
+                    let role = &self.roles.iter().find(|(id, _)| *id == unit.id).unwrap().1;
+                    render_unit(unit, role, debug);
+                }
+            }
 
             self.update_roles();
 
@@ -112,25 +139,12 @@ impl MyStrategyImpl {
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
             render_backtrack(self.world.get_backtrack(current_unit.id), self.world.level(), debug);
-
-            #[cfg(all(feature = "enable_debug", feature = "enable_debug_unit"))]
-            for unit in self.world.units().iter() {
-                let role = &self.roles.iter().find(|(id, _)| *id == unit.id).unwrap().1;
-                render_unit(unit, role, debug);
-            }
-        }
-
-        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
-        {
-            if let Some(weapon) = current_unit.weapon.as_ref() {
-                debug.log(format!("[{}] weapon: last_angle={:?}", current_unit.id, weapon.last_angle));
-            }
         }
 
         let action = self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1.clone();
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
-        debug.log(format!("[{}][{}] action: {:?}", current_unit.id, game.current_tick, action));
+        debug.log(format!("[{}] action: {:?}", current_unit.id, action));
 
         #[cfg(not(feature = "spectator"))]
         return action;
@@ -279,22 +293,6 @@ fn render_unit(unit: &Unit, role: &Role, debug: &mut Debug) {
         size: 36.0,
         color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
     });
-    if let Some(weapon) = unit.weapon.as_ref() {
-        debug.draw(CustomData::PlacedText {
-            text: format!("{:?}", weapon.fire_timer),
-            pos: (unit.position() + Vec2::only_y(unit.size.y + 2.0 * 0.38)).as_debug(),
-            alignment: TextAlignment::Center,
-            size: 36.0,
-            color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
-        });
-        debug.draw(CustomData::PlacedText {
-            text: format!("{:?}", weapon.last_angle),
-            pos: (unit.position() + Vec2::only_y(unit.size.y + 3.0 * 0.38)).as_debug(),
-            alignment: TextAlignment::Center,
-            size: 36.0,
-            color: ColorF32 { a: 1.0, r: 1.0, g: 1.0, b: 1.0 },
-        });
-    }
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]

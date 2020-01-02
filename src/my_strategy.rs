@@ -289,7 +289,7 @@ impl MyStrategy {
         }
         if self.last_tick != game.current_tick {
             self.last_tick = game.current_tick;
-            self.debug_next_y = 0.0;
+            self.debug_next_y = 32.0;
         }
         if self.strategy_impl.is_none() {
             let config = get_config().adjusted(game.properties.team_size);
