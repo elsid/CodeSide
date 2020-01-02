@@ -129,7 +129,7 @@ pub fn get_location_score(location: Location, current_unit: &Unit, dodge: bool, 
     get_location_score_components(location, current_unit, dodge, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, dodge: bool, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, dodge: bool, world: &World, path_info: &TilePathInfo) -> [f64; 17] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -253,6 +253,16 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
     } else {
         0.0
     };
+    let distance_to_nearest_shooting_opponent_score = if let Some(unit) = nearest_opponent {
+        if will_unit_shoot_soon(current_unit, world.config().optimal_location_min_fire_timer)
+                && will_unit_shoot_soon(unit, world.config().optimal_location_min_fire_timer) {
+            unit.center().distance(current_unit_center) / world.max_distance()
+        } else {
+            0.0
+        }
+    } else {
+        0.0
+    };
 
     [
         distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
@@ -271,6 +281,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
         hit_teammates_score * world.config().optimal_location_hit_teammates_score_weight,
         teammate_obstacle_score * world.config().optimal_location_teammate_obstacle_score_weight,
         bullet_obstacle_score * world.config().optimal_location_bullet_obstacle_score_weight,
+        distance_to_nearest_shooting_opponent_score * world.config().optimal_location_distance_to_nearest_shooting_opponent_score_weight,
     ]
 }
 
