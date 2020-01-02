@@ -301,10 +301,10 @@ impl MyStrategy {
                     not(feature = "dump_opponent"),
                     not(feature = "dump_properties_json"),
                     not(feature = "jump"),
-                    not(feature = "test"),
                 ),
                 feature = "check_simulator",
                 feature = "simple",
+                feature = "test",
             ))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new(config, unit.clone(), game.clone()));
@@ -314,7 +314,6 @@ impl MyStrategy {
                 feature = "dump_opponent",
                 feature = "dump_properties_json",
                 feature = "jump",
-                feature = "test",
             ))]
             {
                 self.strategy_impl = Some(MyStrategyImpl::new());
