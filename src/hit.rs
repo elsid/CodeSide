@@ -61,7 +61,9 @@ pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target
 
     for i in 0 .. number_of_directions {
         let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * spread;
-        let destination = source + to_target.rotated(normalize_angle(angle));
+        let far_destination = source + to_target.rotated(normalize_angle(angle));
+        let destination = source + (far_destination - source)
+            * world.rect().get_intersection_with_line(source, far_destination).unwrap();
         let (src, dst) = if i == 0 {
             (source + right, destination + right)
         } else if i == number_of_directions - 1 {

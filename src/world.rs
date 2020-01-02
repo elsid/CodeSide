@@ -53,6 +53,7 @@ pub struct World {
     is_complex_level: bool,
     my_player_index: usize,
     opponent_player_index: usize,
+    rect: Rect,
 }
 
 impl World {
@@ -97,6 +98,7 @@ impl World {
             ),
             my_player_index: game.players.iter().position(|v| v.id == player_id).unwrap(),
             opponent_player_index: game.players.iter().position(|v| v.id != player_id).unwrap(),
+            rect: Rect::new(size / 2.0, size / 2.0),
         }
     }
 
@@ -210,6 +212,10 @@ impl World {
 
     pub fn is_complex_level(&self) -> bool {
         self.is_complex_level
+    }
+
+    pub fn rect(&self) -> &Rect {
+        &self.rect
     }
 
     pub fn my_player(&self) -> &Player {
