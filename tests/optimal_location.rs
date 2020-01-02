@@ -25,6 +25,7 @@ use aicup2019::{
         Vec2,
         get_optimal_location,
         get_location_score,
+        get_location_score_components,
     },
 };
 
@@ -245,8 +246,10 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     let path_info = world.get_path_info(unit_index, location);
     let dodge = false;
     assert!(path_info.is_some());
+    println!("{:?}", get_location_score_components(location, &unit, dodge, &world, path_info.as_ref().unwrap()));
     assert_eq!(
         get_location_score(location, &unit, dodge, &world, &path_info.unwrap()),
         0.7071246500611461
     );
+    assert!(false);
 }
