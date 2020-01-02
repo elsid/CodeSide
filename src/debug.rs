@@ -16,7 +16,7 @@ pub struct Debug<'r, 'd> {
 
 impl<'r, 'd> Debug<'r, 'd> {
     pub fn new(base: &'r mut crate::Debug<'d>) -> Self {
-        Self { base, next_y: 32.0 }
+        Self { base, next_y: 0.0 }
     }
 
     pub fn with_next_y(next_y: f32, base: &'r mut crate::Debug<'d>) -> Self {
