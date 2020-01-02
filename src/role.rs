@@ -1,4 +1,5 @@
 use model::{
+    Tile,
     Unit,
     WeaponType,
 };
@@ -8,6 +9,7 @@ use crate::my_strategy::{
     Rect,
     Rectangular,
     Vec2,
+    Vec2i,
     World,
 };
 
@@ -60,6 +62,11 @@ pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) 
 
 fn get_mines_to_plant(current_unit: &Unit, world: &World) -> usize {
     if !current_unit.on_ground || current_unit.on_ladder || current_unit.mines == 0 || current_unit.weapon.is_none() {
+        return 0;
+    }
+
+    let tile = world.get_tile(current_unit.position().as_location() + Vec2i::only_y(-1));
+    if tile != Tile::Wall && tile != Tile::Platform {
         return 0;
     }
 
