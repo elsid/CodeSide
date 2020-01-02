@@ -71,20 +71,20 @@ impl Rect {
         self.center + Vec2::new(self.half.x(), -self.half.y())
     }
 
-    pub fn has_intersection_with_line(&self, a: Vec2, b: Vec2) -> bool {
+    pub fn get_intersection_with_line(&self, a: Vec2, b: Vec2) -> Option<f64> {
         let d = b - a;
         let min = self.min();
         let max = self.max();
         let p = [-d.x(), d.x(), -d.y(), d.y()];
         let q = [a.x() - min.x(), max.x() - a.x(), a.y() - min.y(), max.y() - a.y()];
-        let mut u1 = 0.0;
-        let mut u2 = 1.0;
+        let mut u1 = -std::f64::MAX;
+        let mut u2 = std::f64::MAX;
         for i in 0 .. 4 {
             if p[i] == 0.0 {
                 if q[i] >= 0.0 {
                     continue;
                 }
-                return false;
+                return None;
             }
             let candidate = q[i] / p[i];
             if p[i] < 0.0 {
@@ -97,12 +97,10 @@ impl Rect {
                 }
             }
         }
-        u1 <= u2
-    }
-
-    pub fn get_intersection_with_line(&self, a: Vec2, b: Vec2) -> Option<f64> {
-        if self.has_intersection_with_line(a, b) {
-            Some(self.center.distance(a))
+        if u1 <= u2 && -std::f64::EPSILON <= u1 && u2 <= 1.0 + std::f64::EPSILON {
+            Some(u1)
+        } else if u1 <= u2 && -std::f64::EPSILON <= u2 && u2 <= 1.0 + std::f64::EPSILON {
+            Some(u2)
         } else {
             None
         }
