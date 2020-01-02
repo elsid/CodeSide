@@ -247,6 +247,6 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, dodge, &world, &path_info.unwrap()),
-        0.040457983394479535
+        0.7071246500611461
     );
 }

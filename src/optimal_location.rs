@@ -194,8 +194,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
     };
     let hit_nearest_opponent_score = if !dodge {
         if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
-            if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer)
-                    && !will_unit_shoot_soon(unit, world.config().optimal_location_min_fire_timer) {
+            if will_weapon_shoot_soon(weapon, world.config().optimal_location_min_fire_timer) {
                 let direction = (unit.center() - current_unit_center).normalized();
                 let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
                     &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
