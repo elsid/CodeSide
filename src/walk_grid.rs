@@ -1,35 +1,43 @@
-use crate::my_strategy::Vec2;
+use crate::my_strategy::{
+    Vec2,
+    Vec2i,
+};
 
 pub struct WalkGrid {
     ax: f64,
     ay: f64,
     nx: f64,
     ny: f64,
-    sign_x: f64,
-    sign_y: f64,
+    sign_x: isize,
+    sign_y: isize,
     avx: f64,
     avy: f64,
     to_border_x: f64,
     to_border_y: f64,
-    point: Vec2,
+    fraction_x: f64,
+    fraction_y: f64,
+    point: Vec2i,
 }
 
 impl WalkGrid {
     #[inline(always)]
     pub fn new(begin: Vec2, end: Vec2) -> Self {
-        let to = end - begin;
-        let av = to.normalized();
-        let sign_x = av.x().signum();
-        let sign_y = av.y().signum();
-        let to_border_x = if sign_x >= 0.0 {
-            (begin.x().ceil() - begin.x())
+        let fraction_x = adjust_fraction(begin.x().fract());
+        let fraction_y = adjust_fraction(begin.y().fract());
+        let point = Vec2i::new(begin.x() as isize, begin.y() as isize);
+        let to = end - make_position(point, fraction_x, fraction_y);
+        let v = to.normalized();
+        let sign_x = v.x().signum() as isize;
+        let sign_y = v.y().signum() as isize;
+        let to_border_x = if sign_x >= 0 {
+            1.0 - fraction_x
         } else {
-            (begin.x() - begin.x().floor())
+            fraction_x
         };
-        let to_border_y = if sign_y >= 0.0 {
-            (begin.y().ceil() - begin.y())
+        let to_border_y = if sign_y >= 0 {
+            1.0 - fraction_y
         } else {
-            (begin.y() - begin.y().floor())
+            fraction_y
         };
         Self {
             ax: 0.0,
@@ -38,12 +46,24 @@ impl WalkGrid {
             ny: to.y().abs(),
             sign_x,
             sign_y,
-            avx: av.x().abs(),
-            avy: av.y().abs(),
+            avx: v.x().abs(),
+            avy: v.y().abs(),
             to_border_x,
             to_border_y,
-            point: begin,
+            fraction_x,
+            fraction_y,
+            point,
         }
+    }
+}
+
+fn adjust_fraction(value: f64) -> f64 {
+    if 0.0 < value && value < 1e-9 {
+        1e-9
+    } else if 1.0 - 1e-9 < value && value < 1.0 {
+        1.0 - 1e-9
+    } else {
+        value
     }
 }
 
@@ -73,7 +93,7 @@ impl Iterator for WalkGrid {
                 self.to_border_y = 1.0;
             }
 
-            Some(point)
+            Some(make_position(point, self.fraction_x, self.fraction_y))
         } else if self.avx != 0.0 && self.avy == 0.0 && self.ax <= self.nx {
             let point = self.point;
 
@@ -81,7 +101,7 @@ impl Iterator for WalkGrid {
             self.ax += self.to_border_x;
             self.to_border_x = 1.0;
 
-            Some(point)
+            Some(make_position(point, self.fraction_x, self.fraction_y))
         } else if self.avx == 0.0 && self.avy != 0.0 && self.ay <= self.ny {
             let point = self.point;
 
@@ -89,9 +109,13 @@ impl Iterator for WalkGrid {
             self.ay += self.to_border_y;
             self.to_border_y = 1.0;
 
-            Some(point)
+            Some(make_position(point, self.fraction_x, self.fraction_y))
         } else {
             None
         }
     }
+}
+
+fn make_position(point: Vec2i, fraction_x: f64, fraction_y: f64) -> Vec2 {
+    Vec2::new(point.x() as f64 + fraction_x, point.y() as f64 + fraction_y)
 }
