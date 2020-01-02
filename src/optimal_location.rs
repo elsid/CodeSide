@@ -19,6 +19,7 @@ use crate::my_strategy::{
 
 use crate::my_strategy::{
     Debug,
+    HitProbabilities,
     Location,
     Positionable,
     Rect,
@@ -157,6 +158,14 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
         _ => false,
     }) as i32 as f64;
     let target = Target::new(current_unit.id, current_unit_rect.clone());
+    let max_player_score = world.units().iter()
+        .filter(|unit| world.is_opponent_unit(unit))
+        .map(|unit| unit.health + world.properties().kill_score)
+        .sum::<i32>();
+    let max_opponent_score = world.units().iter()
+        .filter(|unit| world.is_teammate_unit(unit))
+        .map(|unit| unit.health + world.properties().kill_score)
+        .sum::<i32>();
     let hit_by_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
@@ -164,8 +173,11 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
-                    (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
+                        &target, get_mean_spread(weapon), weapon.params.bullet.size, weapon.params.bullet.damage,
+                        &weapon.params.explosion, world, world.config().optimal_location_number_of_directions);
+
+                    get_opponent_with_target_score_for_hit(&hit_probabilities, world.properties().kill_score)
+                        / (max_opponent_score as f64 * weapon.params.fire_rate)
                 } else {
                     0.0
                 }
@@ -197,9 +209,11 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
                 && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
             let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
-                world.config().optimal_location_number_of_directions);
-            (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
+                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, weapon.params.bullet.damage,
+                &weapon.params.explosion, world, world.config().optimal_location_number_of_directions);
+
+            get_player_score_for_hit(&hit_probabilities, world.properties().kill_score)
+                / (max_player_score as f64 * weapon.params.fire_rate)
         } else {
             0.0
         }
@@ -238,10 +252,13 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, do
                 .map(|v| {
                     let direction = (opponent.center() - current_unit_center).normalized();
                     get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &Target::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
-                        world.config().optimal_location_number_of_directions)
+                        &Target::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, weapon.params.bullet.damage,
+                        &weapon.params.explosion, world, world.config().optimal_location_number_of_directions)
                 })
-                .map(|v| v.teammate_units as f64 / v.total as f64)
+                .map(|v| {
+                    get_opponent_score_for_hit(&v, world.properties().kill_score)
+                        / (max_opponent_score as f64 * weapon.params.fire_rate)
+                })
                 .sum::<f64>()
         } else {
             0.0
@@ -288,17 +305,11 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
 
     let direction = (opponent.center() - current_unit_center).normalized();
     let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        &Target::from_unit(opponent), get_mean_spread(weapon), weapon.params.bullet.size, world,
-        world.config().optimal_location_number_of_directions);
+        &Target::from_unit(opponent), get_mean_spread(weapon), weapon.params.bullet.size, weapon.params.bullet.damage,
+        &weapon.params.explosion, world, world.config().optimal_location_number_of_directions);
 
-    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
-        if min_distance < explosion.radius + 2.0 {
-            return false;
-        }
-    }
-
-    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
-    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
+    get_player_score_for_hit(&hit_probabilities, world.properties().kill_score)
+        > get_opponent_score_for_hit(&hit_probabilities, world.properties().kill_score)
 }
 
 pub fn make_location_rect(location: Location) -> Rect {
@@ -307,4 +318,19 @@ pub fn make_location_rect(location: Location) -> Rect {
 
 fn get_mean_spread(weapon: &Weapon) -> f64 {
     (weapon.params.max_spread + weapon.params.min_spread) / 2.0
+}
+
+pub fn get_player_score_for_hit(hit_probabilities: &HitProbabilities, kill_score: i32) -> f64 {
+    (hit_probabilities.target_damage + hit_probabilities.opponent_units_damage) as f64 / hit_probabilities.total as f64
+        + ((hit_probabilities.target_kills + hit_probabilities.opponent_units_kills) as i32 * kill_score) as f64 / hit_probabilities.total as f64
+}
+
+pub fn get_opponent_score_for_hit(hit_probabilities: &HitProbabilities, kill_score: i32) -> f64 {
+    (hit_probabilities.teammate_units_damage) as f64 / hit_probabilities.total as f64
+        + ((hit_probabilities.teammate_units_kills) as i32 * kill_score) as f64 / hit_probabilities.total as f64
+}
+
+fn get_opponent_with_target_score_for_hit(hit_probabilities: &HitProbabilities, kill_score: i32) -> f64 {
+    (hit_probabilities.target_damage + hit_probabilities.teammate_units_damage) as f64 / hit_probabilities.total as f64
+        + ((hit_probabilities.target_kills + hit_probabilities.teammate_units_kills) as i32 * kill_score) as f64 / hit_probabilities.total as f64
 }
