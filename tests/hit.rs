@@ -165,7 +165,7 @@ fn test_get_distance_to_nearest_hit_wall_by_line_through_wall() {
     });
     assert_eq!(
         get_distance_to_nearest_hit_wall_by_line(Vec2::new(0.2312, 0.6423), Vec2::new(2.653, 1.234), &level),
-        Some(1.0)
+        Some(0.79141357808599)
     );
 }
 
