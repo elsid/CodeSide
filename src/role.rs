@@ -51,7 +51,6 @@ pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) 
 
     if world.number_of_teammates() > 0
             && unit.weapon.is_some()
-            && unit.weapon.as_ref().unwrap().typ != WeaponType::RocketLauncher
             && unit.health > world.properties().unit_max_health / 2 {
         let has_pushers = other.iter()
             .find(|(unit_id, role)| {
