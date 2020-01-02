@@ -54,6 +54,7 @@ pub struct World {
     my_player_index: usize,
     opponent_player_index: usize,
     number_of_health_packs: usize,
+    rect: Rect,
 }
 
 impl World {
@@ -100,6 +101,7 @@ impl World {
             my_player_index: game.players.iter().position(|v| v.id == player_id).unwrap(),
             opponent_player_index: game.players.iter().position(|v| v.id != player_id).unwrap(),
             number_of_health_packs,
+            rect: Rect::new(size / 2.0, size / 2.0),
         }
     }
 
@@ -218,6 +220,10 @@ impl World {
 
     pub fn number_of_health_packs(&self) -> usize {
         self.number_of_health_packs
+    }
+
+    pub fn rect(&self) -> &Rect {
+        &self.rect
     }
 
     pub fn my_player(&self) -> &Player {
