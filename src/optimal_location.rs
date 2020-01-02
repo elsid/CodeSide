@@ -103,7 +103,7 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
             continue;
         }
         if let Some(v) = optimal_locations[i].1 {
-            if v == location {
+            if v == location || v + Vec2i::only_y(-1) == location {
                 return true;
             }
         }
