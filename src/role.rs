@@ -41,7 +41,7 @@ pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) 
     }
 
     if *prev == Role::Pusher {
-        if unit.health > world.properties().unit_max_health / 2 {
+        if world.number_of_teammates() > 0 && unit.health > world.properties().unit_max_health / 2 {
             return prev.clone();
         } else {
             return Role::Shooter;
