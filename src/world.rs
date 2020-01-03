@@ -418,12 +418,12 @@ impl World {
         const EDGES: &[(Vec2i, f64)] = &[
             (Vec2i::new(-1, -1), std::f64::consts::SQRT_2),
             (Vec2i::new(-1, 0), 1.0),
-            // (Vec2i::new(-1, 1), std::f64::consts::SQRT_2),
+            (Vec2i::new(-1, 1), std::f64::consts::SQRT_2),
             (Vec2i::new(0, -1), 1.0),
             (Vec2i::new(0, 1), 1.0),
             (Vec2i::new(1, -1), std::f64::consts::SQRT_2),
             (Vec2i::new(1, 0), 1.0),
-            // (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
+            (Vec2i::new(1, 1), std::f64::consts::SQRT_2),
         ];
 
         let unit_id = self.unit_index[unit_index];
