@@ -164,7 +164,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
+                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world,
+                        world.config().optimal_location_number_of_directions);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
                     0.0

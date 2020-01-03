@@ -121,8 +121,8 @@ pub fn with_my_position(world: World, position: Vec2) -> World {
 
 pub fn with_unit_position(world: World, unit_id: i32, position: Vec2) -> World {
     let mut game = world.game().clone();
-    let me_index = game.units.iter().position(|v| v.id == unit_id).unwrap();
-    game.units[me_index].position = position.as_model();
+    let index = game.units.iter().position(|v| v.id == unit_id).unwrap();
+    game.units[index].position = position.as_model();
     World::new(world.config().clone(), world.player_id(), game)
 }
 
@@ -192,5 +192,12 @@ pub fn make_unit_ext(position: Vec2, properties: &Properties) -> UnitExt {
 pub fn with_level(world: World, level: Level) -> World {
     let mut game = world.game().clone();
     game.level = level.as_model();
+    World::new(world.config().clone(), world.player_id(), game)
+}
+
+pub fn with_unit_health(world: World, unit_id: i32, health: i32) -> World {
+    let mut game = world.game().clone();
+    let index = game.units.iter().position(|v| v.id == unit_id).unwrap();
+    game.units[index].health = health;
     World::new(world.config().clone(), world.player_id(), game)
 }
