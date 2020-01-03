@@ -438,13 +438,22 @@ impl World {
                     continue;
                 }
                 let neighbor_index = self.level.get_tile_index(neighbor_location);
-                let new_distance = self.distances[unit_index].1[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
+                let has_opponent_unit = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
+                let has_teammate_unit = self.has_teammate_unit[unit_index].1[node_index] || self.has_teammate_unit(unit_id, neighbor_location);
+                let has_mine = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
+                let has_bullet = self.has_bullet[unit_index].1[node_index] || self.has_bullet(unit_id, neighbor_location);
+                let new_distance = self.distances[unit_index].1[node_index]
+                    + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location))
+                    + has_opponent_unit as i32 as f64
+                    + has_teammate_unit as i32 as f64
+                    + has_mine as i32 as f64
+                    + has_bullet as i32 as f64;
                 if new_distance < self.distances[unit_index].1[neighbor_index] {
                     self.distances[unit_index].1[neighbor_index] = new_distance;
-                    self.has_opponent_unit[unit_index].1[neighbor_index] = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
-                    self.has_teammate_unit[unit_index].1[neighbor_index] = self.has_teammate_unit[unit_index].1[node_index] || self.has_teammate_unit(unit_id, neighbor_location);
-                    self.has_mine[unit_index].1[neighbor_index] = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
-                    self.has_bullet[unit_index].1[neighbor_index] = self.has_bullet[unit_index].1[node_index] || self.has_bullet(unit_id, neighbor_location);
+                    self.has_opponent_unit[unit_index].1[neighbor_index] = has_opponent_unit;
+                    self.has_teammate_unit[unit_index].1[neighbor_index] = has_teammate_unit;
+                    self.has_mine[unit_index].1[neighbor_index] = has_mine;
+                    self.has_bullet[unit_index].1[neighbor_index] = has_bullet;
                     self.backtracks[unit_index].1[neighbor_index] = node_index;
                     if !destinations[neighbor_index] {
                         destinations[neighbor_index] = true;
