@@ -6,6 +6,7 @@ use model::Vec2F64;
 use model::Vec2F32;
 
 use crate::my_strategy::{
+    Square,
     Vec2,
     Vec2i,
 };
@@ -45,6 +46,11 @@ impl Location {
     #[inline(always)]
     pub fn bottom(&self) -> Vec2 {
         Vec2::new(self.x as f64 + 0.5, self.y as f64)
+    }
+
+    #[inline(always)]
+    pub fn distance(&self, other: Location) -> f64 {
+        (((self.x as isize - other.x as isize).square() + (self.y as isize - other.y as isize).square()) as f64).sqrt()
     }
 
     #[cfg(feature = "enable_debug")]

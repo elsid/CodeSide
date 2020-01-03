@@ -71,7 +71,7 @@ impl<'c, 's> Planner<'c, 's> {
         as_score(self.get_score_components().iter().sum())
     }
 
-    pub fn get_score_components(&self) -> [f64; 4] {
+    pub fn get_score_components(&self) -> [f64; 5] {
         let distance_score = 1.0 - self.simulator.unit().position().distance(self.target) / self.max_distance;
 
         let teammates_health = self.simulator.units().iter()
@@ -102,11 +102,14 @@ impl<'c, 's> Planner<'c, 's> {
             1.0
         };
 
+        let location_distance_score = 1.0 - self.simulator.unit().position().as_location().distance(self.target.as_location()) / self.max_distance;
+
         [
             distance_score * self.config.plan_distance_score_weight,
             health_diff_score * self.config.plan_health_diff_score_weight,
             game_score_diff_score * self.config.plan_game_score_diff_score_weight,
             triggered_mines_by_me_score * self.config.plan_triggered_mines_by_me_score_weight,
+            location_distance_score * self.config.plan_location_distance_score_weight,
         ]
     }
 
