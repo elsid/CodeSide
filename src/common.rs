@@ -70,7 +70,7 @@ impl IdGenerator {
 }
 
 pub fn as_score(value: f64) -> i32 {
-    (value * 1000.0).round() as i32
+    (value * 100000.0).round() as i32
 }
 
 pub fn normalize_angle(value: f64) -> f64 {
