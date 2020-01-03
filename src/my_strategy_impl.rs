@@ -25,13 +25,12 @@ use crate::my_strategy::{
     XorShiftRng,
     default_action,
     get_miner_action,
+    get_optimal_destination,
     get_optimal_location,
     get_optimal_plan,
     get_optimal_target,
-    get_pusher_optimal_destination,
     get_role,
     get_shooter_action,
-    get_shooter_optimal_destination,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -159,7 +158,7 @@ impl MyStrategyImpl {
             let unit_id = self.roles[i].0;
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
-                self.roles[i].1 = get_role(unit, &self.roles[i].1, &self.roles[..], &self.world);
+                self.roles[i].1 = get_role(unit, &self.roles[i].1, &self.world);
                 #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
                 debug.log(format!("[{}] role: {:?}", unit_id, self.roles[i].1));
             }
@@ -188,7 +187,7 @@ impl MyStrategyImpl {
                     Role::Shooter => {
                         self.optimal_locations[i].1 = get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1);
                     },
-                    Role::Miner { .. } | Role::Pusher => {
+                    Role::Miner { .. } => {
                         self.optimal_locations[i].1 = None;
                     },
                 }
@@ -203,13 +202,10 @@ impl MyStrategyImpl {
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
                     Role::Shooter => {
-                        self.optimal_destinations[i].1 = get_shooter_optimal_destination(unit, &self.optimal_locations[i].1, &self.world);
+                        self.optimal_destinations[i].1 = get_optimal_destination(unit, &self.optimal_locations[i].1, &self.world);
                     },
                     Role::Miner { .. } => {
                         self.optimal_destinations[i].1 = unit.position();
-                    },
-                    Role::Pusher { .. } => {
-                        self.optimal_destinations[i].1 = get_pusher_optimal_destination(unit, &self.world);
                     },
                 }
             }
@@ -222,7 +218,7 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
-                    Role::Shooter | Role::Pusher => {
+                    Role::Shooter => {
                         self.optimal_targets[i].1 = get_optimal_target(unit, &self.world, debug);
                     },
                     Role::Miner { .. } => {
@@ -239,7 +235,7 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
-                    Role::Shooter | Role::Pusher => {
+                    Role::Shooter => {
                         let destination = self.optimal_destinations[i].1;
                         self.optimal_plans[i].1 = get_optimal_plan(unit, destination, &self.world, &mut self.rng, debug);
                     },
@@ -257,14 +253,14 @@ impl MyStrategyImpl {
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
-                    Role::Shooter | Role::Pusher => {
+                    Role::Shooter => {
                         let plan = &self.optimal_plans[i].1;
                         let target = self.optimal_targets[i].1;
                         self.optimal_actions[i].1 = get_shooter_action(unit, plan, target, &self.world, debug);
                     },
                     Role::Miner { plant_mines } => {
                         self.optimal_actions[i].1 = get_miner_action(unit, *plant_mines);
-                    },
+                    }
                 }
             }
         }

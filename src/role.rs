@@ -1,7 +1,6 @@
 use model::{
     Tile,
     Unit,
-    WeaponType,
 };
 
 use crate::my_strategy::{
@@ -13,16 +12,15 @@ use crate::my_strategy::{
     World,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Role {
     Shooter,
     Miner {
         plant_mines: usize,
-    },
-    Pusher,
+    }
 }
 
-pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) -> Role {
+pub fn get_role(unit: &Unit, prev: &Role, world: &World) -> Role {
     if let Role::Miner { plant_mines } = prev {
         if *plant_mines > 0 || has_collision_with_teammate_mine(unit, world) {
             return prev.clone();
@@ -31,29 +29,6 @@ pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) 
         let plant_mines = get_mines_to_plant(unit, world);
         if plant_mines > 0 {
             return Role::Miner { plant_mines };
-        }
-    }
-
-    if *prev == Role::Pusher {
-        if unit.health > world.properties().unit_max_health / 2 {
-            return prev.clone();
-        } else {
-            return Role::Shooter;
-        }
-    }
-
-    if world.number_of_teammates() > 0
-            && unit.weapon.is_some()
-            && unit.weapon.as_ref().unwrap().typ != WeaponType::RocketLauncher
-            && unit.health > world.properties().unit_max_health / 2 {
-        let has_pushers = other.iter()
-            .find(|(unit_id, role)| {
-                let unit = world.get_unit(*unit_id);
-                world.is_teammate_unit(unit) && *role == Role::Pusher
-            }).is_some();
-
-        if !has_pushers {
-            return Role::Pusher;
         }
     }
 
