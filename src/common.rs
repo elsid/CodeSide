@@ -29,6 +29,8 @@ pub trait Square: Mul + Copy {
 
 impl Square for f64 {}
 
+impl Square for isize {}
+
 pub trait Clamp1: PartialOrd + Sized {
     fn clamp1(self, min: Self, max: Self) -> Self {
         if self < min {
