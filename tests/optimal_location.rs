@@ -72,7 +72,7 @@ fn test_get_location_score_for_tile_with_bullet() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -1.0945366945602066
+        -1.0992373770792807
     );
 }
 
@@ -86,7 +86,7 @@ fn test_get_location_score_for_tile_with_opponent() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -0.6728730735451247
+        -0.6775737560641988
     );
 }
 
@@ -164,7 +164,7 @@ fn test_get_location_score_for_tile_with_mine() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -5.541984881843375
+        -5.550499593426026
     );
 }
 
@@ -178,7 +178,7 @@ fn test_get_location_score_for_tile_with_mine_on_the_way() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -5.546685564362448
+        -5.55514906487986
     );
 }
 
