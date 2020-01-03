@@ -189,8 +189,15 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         let tick = state.planner.simulator.current_tick();
 
         for kind in &transitions {
-            if !self.applied.contains(&UnitState { transition: *kind, x, y, jump_ticks_left, health, tick }) {
-                result.push(Transition { id: self.transition_id_generator.next(), kind: *kind });
+            let unit_state = UnitState { transition: *kind, x, y, jump_ticks_left, health, tick };
+            if !self.applied.contains(&unit_state) {
+                let id = self.transition_id_generator.next();
+                result.push(Transition { id, kind: *kind });
+                log!(self.current_tick, "[{}][{} -> {}] push transition_id={} {:?} {:?}",
+                    state.depth, state.prev_id, state.id, id, *kind, unit_state);
+            } else {
+                log!(self.current_tick, "[{}][{} -> {}] skip {:?} {:?}",
+                    state.depth, state.prev_id, state.id, *kind, unit_state);
             }
         }
 
@@ -216,7 +223,17 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             tick: state.planner.simulator.current_tick(),
         };
 
-        log!(self.current_tick, "[{}][{} -> {}] transition_id={} {:?}", next.depth, state.id, next.id, transition.id, unit_state);
+        log!(self.current_tick, "[{}][{} -> {}] transition_id={} score={} {:?} -> {:?}",
+            next.depth, state.id, next.id, transition.id, next.get_score(), unit_state,
+            UnitState {
+                transition: transition.kind,
+                x: (next.planner.simulator.unit().base().position.x * 1000.0).round() as i32,
+                y: (next.planner.simulator.unit().base().position.y * 1000.0).round() as i32,
+                jump_ticks_left: (next.planner.simulator.unit().base().jump_state.max_time / time_interval).ceil() as i32,
+                health: next.planner.simulator.unit().base().health,
+                tick: next.planner.simulator.current_tick(),
+            }
+        );
 
         self.applied.insert(unit_state);
 
