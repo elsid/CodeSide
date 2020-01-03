@@ -18,9 +18,8 @@ fn test_find_tiles_path() {
     assert_eq!(
         world.find_reversed_tiles_path(EXAMPLE_MY_UNIT_ID, Location::new(37, 1), Location::new(29, 5)),
         vec![
-            Location::new(29, 5), Location::new(30, 5), Location::new(31, 5), Location::new(32, 5),
-            Location::new(32, 4), Location::new(32, 3), Location::new(32, 2), Location::new(33, 2),
-            Location::new(34, 2), Location::new(34, 1), Location::new(35, 1), Location::new(36, 1),
+            Location::new(29, 5), Location::new(30, 5), Location::new(31, 5), Location::new(32, 4),
+            Location::new(33, 3), Location::new(34, 2), Location::new(35, 1), Location::new(36, 1),
         ]
     );
 }
