@@ -33,7 +33,7 @@ def check_game(game):
         print('loss', seed, results['Tcp_310']['position'])
     for k, v in results.items():
         if v['crashed']:
-            print('crashed', k, seed)
+            print('crashed', k, seed, results['Tcp_310']['position'])
 
 
 def get_time(path):
