@@ -39,28 +39,6 @@ pub fn get_role(unit: &Unit, prev: &Role, other: &[(i32, Role)], world: &World) 
         return Role::Dodger;
     }
 
-    if *prev == Role::Pusher {
-        if world.number_of_teammates() > 0 && unit.health > world.properties().unit_max_health / 2 {
-            return prev.clone();
-        } else {
-            return Role::Shooter;
-        }
-    }
-
-    if world.number_of_teammates() > 0
-            && unit.weapon.is_some()
-            && unit.health > world.properties().unit_max_health / 2 {
-        let has_pushers = other.iter()
-            .find(|(unit_id, role)| {
-                let unit = world.get_unit(*unit_id);
-                world.is_teammate_unit(unit) && *role == Role::Pusher
-            }).is_some();
-
-        if !has_pushers {
-            return Role::Pusher;
-        }
-    }
-
     Role::Shooter
 }
 
