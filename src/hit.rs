@@ -1,7 +1,10 @@
 use model::{
+    BulletParams,
+    ExplosionParams,
     Tile,
     Unit,
 };
+
 use crate::my_strategy::{
     Level,
     Location,
@@ -96,12 +99,147 @@ pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target
     }
 }
 
+#[derive(Debug)]
+pub struct HitDamage {
+    pub opponent_units_damage_from_opponent: i32,
+    pub opponent_units_damage_from_teammate: i32,
+    pub teammate_units_damage_from_opponent: i32,
+    pub teammate_units_damage_from_teammate: i32,
+    pub target_damage_from_opponent: i32,
+    pub target_damage_from_teammate: i32,
+    pub opponent_units_kills: usize,
+    pub teammate_units_kills: usize,
+    pub target_kills: usize,
+}
+
+#[inline(never)]
+pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &Target,
+        spread: f64, bullet: &BulletParams, explosion: &Option<ExplosionParams>,
+        world: &World, number_of_directions: usize) -> HitDamage {
+    let to_target = direction * world.max_distance();
+    let left = direction.left() * bullet.size;
+    let right = direction.right() * bullet.size;
+    let is_teammate = world.is_teammate_unit(world.get_unit(unit_id));
+
+    let mut min_distance = None;
+    let mut opponent_units_damage_from_opponent = 0;
+    let mut opponent_units_damage_from_teammate = 0;
+    let mut teammate_units_damage_from_opponent = 0;
+    let mut teammate_units_damage_from_teammate = 0;
+    let mut target_damage_from_opponent = 0;
+    let mut target_damage_from_teammate = 0;
+    let mut opponent_units_kills = 0;
+    let mut teammate_units_kills = 0;
+    let mut target_kills = 0;
+    let mut units_health = world.units().iter().map(|v| (v.id, v.health)).collect::<Vec<_>>();
+
+    for i in 0 .. number_of_directions {
+        let angle = normalize_angle(((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * spread);
+        let far_destination = source + to_target.rotated(angle);
+        let destination = source + (far_destination - source)
+            * world.rect().get_intersection_with_line(source, far_destination).unwrap();
+        let (src, dst) = if i == 0 {
+            (source + right, destination + right)
+        } else if i == number_of_directions - 1 {
+            (source + left, destination + left)
+        } else {
+            (source, destination)
+        };
+        if let Some(hit) = get_nearest_hit(unit_id, src, dst, target, world) {
+            if min_distance.is_none() || min_distance.unwrap() > hit.distance {
+                min_distance = Some(hit.distance);
+            }
+            if hit.object_type == ObjectType::Unit {
+                if let Some(hit_unit_id) = hit.unit_id {
+                    let health_mut = &mut units_health.iter_mut().find(|(id, _)| *id == hit_unit_id).unwrap().1;
+                    let damage = bullet.damage.min(*health_mut);
+
+                    if is_teammate {
+                        opponent_units_damage_from_teammate += damage
+                            * (!hit.is_target as usize & !hit.is_teammate as usize) as i32;
+                        teammate_units_damage_from_teammate += damage
+                            * (!hit.is_target as usize & hit.is_teammate as usize) as i32;
+                        target_damage_from_teammate += damage * hit.is_target as i32;
+                    } else {
+                        opponent_units_damage_from_opponent += damage
+                            * (!hit.is_target as usize & !hit.is_teammate as usize) as i32;
+                        teammate_units_damage_from_opponent += damage
+                            * (!hit.is_target as usize & hit.is_teammate as usize) as i32;
+                        target_damage_from_opponent += damage * hit.is_target as i32;
+                    }
+
+                    *health_mut -= damage;
+                }
+            }
+            if let Some(explosion) = explosion {
+                let mut explosions = vec![(explosion, source + Vec2::only_x(hit.distance).rotated(angle), is_teammate)];
+                let mut exploded_mines = std::iter::repeat(false).take(world.mines().len()).collect::<Vec<_>>();
+                let distance_const = (hit.distance / bullet.speed) * world.properties().unit_max_horizontal_speed;
+                while let Some((explosion, center, is_teammate)) = explosions.pop() {
+                    let radius = explosion.radius - distance_const;
+                    if radius < 0.0 {
+                        continue;
+                    }
+                    let explosion_rect = Rect::new(center, Vec2::new(radius, radius));
+                    for unit in world.units().iter() {
+                        let health_mut = &mut units_health.iter_mut().find(|(id, _)| *id == unit.id).unwrap().1;
+
+                        if *health_mut > 0 && explosion_rect.has_collision(&unit.rect()) {
+                            let damage = explosion.damage.min(*health_mut);
+
+                            if is_teammate {
+                                teammate_units_damage_from_teammate += damage * world.is_teammate_unit(unit) as i32;
+                                opponent_units_damage_from_teammate += damage * !world.is_teammate_unit(unit) as i32;
+                                target_damage_from_teammate += damage * (unit.id == target.id) as i32;
+                            } else {
+                                teammate_units_damage_from_opponent += damage * world.is_teammate_unit(unit) as i32;
+                                opponent_units_damage_from_opponent += damage * !world.is_teammate_unit(unit) as i32;
+                                target_damage_from_opponent += damage * (unit.id == target.id) as i32;
+                            }
+
+                            *health_mut -= damage;
+                        }
+                    }
+                    for (n, mine) in world.mines().iter().enumerate() {
+                        if !exploded_mines[n] && explosion_rect.has_collision(&mine.rect()) {
+                            exploded_mines[n] = true;
+                            explosions.push((&mine.explosion_params, mine.center(), world.is_teammate_mine(mine)));
+                        }
+                    }
+                }
+            }
+            for (damaged_unit_id, health) in units_health.iter_mut() {
+                let unit = world.get_unit(*damaged_unit_id);
+                if *health == 0 {
+                    opponent_units_kills += world.is_opponent_unit(unit) as usize;
+                    teammate_units_kills += world.is_teammate_unit(unit) as usize;
+                    target_kills += (*damaged_unit_id == unit_id) as usize;
+                }
+                *health = world.get_unit(*damaged_unit_id).health;
+            }
+        }
+    }
+
+    HitDamage {
+        opponent_units_damage_from_opponent,
+        opponent_units_damage_from_teammate,
+        teammate_units_damage_from_opponent,
+        teammate_units_damage_from_teammate,
+        target_damage_from_opponent,
+        target_damage_from_teammate,
+        opponent_units_kills,
+        teammate_units_kills,
+        target_kills,
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Hit {
     pub distance: f64,
     pub object_type: ObjectType,
     pub is_target: bool,
     pub is_teammate: bool,
+    pub unit_id: Option<i32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -126,6 +264,7 @@ pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target
             object_type: ObjectType::Unit,
             is_target: true,
             is_teammate: false,
+            unit_id: Some(unit_id),
         })
     } else {
         None
@@ -140,6 +279,7 @@ pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target
                 object_type: ObjectType::Unit,
                 is_target: target.id == unit_hit.id,
                 is_teammate: unit_hit.is_teammate,
+                unit_id: Some(unit_hit.id),
             });
         }
     }
@@ -153,6 +293,7 @@ pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target
                 object_type: ObjectType::Mine,
                 is_target: false,
                 is_teammate: mine_hit.is_teammate,
+                unit_id: None,
             });
         }
     }
@@ -164,6 +305,7 @@ pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target
                 object_type: ObjectType::Wall,
                 is_target: false,
                 is_teammate: false,
+                unit_id: None,
             });
         }
     }
