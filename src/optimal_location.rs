@@ -19,6 +19,7 @@ use crate::my_strategy::{
 
 use crate::my_strategy::{
     Debug,
+    HitDamage,
     Location,
     Positionable,
     Rect,
@@ -29,6 +30,7 @@ use crate::my_strategy::{
     Vec2i,
     World,
     as_score,
+    get_hit_damage,
     get_hit_probabilities,
     get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_destination,
@@ -164,7 +166,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world, world.config().optimal_location_number_of_directions);
+                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world,
+                        world.config().optimal_location_number_of_directions);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
                     0.0
@@ -291,10 +294,19 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
         &Target::from_unit(opponent), get_mean_spread(weapon), weapon.params.bullet.size, world,
         world.config().optimal_location_number_of_directions);
 
-    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
-        if min_distance < explosion.radius + 2.0 {
+    if weapon.params.explosion.is_some() {
+        let number_of_directions = world.config().optimal_location_number_of_directions;
+        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, &Target::from_unit(opponent),
+            get_mean_spread(weapon), &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
+
+        if hit_damage.teammate_units_kills > 0 || hit_damage.shooter_kills > 0
+                || hit_damage.shooter_damage_from_teammate > weapon.params.bullet.damage
+                || hit_damage.teammate_units_damage_from_teammate > weapon.params.bullet.damage {
             return false;
         }
+
+        return get_player_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+            > get_opponent_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
     }
 
     (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
@@ -307,4 +319,23 @@ pub fn make_location_rect(location: Location) -> Rect {
 
 fn get_mean_spread(weapon: &Weapon) -> f64 {
     (weapon.params.max_spread + weapon.params.min_spread) / 2.0
+}
+
+pub fn get_player_score_for_hit(hit_damage: &HitDamage, kill_score: i32, number_of_directions: usize) -> f64 {
+    (
+        hit_damage.target_damage_from_teammate
+        + hit_damage.target_damage_from_opponent
+        + hit_damage.opponent_units_damage_from_teammate
+        + hit_damage.opponent_units_damage_from_opponent
+        + (hit_damage.target_kills + hit_damage.opponent_units_kills) as i32 * kill_score
+    ) as f64 / number_of_directions as f64
+}
+
+pub fn get_opponent_score_for_hit(hit_damage: &HitDamage, kill_score: i32, number_of_directions: usize) -> f64 {
+    (
+        hit_damage.shooter_damage_from_teammate
+        + hit_damage.shooter_damage_from_opponent
+        + hit_damage.teammate_units_damage_from_opponent
+        + (hit_damage.shooter_kills + hit_damage.teammate_units_kills) as i32 * kill_score
+    ) as f64 / number_of_directions as f64
 }
