@@ -17,7 +17,9 @@ use crate::my_strategy::{
 pub const EXAMPLE_MY_PLAYER_ID: i32 = 11;
 pub const EXAMPLE_OPPONENT_PLAYER_ID: i32 = 12;
 pub const EXAMPLE_MY_UNIT_ID: i32 = 101;
-pub const EXAMPLE_OPPONENT_UNIT_ID: i32 = 102;
+pub const EXAMPLE_MY_UNIT_ID_1: i32 = 102;
+pub const EXAMPLE_OPPONENT_UNIT_ID: i32 = 111;
+pub const EXAMPLE_OPPONENT_UNIT_ID_1: i32 = 112;
 
 pub fn example_rng(seed: u64) -> XorShiftRng {
     XorShiftRng::from_seed([
@@ -29,7 +31,11 @@ pub fn example_rng(seed: u64) -> XorShiftRng {
 }
 
 pub fn example_world() -> World {
-    let properties = example_properties();
+    example_world_with_team_size(1)
+}
+
+pub fn example_world_with_team_size(team_size: i32) -> World {
+    let properties = example_properties_with_team_size(team_size);
     let my_player = example_my_player();
     let opponent = example_opponent();
     let player_id = my_player.id;
@@ -39,6 +45,10 @@ pub fn example_world() -> World {
 }
 
 pub fn example_properties() -> Properties {
+    example_properties_with_team_size(1)
+}
+
+pub fn example_properties_with_team_size(team_size: i32) -> Properties {
     use model::{
         BulletParams,
         ExplosionParams,
@@ -48,7 +58,7 @@ pub fn example_properties() -> Properties {
 
     Properties {
         max_tick_count: 3600,
-        team_size: 1,
+        team_size,
         ticks_per_second: 60.0,
         updates_per_tick: 100,
         loot_box_size: Vec2F64 { x: 0.5, y: 0.5 },
@@ -155,10 +165,19 @@ pub fn example_game(my_player: Player, opponent: Player, properties: Properties)
     Game {
         current_tick: 0,
         level: example_level(),
-        units: vec![
-            example_my_unit(&my_player, &properties),
-            example_opponent_unit(&opponent, &properties),
-        ],
+        units: match properties.team_size {
+            1 => vec![
+                example_my_unit(&my_player, &properties),
+                example_opponent_unit(&opponent, &properties),
+            ],
+            2 => vec![
+                example_my_unit(&my_player, &properties),
+                example_my_unit_1(&my_player, &properties),
+                example_opponent_unit(&opponent, &properties),
+                example_opponent_unit_1(&opponent, &properties),
+            ],
+            _ => Vec::new(),
+        },
         players: vec![my_player, opponent],
         bullets: vec![],
         mines: vec![],
@@ -304,6 +323,33 @@ pub fn example_my_unit(player: &Player, properties: &Properties) -> Unit {
     }
 }
 
+pub fn example_my_unit_1(player: &Player, properties: &Properties) -> Unit {
+    use model::JumpState;
+
+    Unit {
+        player_id: player.id,
+        id: EXAMPLE_MY_UNIT_ID_1,
+        health: properties.unit_max_health,
+        position: Vec2F64 {
+            x: 36.5,
+            y: 1.0,
+        },
+        size: properties.unit_size.clone(),
+        jump_state: JumpState {
+            can_jump: false,
+            speed: 0.0,
+            max_time: 0.0,
+            can_cancel: false,
+        },
+        walked_right: false,
+        stand: true,
+        on_ground: false,
+        on_ladder: false,
+        mines: 0,
+        weapon: None,
+    }
+}
+
 pub fn example_opponent_unit(player: &Player, properties: &Properties) -> Unit {
     use model::JumpState;
 
@@ -313,6 +359,33 @@ pub fn example_opponent_unit(player: &Player, properties: &Properties) -> Unit {
         health: properties.unit_max_health,
         position: Vec2F64 {
             x: 2.5,
+            y: 1.0,
+        },
+        size: properties.unit_size.clone(),
+        jump_state: JumpState {
+            can_jump: false,
+            speed: 0.0,
+            max_time: 0.0,
+            can_cancel: false,
+        },
+        walked_right: true,
+        stand: true,
+        on_ground: false,
+        on_ladder: false,
+        mines: 0,
+        weapon: None,
+    }
+}
+
+pub fn example_opponent_unit_1(player: &Player, properties: &Properties) -> Unit {
+    use model::JumpState;
+
+    Unit {
+        player_id: player.id,
+        id: EXAMPLE_OPPONENT_UNIT_ID_1,
+        health: properties.unit_max_health,
+        position: Vec2F64 {
+            x: 3.5,
             y: 1.0,
         },
         size: properties.unit_size.clone(),
