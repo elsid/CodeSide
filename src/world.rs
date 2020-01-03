@@ -511,21 +511,11 @@ pub fn is_tile_reachable_from(source: Location, destination: Location, level: &L
                 Tile::Wall => false,
                 Tile::Ladder | Tile::Platform | Tile::JumpPad => true,
                 Tile::Empty => source.y() > destination.y()
-                    || (source.y() > 0
-                        && (
-                            is_walkable(level.get_tile(source + Vec2i::new(0, -1)))
-                            || is_walkable(level.get_tile(destination + Vec2i::new(0, -1)))
-                            || (2 .. source.y() as isize + 1).find(|&dy| {
-                                can_jump_up_from(level.get_tile(source + Vec2i::new(0, -dy)), dy as f64 + 0.5, properties)
-                            }).is_some()
-                            || (1 .. destination.x() as isize).find(|&dx| {
-                                can_fly_from(level.get_tile(destination + Vec2i::new(-dx, 0)), dx as f64 + 0.5, properties)
-                            }).is_some()
-                            || (destination.x() + 1 .. level.size_x() - 1).find(|&x| {
-                                can_fly_from(level.get_tile(Location::new(x, destination.y())), (x - destination.x()) as f64 + 0.5, properties)
-                            }).is_some()
-                        )
-                    ),
+                    || source.y() == destination.y() && (is_walkable(level.get_tile(source + Vec2i::new(0, -1))) || is_walkable(level.get_tile(destination + Vec2i::new(0, -1))))
+                    || source.y() < destination.y()
+                        && (source.x() as isize - destination.x() as isize).abs() <= 1
+                        && (1 .. source.y() as isize + 1)
+                            .find(|&dy| can_jump_up_from(level.get_tile(source + Vec2i::new(0, -dy)), dy as f64, properties)).is_some(),
             }
         },
     }
@@ -537,16 +527,6 @@ pub fn can_jump_up_from(tile: Tile, height: f64, properties: &Properties) -> boo
         Tile::Ladder => properties.max_unit_jump_height() >= height,
         Tile::Platform => properties.max_unit_jump_height() >= height,
         Tile::JumpPad => properties.max_jump_pad_height() >= height,
-        Tile::Empty => false,
-    }
-}
-
-pub fn can_fly_from(tile: Tile, length: f64, properties: &Properties) -> bool {
-    match tile {
-        Tile::Wall => properties.max_unit_jump_length() >= length,
-        Tile::Ladder => properties.max_unit_jump_length() >= length,
-        Tile::Platform => properties.max_unit_jump_length() >= length,
-        Tile::JumpPad => properties.max_jump_pad_length() >= length,
         Tile::Empty => false,
     }
 }
