@@ -6,6 +6,7 @@ use model::Vec2F64;
 use model::Vec2F32;
 
 use crate::my_strategy::{
+    Clamp1,
     Location,
     Square,
 };
@@ -116,7 +117,7 @@ impl Vec2 {
 
     #[inline(always)]
     pub fn cos(&self, other: Self) -> f64 {
-        self.dot(other) / (self.norm() * other.norm())
+        (self.dot(other) / (self.norm() * other.norm())).clamp1(-1.0, 1.0)
     }
 
     #[inline(always)]
