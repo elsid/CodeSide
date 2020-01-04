@@ -12,9 +12,9 @@ use model::{
 
 use crate::my_strategy::{
     Debug,
+    HitTarget,
     Positionable,
     Rectangular,
-    Target,
     Vec2,
     World,
     as_score,
@@ -72,12 +72,12 @@ fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit
 
     let direction = (opponent.center() - current_unit_center).normalized();
     let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        &Target::from_unit(opponent), weapon.spread, weapon.params.bullet.size, world,
+        &HitTarget::from_unit(opponent), weapon.spread, weapon.params.bullet.size, world,
         world.config().optimal_action_number_of_directions);
 
     if weapon.params.explosion.is_some() {
         let number_of_directions = world.config().optimal_action_number_of_directions;
-        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, &Target::from_unit(opponent),
+        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, &HitTarget::from_unit(opponent),
             weapon.spread, &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
 
         if hit_damage.teammate_units_kills > 0 || hit_damage.shooter_kills > 0
@@ -121,7 +121,7 @@ fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug)
             } else {
                 (source, destination)
             };
-            if let Some(hit) = get_nearest_hit(unit.id, src, dst, &Target::from_unit(opponent), &world) {
+            if let Some(hit) = get_nearest_hit(unit.id, src, dst, &HitTarget::from_unit(opponent), &world) {
                 let color = match hit.object_type {
                     ObjectType::Wall => ColorF32 { a: 0.5, r: 0.66, g: 0.66, b: 0.66 },
                     ObjectType::Unit => if hit.is_teammate {

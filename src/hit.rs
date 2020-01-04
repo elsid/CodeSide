@@ -32,12 +32,12 @@ pub struct HitProbabilities {
 }
 
 #[derive(Debug)]
-pub struct Target {
+pub struct HitTarget {
     id: i32,
     rect: Rect,
 }
 
-impl Target {
+impl HitTarget {
     pub fn new(id: i32, rect: Rect) -> Self {
         Self { id, rect }
     }
@@ -48,7 +48,7 @@ impl Target {
 }
 
 #[inline(never)]
-pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &Target,
+pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget,
         spread: f64, bullet_size: f64, world: &World, number_of_directions: usize) -> HitProbabilities {
     let to_target = direction * world.max_distance();
     let left = direction.left() * bullet_size;
@@ -116,7 +116,7 @@ pub struct HitDamage {
 }
 
 #[inline(never)]
-pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &Target,
+pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget,
         spread: f64, bullet: &BulletParams, explosion: &Option<ExplosionParams>,
         world: &World, number_of_directions: usize) -> HitDamage {
     let to_target = direction * world.max_distance();
@@ -267,7 +267,7 @@ pub enum ObjectType {
 }
 
 #[inline(never)]
-pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
+pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &HitTarget, world: &World) -> Option<Hit> {
     let to_destination = destination - source;
     let destination_distance = to_destination.norm();
     let mut max_distance = destination_distance;

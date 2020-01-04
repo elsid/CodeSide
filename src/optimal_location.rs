@@ -20,11 +20,11 @@ use crate::my_strategy::{
 use crate::my_strategy::{
     Debug,
     HitDamage,
+    HitTarget,
     Location,
     Positionable,
     Rect,
     Rectangular,
-    Target,
     TilePathInfo,
     Vec2,
     Vec2i,
@@ -158,7 +158,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         },
         _ => false,
     }) as i32 as f64;
-    let target = Target::new(current_unit.id, current_unit_rect.clone());
+    let target = HitTarget::new(current_unit.id, current_unit_rect.clone());
     let hit_by_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
@@ -200,7 +200,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
             let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &Target::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
+                &HitTarget::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
                 world.config().optimal_location_number_of_directions);
             (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
         } else {
@@ -241,7 +241,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 .map(|v| {
                     let direction = (opponent.center() - current_unit_center).normalized();
                     get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &Target::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
+                        &HitTarget::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
                         world.config().optimal_location_number_of_directions)
                 })
                 .map(|v| v.teammate_units as f64 / v.total as f64)
@@ -291,12 +291,12 @@ pub fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Uni
 
     let direction = (opponent.center() - current_unit_center).normalized();
     let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        &Target::from_unit(opponent), get_mean_spread(weapon), weapon.params.bullet.size, world,
+        &HitTarget::from_unit(opponent), get_mean_spread(weapon), weapon.params.bullet.size, world,
         world.config().optimal_location_number_of_directions);
 
     if weapon.params.explosion.is_some() {
         let number_of_directions = world.config().optimal_location_number_of_directions;
-        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, &Target::from_unit(opponent),
+        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, &HitTarget::from_unit(opponent),
             get_mean_spread(weapon), &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
 
         if hit_damage.teammate_units_kills > 0 || hit_damage.shooter_kills > 0
