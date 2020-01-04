@@ -3,6 +3,7 @@ use model::{
     Unit,
     UnitAction,
     Vec2F64,
+    Weapon,
 };
 
 use crate::my_strategy::{
@@ -14,6 +15,11 @@ use crate::my_strategy::{
     Vec2,
     World,
     get_weapon_score,
+    HitTarget,
+    get_hit_damage,
+    get_hit_probability_by_spread,
+    get_opponent_score_for_hit,
+    get_player_score_for_hit,
 };
 
 pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
@@ -34,7 +40,14 @@ pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: &Option<Targ
         debug: &mut Debug) -> UnitAction {
     let (shoot, aim) = match target {
         Some(Target::Mine { rect }) => (true, rect.center() - current_unit.center()),
-        Some(Target::Unit(hit_target)) => (true, hit_target.rect().center() - current_unit.center()),
+        Some(Target::Unit(hit_target)) => if let Some(weapon) = current_unit.weapon.as_ref() {
+            (
+                should_shoot(current_unit, hit_target, weapon, world),
+                hit_target.rect().center() - current_unit.center()
+            )
+        } else {
+            (false, Vec2::zero())
+        },
         _ => (false, Vec2::zero()),
     };
 
@@ -81,4 +94,22 @@ pub const fn default_action() -> UnitAction {
         swap_weapon: false,
         plant_mine: false,
     }
+}
+
+fn should_shoot(current_unit: &Unit, target: &HitTarget, weapon: &Weapon, world: &World) -> bool {
+    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit.center(), target.rect(),
+        weapon.spread, weapon.params.bullet.size);
+
+    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+        return false;
+    }
+
+    let direction = weapon.last_angle.map(|v| Vec2::i().rotated(v))
+        .unwrap_or_else(|| (target.rect().center() - current_unit.center()).normalized());
+    let number_of_directions = world.config().optimal_action_number_of_directions;
+    let hit_damage = get_hit_damage(current_unit.id, current_unit.center(), direction, target,
+        weapon.spread, &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
+
+    get_player_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+        > get_opponent_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
 }

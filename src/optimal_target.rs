@@ -11,7 +11,7 @@ use model::{
 };
 
 use crate::my_strategy::{
-    Debug,
+    Debug as Dbg,
     HitTarget,
     Positionable,
     Rect,
@@ -22,6 +22,7 @@ use crate::my_strategy::{
     get_hit_damage,
     get_hit_probabilities,
     get_hit_probability_by_spread,
+    get_mean_spread,
     get_opponent_score_for_hit,
     get_player_score_for_hit,
 };
@@ -34,6 +35,7 @@ use crate::my_strategy::{
     normalize_angle,
 };
 
+#[derive(Debug)]
 pub enum Target {
     Mine {
         rect: Rect,
@@ -41,7 +43,7 @@ pub enum Target {
     Unit(HitTarget),
 }
 
-pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Target> {
+pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Dbg) -> Option<Target> {
     if let Some(weapon) = current_unit.weapon.as_ref() {
         let mine_rect = world.mines().iter()
             .find(|mine| world.is_teammate_mine(mine) && mine.position().distance(current_unit.position()) < 2.0 * current_unit.size.x)
@@ -51,31 +53,55 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
             return Some(Target::Mine { rect });
         }
 
-        let unit = world.units().iter()
-            .filter(|unit| {
-                world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world)
-            })
-            .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
+        let target_unit = world.units().iter()
+            .filter(|unit| world.is_opponent_unit(unit))
+            .map(|unit| (unit, get_target_score(current_unit, unit, weapon, world)))
+            .max_by_key(|(_, score)| as_score(*score));
+
+        let target = target_unit.map(|(unit, _)| Target::Unit(HitTarget::from_unit(unit)));
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
         {
-            if let Some(opponent) = unit {
-                render_target(current_unit, opponent, world, debug);
+            if let Some((unit, score)) = target_unit {
+                render_target(current_unit, unit, world, debug);
+                #[cfg(feature = "enable_debug_log")]
+                debug.log(format!("[{}] optimal_target: {:?} {:?} {:?}", current_unit.id, target, score,
+                    get_target_score_components(current_unit, unit, weapon, world)));
             }
         }
 
-        unit.map(|unit| Target::Unit(HitTarget::from_unit(unit)))
+        target
     } else {
         None
     }
 }
 
-fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
+fn get_target_score(current_unit: &Unit, target: &Unit, weapon: &Weapon, world: &World) -> f64 {
+    get_target_score_components(current_unit, target, weapon, world).iter().sum()
+}
+
+fn get_target_score_components(current_unit: &Unit, target: &Unit, weapon: &Weapon, world: &World) -> [f64; 2] {
+    let current_unit_center = current_unit.center();
+    let unit_direction = (target.center() - current_unit.center()).normalized();
+    let current_direction = weapon.last_angle.map(|v| Vec2::i().rotated(v)).unwrap_or(unit_direction);
+
+    let current_state_shoot_score = get_shoot_score(current_unit.id, current_unit_center, current_direction,
+        weapon.spread, target, weapon, world);
+
+    let possible_state_shoot_score = get_shoot_score(current_unit.id, current_unit_center, unit_direction,
+        get_mean_spread(weapon), target, weapon, world);
+
+    [
+        current_state_shoot_score,
+        possible_state_shoot_score,
+    ]
+}
+
+fn get_shoot_score(current_unit_id: i32, current_unit_center: Vec2, current_unit_direction: Vec2, spread: f64, opponent: &Unit, weapon: &Weapon, world: &World) -> f64 {
     let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &opponent.rect(), weapon.spread, weapon.params.bullet.size);
 
     if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
-        return false;
+        return 0.0;
     }
 
     let direction = (opponent.center() - current_unit_center).normalized();
@@ -85,25 +111,36 @@ fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit
 
     if weapon.params.explosion.is_some() {
         let number_of_directions = world.config().optimal_action_number_of_directions;
-        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, &HitTarget::from_unit(opponent),
-            weapon.spread, &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
+        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, current_unit_direction,
+            &HitTarget::from_unit(opponent), spread, &weapon.params.bullet, &weapon.params.explosion, world,
+            number_of_directions);
 
         if hit_damage.teammate_units_kills > 0 || hit_damage.shooter_kills > 0
                 || hit_damage.shooter_damage_from_teammate > weapon.params.bullet.damage
                 || hit_damage.teammate_units_damage_from_teammate > weapon.params.bullet.damage {
-            return false;
+            return -(
+                hit_damage.shooter_damage_from_teammate
+                + hit_damage.shooter_damage_from_opponent
+                + hit_damage.teammate_units_damage_from_opponent
+                + hit_damage.teammate_units_damage_from_teammate
+                + (hit_damage.shooter_kills + hit_damage.teammate_units_kills) as i32 * world.properties().kill_score
+            ) as f64 / number_of_directions as f64;
         }
 
         return get_player_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
-            > get_opponent_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+            - get_opponent_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions);
     }
 
-    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
-    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
+    if (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
+            && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot {
+        return 0.0;
+    }
+
+    world.max_distance() - current_unit_center.distance(opponent.center())
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
-fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug) {
+fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Dbg) {
     for position in WalkGrid::new(unit.rect().center(), opponent.rect().center()) {
         debug.draw(CustomData::Rect {
             pos: position.as_location().as_debug(),

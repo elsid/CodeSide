@@ -317,7 +317,7 @@ pub fn make_location_rect(location: Location) -> Rect {
     Rect::new(location.center(), Vec2::new(0.5, 0.5))
 }
 
-fn get_mean_spread(weapon: &Weapon) -> f64 {
+pub fn get_mean_spread(weapon: &Weapon) -> f64 {
     (weapon.params.max_spread + weapon.params.min_spread) / 2.0
 }
 
