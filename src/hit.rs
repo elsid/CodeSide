@@ -1,7 +1,9 @@
 use model::{
     Tile,
     Unit,
+    Weapon,
 };
+
 use crate::my_strategy::{
     Level,
     Location,
@@ -296,4 +298,27 @@ fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &
         })
         .min_by_key(|&(factor, _)| as_score(factor))
         .map(|(factor, is_teammate)| MineHit { distance: factor * target.distance(source), is_teammate })
+}
+
+pub fn is_allowed_to_shoot(current_unit_id: i32, current_unit_center: Vec2, spread: f64, target: &Target,
+        weapon: &Weapon, world: &World, number_of_directions: usize) -> bool {
+    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &target.rect,
+        spread, weapon.params.bullet.size);
+
+    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
+        return false;
+    }
+
+    let direction = (target.rect.center() - current_unit_center).normalized();
+    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
+        target, spread, weapon.params.bullet.size, world, number_of_directions);
+
+    if let (Some(explosion), Some(min_distance)) = (weapon.params.explosion.as_ref(), hit_probabilities.min_distance) {
+        if min_distance < explosion.radius + 2.0 {
+            return false;
+        }
+    }
+
+    (hit_probabilities.target + hit_probabilities.opponent_units) >= world.config().min_target_hits_to_shoot
+    && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot
 }
