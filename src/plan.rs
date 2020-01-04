@@ -61,6 +61,10 @@ impl<'c, 's> Planner<'c, 's> {
             log!(current_tick, "transition_id={} kind={:?}", transition.id, transition.kind);
         }
 
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] target={:?} plan_score={} {:?}, transitions: {:?}",
+            self.simulator.unit().base().id, self.target, planner.get_score(), planner.get_score_components(), transitions));
+
         Plan {
             transitions,
             score: planner.get_score(),
