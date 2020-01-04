@@ -355,7 +355,7 @@ impl World {
                 return Vec::new()
             }
             result.push(self.level.get_tile_location(index));
-            if prev == self.level.get_tile_index(source) {
+            if prev == self.level.get_tile_index(source) || self.level.get_tile_location(prev) == source + Vec2i::only_y(1) {
                 break;
             }
             index = prev;
