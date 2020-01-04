@@ -45,6 +45,10 @@ impl HitTarget {
     pub fn from_unit(unit: &Unit) -> Self {
         Self { id: unit.id, rect: unit.rect() }
     }
+
+    pub fn rect(&self) -> &Rect {
+        &self.rect
+    }
 }
 
 #[inline(never)]

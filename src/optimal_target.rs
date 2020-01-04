@@ -14,6 +14,7 @@ use crate::my_strategy::{
     Debug,
     HitTarget,
     Positionable,
+    Rect,
     Rectangular,
     Vec2,
     World,
@@ -33,14 +34,21 @@ use crate::my_strategy::{
     normalize_angle,
 };
 
-pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Vec2> {
-    if let Some(weapon) = current_unit.weapon.as_ref() {
-        let mine = world.mines().iter()
-            .find(|mine| world.is_teammate_mine(mine) && mine.position().distance(current_unit.position()) < 2.0 * current_unit.size.x)
-            .map(|mine| mine.center());
+pub enum Target {
+    Mine {
+        rect: Rect,
+    },
+    Unit(HitTarget),
+}
 
-        if let Some(position) = mine {
-            return Some(position);
+pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Target> {
+    if let Some(weapon) = current_unit.weapon.as_ref() {
+        let mine_rect = world.mines().iter()
+            .find(|mine| world.is_teammate_mine(mine) && mine.position().distance(current_unit.position()) < 2.0 * current_unit.size.x)
+            .map(|mine| mine.rect());
+
+        if let Some(rect) = mine_rect {
+            return Some(Target::Mine { rect });
         }
 
         let unit = world.units().iter()
@@ -57,7 +65,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
             }
         }
 
-        unit.map(|unit| unit.center())
+        unit.map(|unit| Target::Unit(HitTarget::from_unit(unit)))
     } else {
         None
     }
