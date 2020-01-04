@@ -40,7 +40,7 @@ pub fn get_optimal_plan(current_unit: &Unit, global_destination: Vec2, world: &W
     };
 
     #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_plan", feature = "enable_debug_log"))]
-    debug.log(format!("[{}] global_destination: {:?} local_destination: {:?}", current_unit.id, global_destination, local_destination));
+    debug.log(format!("[{}] global_destination: {:?} local_destination: {:?} tiles_path: {:?}", current_unit.id, global_destination, local_destination, tiles_path));
 
     let simulator = Simulator::new(&world, current_unit.id);
     let planner = Planner::new(local_destination, world.config(), simulator, world.max_distance(), world.max_score());
