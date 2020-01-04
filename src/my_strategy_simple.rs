@@ -7,13 +7,13 @@ use model::{
 use crate::my_strategy::{
     Config,
     Debug,
+    HitTarget,
     Plan,
     Planner,
     Positionable,
     Rectangular,
     SeedableRng,
     Simulator,
-    Target,
     Vec2,
     World,
     XorShiftRng,
@@ -60,7 +60,7 @@ impl MyStrategyImpl {
         let nearest_opponent_unit_center = self.world.units().iter()
             .filter_map(|v| {
                 if self.world.is_opponent_unit(v) {
-                    if let Some(hit) = get_nearest_hit(current_unit.id, current_unit.center(), v.center(), &Target::from_unit(v), &self.world) {
+                    if let Some(hit) = get_nearest_hit(current_unit.id, current_unit.center(), v.center(), &HitTarget::from_unit(v), &self.world) {
                         if hit.is_target {
                             Some(v.center())
                         } else {

@@ -12,9 +12,9 @@ use model::{
 
 use crate::my_strategy::{
     Debug,
+    HitTarget,
     Positionable,
     Rectangular,
-    Target,
     Vec2,
     World,
     as_score,
@@ -60,7 +60,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
 }
 
 fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
-    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, &Target::from_unit(&opponent), weapon,
+    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, &HitTarget::from_unit(&opponent), weapon,
         world, world.config().optimal_action_number_of_directions)
 }
 
@@ -91,7 +91,7 @@ fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug)
             } else {
                 (source, destination)
             };
-            if let Some(hit) = get_nearest_hit(unit.id, src, dst, &Target::from_unit(opponent), &world) {
+            if let Some(hit) = get_nearest_hit(unit.id, src, dst, &HitTarget::from_unit(opponent), &world) {
                 let color = match hit.object_type {
                     ObjectType::Wall => ColorF32 { a: 0.5, r: 0.66, g: 0.66, b: 0.66 },
                     ObjectType::Unit => if hit.is_teammate {

@@ -31,12 +31,12 @@ pub struct HitProbabilities {
 }
 
 #[derive(Debug)]
-pub struct Target {
+pub struct HitTarget {
     id: i32,
     rect: Rect,
 }
 
-impl Target {
+impl HitTarget {
     pub fn new(id: i32, rect: Rect) -> Self {
         Self { id, rect }
     }
@@ -47,7 +47,7 @@ impl Target {
 }
 
 #[inline(never)]
-pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &Target,
+pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget,
         spread: f64, bullet_size: f64, world: &World, number_of_directions: usize) -> HitProbabilities {
     let to_target = direction * world.max_distance();
     let left = direction.left() * bullet_size;
@@ -115,7 +115,7 @@ pub enum ObjectType {
 }
 
 #[inline(never)]
-pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &Target, world: &World) -> Option<Hit> {
+pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &HitTarget, world: &World) -> Option<Hit> {
     let to_destination = destination - source;
     let destination_distance = to_destination.norm();
     let mut max_distance = destination_distance;
@@ -300,7 +300,7 @@ fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &
         .map(|(factor, is_teammate)| MineHit { distance: factor * target.distance(source), is_teammate })
 }
 
-pub fn is_allowed_to_shoot(current_unit_id: i32, current_unit_center: Vec2, spread: f64, target: &Target,
+pub fn is_allowed_to_shoot(current_unit_id: i32, current_unit_center: Vec2, spread: f64, target: &HitTarget,
         weapon: &Weapon, world: &World, number_of_directions: usize) -> bool {
     let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &target.rect,
         spread, weapon.params.bullet.size);
