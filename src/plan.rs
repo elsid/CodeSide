@@ -215,7 +215,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         next.id = self.state_id_generator.next();
         next.depth += 1;
         *next.planner.simulator.unit_mut().action_mut() = transition.get_action(state.properties());
-        next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut None);
+        next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut Some(self.debug));
 
         let unit = state.planner.simulator.unit();
         let unit_state = UnitState {
