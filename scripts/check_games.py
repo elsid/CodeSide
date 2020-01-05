@@ -26,7 +26,7 @@ def check_game(game):
     seed = game['seed']
     results = game['results']
     if sum(1 for v in results.values() if v['score'] == 0) == len(results):
-        print('zero_draw', seed)
+        print('zero_draw', seed, results['Tcp_310']['position'])
     scores = frozenset(v['score'] for v in results.values())
     min_score = min(scores)
     if len(scores) != 1 and 'Tcp_310' in results and results['Tcp_310']['score'] == min_score:
