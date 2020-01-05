@@ -100,8 +100,8 @@ impl<'c, 's> Planner<'c, 's> {
 
         let game_score_diff_score = 1.0 - (opponents_score - my_score) as f64 / self.max_score as f64;
 
-        let triggered_mines_by_me_score = if self.simulator.counters().max_number_of_mines > 0 {
-            1.0 - self.simulator.counters().triggered_mines_by_me as f64 / self.simulator.counters().max_number_of_mines as f64
+        let triggered_mines_by_me_score = if self.simulator.stats().max_number_of_mines > 0 {
+            1.0 - self.simulator.stats().triggered_mines_by_me as f64 / self.simulator.stats().max_number_of_mines as f64
         } else {
             1.0
         };
