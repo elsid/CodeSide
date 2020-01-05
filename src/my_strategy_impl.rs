@@ -60,6 +60,9 @@ impl MyStrategyImpl {
         let world = World::new(config, current_unit.player_id, game);
         #[cfg(feature = "dump_level")]
         println!("{}", dump_level(world.level()));
+        #[cfg(not(feature = "disable_output"))]
+        eprintln!("new {} {} {} {} {} {}", world.is_complex_level(), world.players().len(), world.units().len(),
+            world.bullets().len(), world.mines().len(), world.loot_boxes().len());
         Self {
             rng: XorShiftRng::from_seed([
                 3918248293,
