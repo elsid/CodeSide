@@ -39,6 +39,7 @@ max_tick = []
 spectator = []
 test = []
 simple = []
+enable_debug_bullet = []
 
 [[bench]]
 name = "simulator"
