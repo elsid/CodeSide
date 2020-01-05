@@ -88,7 +88,7 @@ impl<'c, 's> Planner<'c, 's> {
             .map(|v| v.health())
             .sum::<i32>();
 
-        let health_diff_score = (teammates_health - opponnents_health) as f64
+        let health_diff_score = 1.0 - (opponnents_health - teammates_health) as f64
             / (self.simulator.units().len() as i32 * self.simulator.properties().unit_max_health) as f64;
 
         let my_score = self.simulator.my_player().score;
