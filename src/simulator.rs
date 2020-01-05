@@ -61,7 +61,8 @@ pub struct Stats {
     pub triggered_mines_by_me: usize,
 }
 
-const EPSILON: f64 = 1e-9;
+const LESSER_EPSILON: f64 = 1e-14;
+const GREATER_EPSILON: f64 = 1e-9;
 
 impl<'r> Simulator<'r> {
     pub fn new(world: &'r World, me_id: i32) -> Self {
@@ -610,7 +611,7 @@ impl<'r> Simulator<'r> {
                         let distance_by_x = (self.units[unit].holding_center_x() - tile_x).abs();
                         let penetration_by_x = half_size_sum_x - distance_by_x;
                         assert!(
-                            penetration_by_x <= EPSILON || penetration_by_y <= EPSILON,
+                            penetration_by_x <= LESSER_EPSILON || penetration_by_y <= LESSER_EPSILON,
                             "\n[{}] {} x={} y={} penetration_by_x={} penetration_by_y={}\n{:?}\n", self.units[unit].base.id, place, x, y, penetration_by_x, penetration_by_y, self.units[unit]
                         );
                     },
@@ -783,7 +784,7 @@ impl UnitExt {
         let half_size_sum_y = (self.holding_size_y() + tile_size) / 2.0;
         let distance_by_y = (self.holding_center_y() - tile_y).abs();
         let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= EPSILON {
+        if penetration_by_y <= LESSER_EPSILON {
             return;
         }
         let tile_x = x as f64 + 0.5;
@@ -793,7 +794,7 @@ impl UnitExt {
         if penetration_by_x <= 0.0 {
             return;
         }
-        self.velocity_x -= (penetration_by_x + EPSILON).copysign(self.velocity_x);
+        self.velocity_x -= (penetration_by_x + GREATER_EPSILON).copysign(self.velocity_x);
     }
 
     pub fn collide_with_tile_by_y(&mut self, x: usize, y: usize) -> bool {
@@ -805,7 +806,7 @@ impl UnitExt {
         let half_size_sum_x = (self.holding_size_x() + tile_size) / 2.0;
         let distance_by_x = (self.holding_center_x() - tile_x).abs();
         let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= EPSILON {
+        if penetration_by_x <= LESSER_EPSILON {
             return false;
         }
         let tile_y = y as f64 + 0.5;
@@ -815,7 +816,7 @@ impl UnitExt {
         if penetration_by_y <= 0.0 {
             return false;
         }
-        self.velocity_y -= (penetration_by_y + EPSILON).copysign(self.velocity_y);
+        self.velocity_y -= (penetration_by_y + GREATER_EPSILON).copysign(self.velocity_y);
         true
     }
 
@@ -823,7 +824,7 @@ impl UnitExt {
         let half_size_sum_y = (self.holding_size_y() + other.holding_size_y()) / 2.0;
         let distance_by_y = (self.holding_center_y() - other.holding_center_y()).abs();
         let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= EPSILON {
+        if penetration_by_y <= LESSER_EPSILON {
             return;
         }
         let half_size_sum_x = (self.moving_size_x() + other.holding_size_x()) / 2.0;
@@ -832,14 +833,14 @@ impl UnitExt {
         if penetration_by_x <= 0.0 {
             return;
         }
-        self.velocity_x -= (penetration_by_x + EPSILON).copysign(self.velocity_x);
+        self.velocity_x -= (penetration_by_x + GREATER_EPSILON).copysign(self.velocity_x);
     }
 
     pub fn collide_with_unit_by_y(&mut self, other: &UnitExt) -> bool {
         let half_size_sum_x = (self.holding_size_x() + other.holding_size_x()) / 2.0;
         let distance_by_x = (self.holding_center_x() - other.holding_center_x()).abs();
         let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= EPSILON {
+        if penetration_by_x <= LESSER_EPSILON {
             return false;
         }
         let half_size_sum_y = (self.moving_size_y() + other.holding_size_y()) / 2.0;
@@ -848,7 +849,7 @@ impl UnitExt {
         if penetration_by_y <= 0.0 {
             return false;
         }
-        self.velocity_y -= (penetration_by_y + EPSILON).copysign(self.velocity_y);
+        self.velocity_y -= (penetration_by_y + GREATER_EPSILON).copysign(self.velocity_y);
         true
     }
 
