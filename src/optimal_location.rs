@@ -273,7 +273,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
 
 pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
     match weapon_type {
-        WeaponType::RocketLauncher => 1,
+        WeaponType::RocketLauncher => 3,
         WeaponType::AssaultRifle => 2,
         WeaponType::Pistol => 3,
     }
