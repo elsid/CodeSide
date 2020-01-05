@@ -8,6 +8,7 @@ import sys
 import operator
 import functools
 import numbers
+import math
 
 from collections import defaultdict, Counter
 
@@ -76,16 +77,34 @@ def show_stats(stats):
 
 def show_ratio_plots(pyplot, stats, metric):
     players = stats['players']
-    show_plot(
+    show_ratio_plot(
         pyplot,
         name='%s %s / %s' % (metric, players[0], players[1]),
         values=stats[metric][players[0]] / stats[metric][players[1]],
     )
-    show_plot(
+    show_ratio_plot(
         pyplot,
         name='%s %s / %s' % (metric, players[1], players[0]),
         values=stats[metric][players[1]] / stats[metric][players[0]],
     )
+
+
+def show_ratio_plot(pyplot, name, values):
+    fig, ax = pyplot.subplots()
+    fig.canvas.set_window_title(name)
+    ax.set_title(name)
+    ax.plot(numpy.arange(0, len(values), 1), values, label=name)
+    filtered = [v for v in values[len(values) // 2:] if not math.isinf(v)]
+    if filtered:
+        filtered = numpy.array(filtered)
+        min_v = min(filtered)
+        ax.plot([len(values) // 2, len(values) - 1], [min_v, min_v], '-.', label='last half max %s' % min_v)
+        max_v = max(filtered)
+        ax.plot([len(values) // 2, len(values) - 1], [max_v, max_v], '-.', label='last half max %s' % max_v)
+        mean = statistics.mean(filtered)
+        ax.plot([len(values) // 2, len(values) - 1], [mean, mean], '--', label='last half mean %s' % mean)
+    ax.grid(True)
+    ax.legend()
 
 
 def show_metric_plot(pyplot, stats, metric):
