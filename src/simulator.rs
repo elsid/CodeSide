@@ -304,6 +304,12 @@ impl<'r> Simulator<'r> {
         while let Some(explosion) = explosions.pop() {
             self.explode_units(&explosion);
             self.explode_mines(&explosion, &mut explosions);
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
+            {
+                if let Some(d) = debug {
+                    d.rect_border(&explosion.rect(), ColorF32 { a: 0.01, r: 0.8, g: 0.0, b: 0.0 }, 0.1);
+                }
+            }
         }
 
         #[cfg(feature = "simulator_weapon")]
