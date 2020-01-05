@@ -234,32 +234,7 @@ impl<'r> Simulator<'r> {
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
             {
                 if let Some(d) = debug {
-                    let rect = self.units[unit].base.rect();
-                    let color = ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 };
-                    d.draw(CustomData::Line {
-                        p1: rect.bottom_left().as_debug(),
-                        p2: rect.top_left().as_debug(),
-                        width: 0.1,
-                        color: color.clone(),
-                    });
-                    d.draw(CustomData::Line {
-                        p1: rect.top_left().as_debug(),
-                        p2: rect.top_right().as_debug(),
-                        width: 0.1,
-                        color: color.clone(),
-                    });
-                    d.draw(CustomData::Line {
-                        p1: rect.top_right().as_debug(),
-                        p2: rect.bottom_right().as_debug(),
-                        width: 0.1,
-                        color: color.clone(),
-                    });
-                    d.draw(CustomData::Line {
-                        p1: rect.bottom_right().as_debug(),
-                        p2: rect.bottom_left().as_debug(),
-                        width: 0.1,
-                        color: color.clone(),
-                    });
+                    d.rect_border(&self.units[unit].base.rect(), ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }, 0.1);
                 }
             }
         }

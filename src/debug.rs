@@ -7,7 +7,10 @@ use model::{
 };
 
 #[cfg(feature = "enable_debug")]
-use crate::my_strategy::Clamp1;
+use crate::my_strategy::{
+    Clamp1,
+    Rect
+};
 
 pub struct Debug<'r, 'd> {
     base: &'r mut crate::Debug<'d>,
@@ -42,6 +45,34 @@ impl<'r, 'd> Debug<'r, 'd> {
             alignment: TextAlignment::Left,
             size: 20.5,
             color: ColorF32 { a: 0.8, r: 1.0, g: 1.0, b: 1.0 },
+        });
+    }
+
+    #[cfg(feature = "enable_debug")]
+    pub fn rect_border(&mut self, rect: &Rect, color: ColorF32, border_width: f32) {
+        self.draw(CustomData::Line {
+            p1: rect.bottom_left().as_debug(),
+            p2: rect.top_left().as_debug(),
+            width: border_width,
+            color: color.clone(),
+        });
+        self.draw(CustomData::Line {
+            p1: rect.top_left().as_debug(),
+            p2: rect.top_right().as_debug(),
+            width: border_width,
+            color: color.clone(),
+        });
+        self.draw(CustomData::Line {
+            p1: rect.top_right().as_debug(),
+            p2: rect.bottom_right().as_debug(),
+            width: border_width,
+            color: color.clone(),
+        });
+        self.draw(CustomData::Line {
+            p1: rect.bottom_right().as_debug(),
+            p2: rect.bottom_left().as_debug(),
+            width: border_width,
+            color: color.clone(),
         });
     }
 }
