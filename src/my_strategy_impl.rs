@@ -6,6 +6,7 @@ use model::{
 
 #[cfg(feature = "enable_debug")]
 use model::{
+    Bullet,
     ColorF32,
     CustomData,
     TextAlignment,
@@ -139,6 +140,11 @@ impl MyStrategyImpl {
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
             render_backtrack(self.world.get_backtrack(current_unit.id), self.world.level(), debug);
+
+            #[cfg(feature = "enable_debug_bullet")]
+            for bullet in self.world.bullets().iter() {
+                render_bullet(bullet, debug);
+            }
         }
 
         let action = self.optimal_actions.iter().find(|(id, _)| *id == current_unit.id).unwrap().1.clone();
@@ -323,4 +329,14 @@ fn render_backtrack(backtrack: &Vec<usize>, level: &Level, debug: &mut Debug) {
             color: ColorF32 { a: 0.66, r: 0.66, g: 0.66, b: 0.33 },
         });
     }
+}
+
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_bullet"))]
+fn render_bullet(bullet: &Bullet, debug: &mut Debug) {
+    debug.draw(CustomData::Line {
+        p1: bullet.position().as_debug(),
+        p2: (bullet.position() + Vec2::from_model(&bullet.velocity)).as_debug(),
+        width: 0.05,
+        color: ColorF32 { a: 0.66, r: 1.0, g: 0.66, b: 0.0 },
+    });
 }
