@@ -193,12 +193,20 @@ pub fn get_distance_to_nearest_hit_wall_by_vertical(begin: Vec2, end: Vec2, leve
     let direction = (end_y - y).signum();
     while y != end_y {
         if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-            return Some((y as f64 - begin.y()).abs());
+            if (y as f64) < begin.y() {
+                return Some(begin.y() - (y + 1) as f64);
+            } else {
+                return Some(y as f64 - begin.y());
+            }
         }
         y += direction;
     }
     if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-        Some((y as f64 - begin.y()).abs())
+        if (y as f64) < begin.y() {
+            return Some(begin.y() - (y + 1) as f64);
+        } else {
+            return Some(y as f64 - begin.y());
+        }
     } else {
         None
     }
@@ -211,12 +219,20 @@ pub fn get_distance_to_nearest_hit_wall_by_horizontal(begin: Vec2, end: Vec2, le
     let direction = (end_x - x).signum();
     while x != end_x {
         if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-            return Some((x as f64 - begin.x()).abs());
+            if (x as f64) < begin.x() {
+                return Some(begin.x() - (x + 1) as f64);
+            } else {
+                return Some(x as f64 - begin.x());
+            }
         }
         x += direction;
     }
     if level.get_tile(Location::new(x as usize, y as usize)) == Tile::Wall {
-        Some((x as f64 - begin.x()).abs())
+        if (x as f64) < begin.x() {
+            return Some(begin.x() - (x + 1) as f64);
+        } else {
+            return Some(x as f64 - begin.x());
+        }
     } else {
         None
     }

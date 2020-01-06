@@ -16,7 +16,7 @@ use aicup2019::my_strategy::{
 };
 
 #[test]
-fn test_get_distance_to_nearest_hit_wall_by_vertical_with_only_empty_tiles() {
+fn test_get_distance_to_nearest_hit_wall_by_vertical_bottom_to_top_with_only_empty_tiles() {
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -31,7 +31,52 @@ fn test_get_distance_to_nearest_hit_wall_by_vertical_with_only_empty_tiles() {
 }
 
 #[test]
-fn test_get_distance_to_nearest_hit_wall_by_horizontal_with_only_empty_tiles() {
+fn test_get_distance_to_nearest_hit_wall_by_vertical_top_to_bottom_with_only_empty_tiles() {
+    let level = Level::from_model(&model::Level {
+        tiles: vec![
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+        ]
+    });
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_vertical(Vec2::new(0.5, 2.5), Vec2::new(0.5, 0.5), &level),
+        None
+    );
+}
+
+#[test]
+fn test_get_distance_to_nearest_hit_wall_by_vertical_bottom_to_top_with_border_wall_tiles() {
+    let level = Level::from_model(&model::Level {
+        tiles: vec![
+            vec![Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall],
+            vec![Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall],
+            vec![Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall],
+        ]
+    });
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_vertical(Vec2::new(2.5, 2.5), Vec2::new(2.5, 4.5), &level),
+        Some(1.5)
+    );
+}
+
+#[test]
+fn test_get_distance_to_nearest_hit_wall_by_vertical_top_to_bottom_with_border_wall_tiles() {
+    let level = Level::from_model(&model::Level {
+        tiles: vec![
+            vec![Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall],
+            vec![Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall],
+            vec![Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall],
+        ]
+    });
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_vertical(Vec2::new(2.5, 2.5), Vec2::new(2.5, 0.5), &level),
+        Some(1.5)
+    );
+}
+
+#[test]
+fn test_get_distance_to_nearest_hit_wall_by_horizontal_from_left_to_right_with_only_empty_tiles() {
     let level = Level::from_model(&model::Level {
         tiles: vec![
             vec![Tile::Empty, Tile::Empty, Tile::Empty],
@@ -42,6 +87,55 @@ fn test_get_distance_to_nearest_hit_wall_by_horizontal_with_only_empty_tiles() {
     assert_eq!(
         get_distance_to_nearest_hit_wall_by_horizontal(Vec2::new(0.5, 0.5), Vec2::new(2.5, 0.5), &level),
         None
+    );
+}
+
+#[test]
+fn test_get_distance_to_nearest_hit_wall_by_horizontal_from_right_to_left_with_only_empty_tiles() {
+    let level = Level::from_model(&model::Level {
+        tiles: vec![
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+        ]
+    });
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_horizontal(Vec2::new(2.5, 0.5), Vec2::new(0.5, 0.5), &level),
+        None
+    );
+}
+
+#[test]
+fn test_get_distance_to_nearest_hit_wall_by_horizontal_from_left_to_right_with_border_wall_tiles() {
+    let level = Level::from_model(&model::Level {
+        tiles: vec![
+            vec![Tile::Wall, Tile::Wall, Tile::Wall],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Wall, Tile::Wall, Tile::Wall],
+        ]
+    });
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_horizontal(Vec2::new(2.5, 2.5), Vec2::new(4.5, 2.5), &level),
+        Some(1.5)
+    );
+}
+
+#[test]
+fn test_get_distance_to_nearest_hit_wall_by_horizontal_from_right_to_left_with_border_wall_tiles() {
+    let level = Level::from_model(&model::Level {
+        tiles: vec![
+            vec![Tile::Wall, Tile::Wall, Tile::Wall],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Empty, Tile::Empty, Tile::Empty],
+            vec![Tile::Wall, Tile::Wall, Tile::Wall],
+        ]
+    });
+    assert_eq!(
+        get_distance_to_nearest_hit_wall_by_horizontal(Vec2::new(2.5, 2.5), Vec2::new(0.5, 2.5), &level),
+        Some(1.5)
     );
 }
 
