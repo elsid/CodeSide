@@ -29,4 +29,14 @@ impl Vec2i {
     pub const fn only_y(y: isize) -> Self {
         Self { x: 0, y }
     }
+
+    #[inline(always)]
+    pub fn add_x(&mut self, x: isize) {
+        self.x += x;
+    }
+
+    #[inline(always)]
+    pub fn add_y(&mut self, y: isize) {
+        self.y += y;
+    }
 }
