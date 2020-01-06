@@ -52,7 +52,7 @@ impl Config {
             optimal_location_first_weapon_score_weight: 3.0,
             optimal_location_swap_weapon_score_weight: 1.0,
             optimal_location_hit_by_opponent_score_weight: -1.0,
-            optimal_location_opponent_obstacle_score_weight: -1.0,
+            optimal_location_opponent_obstacle_score_weight: -2.0,
             optimal_location_hit_nearest_opponent_score_weight: 2.0,
             optimal_location_loot_box_mine_score_weight: 0.1,
             optimal_location_height_score_weight: 0.1,
@@ -74,7 +74,6 @@ impl Config {
 
     pub fn adjusted(mut self, team_size: i32) -> Self {
         self.optimal_location_health_pack_score_weight *= team_size as f64;
-        self.optimal_location_opponent_obstacle_score_weight *= team_size as f64;
         self
     }
 }
