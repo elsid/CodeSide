@@ -48,7 +48,7 @@ impl Config {
             plan_triggered_mines_by_me_score_weight: 1.0,
             plan_time_interval_factor: 3.0,
             optimal_location_distance_to_position_score_weight: -0.25,
-            optimal_location_health_pack_score_weight: 2.0,
+            optimal_location_health_pack_score_weight: 4.0,
             optimal_location_first_weapon_score_weight: 3.0,
             optimal_location_swap_weapon_score_weight: 1.0,
             optimal_location_hit_by_opponent_score_weight: -1.0,
@@ -73,7 +73,7 @@ impl Config {
     }
 
     pub fn adjusted(mut self, team_size: i32) -> Self {
-        self.optimal_location_health_pack_score_weight *= (team_size * team_size) as f64;
+        self.optimal_location_health_pack_score_weight *= team_size as f64;
         self.optimal_location_opponent_obstacle_score_weight *= team_size as f64;
         self
     }
