@@ -23,7 +23,7 @@ pub enum Role {
 
 pub fn get_role(unit: &Unit, prev: &Role, world: &World, debug: &mut Dbg) -> Role {
     if let Role::Miner { plant_mines } = prev {
-        if *plant_mines > 0 || has_collision_with_teammate_mine(unit, world) {
+        if (*plant_mines > 0 || has_collision_with_teammate_mine(unit, world)) && will_explode_opponent_units(unit, world) {
             return prev.clone();
         }
     } else {
@@ -143,5 +143,18 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> us
 fn has_collision_with_teammate_mine(unit: &Unit, world: &World) -> bool {
     world.mines().iter()
         .find(|v| world.is_teammate_mine(v) && v.rect().has_collision(&unit.rect()))
+        .is_some()
+}
+
+fn will_explode_opponent_units(miner: &Unit, world: &World) -> bool {
+    world.mines().iter()
+        .filter(|mine| world.is_teammate_mine(mine) && mine.rect().has_collision(&miner.rect()))
+        .find(|mine| {
+            let radius = world.properties().mine_explosion_params.radius;
+            let explosion_rect = Rect::new(mine.position(), Vec2::new(radius, radius));
+            world.units().iter()
+                .find(|unit| world.is_opponent_unit(unit) && explosion_rect.has_collision(&unit.rect()))
+                .is_some()
+        })
         .is_some()
 }
