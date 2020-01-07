@@ -167,7 +167,7 @@ impl MyStrategyImpl {
             let unit_id = self.roles[i].0;
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
-                self.roles[i].1 = get_role(unit, &self.roles[i].1, &self.world);
+                self.roles[i].1 = get_role(unit, &self.roles[i].1, &self.world, debug);
                 #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
                 debug.log(format!("[{}] role: {:?}", unit_id, self.roles[i].1));
             }

@@ -4,6 +4,7 @@ use model::{
 };
 
 use crate::my_strategy::{
+    Debug as Dbg,
     Positionable,
     Rect,
     Rectangular,
@@ -20,13 +21,13 @@ pub enum Role {
     }
 }
 
-pub fn get_role(unit: &Unit, prev: &Role, world: &World) -> Role {
+pub fn get_role(unit: &Unit, prev: &Role, world: &World, debug: &mut Dbg) -> Role {
     if let Role::Miner { plant_mines } = prev {
         if *plant_mines > 0 || has_collision_with_teammate_mine(unit, world) {
             return prev.clone();
         }
     } else {
-        let plant_mines = get_mines_to_plant(unit, world);
+        let plant_mines = get_mines_to_plant(unit, world, debug);
         if plant_mines > 0 {
             return Role::Miner { plant_mines };
         }
@@ -35,19 +36,25 @@ pub fn get_role(unit: &Unit, prev: &Role, world: &World) -> Role {
     Role::Shooter
 }
 
-fn get_mines_to_plant(current_unit: &Unit, world: &World) -> usize {
+fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> usize {
     if !current_unit.on_ground || current_unit.on_ladder || current_unit.mines == 0 || current_unit.weapon.is_none() {
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] reject miner 1", current_unit.id));
         return 0;
     }
 
     let tile = world.get_tile(current_unit.position().as_location() + Vec2i::only_y(-1));
     if tile != Tile::Wall && tile != Tile::Platform {
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] reject miner 2", current_unit.id));
         return 0;
     }
 
     let fire_time = current_unit.weapon.as_ref().map(|v| v.fire_timer.unwrap_or(0.0)).unwrap_or(std::f64::MAX);
 
     if fire_time >= 2.0 * world.tick_time_interval() {
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] reject miner 3", current_unit.id));
         return 0;
     }
 
@@ -61,6 +68,8 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World) -> usize {
         .collect::<Vec<_>>();
 
     if collided_teammate_units.len() > 1 {
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] reject miner 4", current_unit.id));
         return 0;
     }
 
@@ -74,6 +83,8 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World) -> usize {
         .collect::<Vec<_>>();
 
     if collided_opponent_units.is_empty() {
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] reject miner 5", current_unit.id));
         return 0;
     }
 
@@ -120,6 +131,8 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World) -> usize {
     }
 
     if max_my_total_score < world.properties().kill_score * world.properties().team_size {
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] reject miner 6", current_unit.id));
         return 0;
     }
 
