@@ -30,6 +30,7 @@ use crate::my_strategy::{
     World,
     as_score,
     get_hit_probabilities,
+    get_hit_probability_by_spread,
     get_hit_probability_by_spread_with_destination,
     is_allowed_to_shoot,
 };
@@ -161,7 +162,9 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
-                if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+                if (weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer)
+                        && get_hit_probability_by_spread(unit.center(), &current_unit_rect, get_mean_spread(weapon), weapon.params.bullet.size)
+                            >= world.config().min_hit_probability_by_spread_to_shoot {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
                         &target, get_mean_spread(weapon), weapon.params.bullet.size, world,
