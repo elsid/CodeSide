@@ -37,7 +37,8 @@ pub fn get_role(unit: &Unit, prev: &Role, world: &World, debug: &mut Dbg) -> Rol
 }
 
 fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> usize {
-    if !current_unit.on_ground || current_unit.on_ladder || current_unit.mines == 0 || current_unit.weapon.is_none() {
+    if current_unit.on_ladder || current_unit.mines == 0 || current_unit.weapon.is_none()
+            || current_unit.position.y - current_unit.position.y.floor() > world.properties().unit_fall_speed * 2.0 as f64 * world.tick_time_interval() {
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
         debug.log(format!("[{}] reject miner 1", current_unit.id));
         return 0;
