@@ -38,7 +38,7 @@ simulator_pickup_mine = []
 max_tick = []
 spectator = []
 test = []
-simple = []
+pusher = []
 enable_debug_bullet = []
 
 [[bench]]
