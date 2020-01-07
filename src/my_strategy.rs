@@ -209,9 +209,9 @@ pub mod my_strategy_check_simulator;
 #[path = "my_strategy_test.rs"]
 pub mod my_strategy_test;
 
-#[cfg(feature = "simple")]
-#[path = "my_strategy_simple.rs"]
-pub mod my_strategy_simple;
+#[cfg(feature = "pusher")]
+#[path = "my_strategy_pusher.rs"]
+pub mod my_strategy_pusher;
 
 #[cfg(all(
     not(feature = "dump_examples"),
@@ -219,7 +219,7 @@ pub mod my_strategy_simple;
     not(feature = "dump_properties_json"),
     not(feature = "jump"),
     not(feature = "test"),
-    not(feature = "simple"),
+    not(feature = "pusher"),
 ))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
@@ -242,8 +242,8 @@ pub use self::my_strategy_check_simulator::MyStrategyImpl;
 #[cfg(feature = "test")]
 pub use self::my_strategy_test::MyStrategyImpl;
 
-#[cfg(feature = "simple")]
-pub use self::my_strategy_simple::MyStrategyImpl;
+#[cfg(feature = "pusher")]
+pub use self::my_strategy_pusher::MyStrategyImpl;
 
 #[cfg(all(
     not(feature = "dump_examples"),
@@ -252,7 +252,7 @@ pub use self::my_strategy_simple::MyStrategyImpl;
     not(feature = "jump"),
     not(feature = "check_simulator"),
     not(feature = "test"),
-    not(feature = "simple"),
+    not(feature = "pusher"),
 ))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 
@@ -303,7 +303,7 @@ impl MyStrategy {
                     not(feature = "jump"),
                 ),
                 feature = "check_simulator",
-                feature = "simple",
+                feature = "pusher",
                 feature = "test",
             ))]
             {
