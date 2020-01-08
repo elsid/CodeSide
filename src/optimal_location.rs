@@ -14,6 +14,7 @@ use model::{
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
 use crate::my_strategy::{
+    Level,
     color_from_heat,
 };
 
@@ -24,7 +25,6 @@ use crate::my_strategy::{
     Positionable,
     Rect,
     Rectangular,
-    TilePathInfo,
     Vec2,
     Vec2i,
     World,
@@ -36,75 +36,32 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(i32, Location)> {
-    let mut optimal: Option<(i32, Location)> = None;
-
-    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
-    let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
-        .take(world.level().size())
-        .collect();
-
-    let unit_index = world.get_unit_index(unit.id);
-
-    for x in 1 .. world.level().size_x() - 1 {
-        for y in 1 .. world.level().size_y() - 2 {
-            let location = Location::new(x, y);
-            let tile = world.get_tile(location);
-            if tile == Tile::Wall || is_busy_by_other(location, unit.id, optimal_locations, world) {
-                continue;
-            }
-            if let Some(path_info) = world.get_path_info(unit_index, location) {
-                let candidate_score = get_location_score(location, unit, world, &path_info);
-                if optimal.is_none() || optimal.unwrap().0 < candidate_score {
-                    optimal = Some((candidate_score, location));
-                }
-                #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
-                {
-                    tiles[world.level().get_tile_index(location)] = Some(candidate_score);
-                }
-            }
-        }
-    }
-
-    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
-    {
-        let min = tiles.iter().filter_map(|&v| v).min_by_key(|&v| as_score(v)).unwrap();
-        let max = tiles.iter().filter_map(|&v| v).max_by_key(|&v| as_score(v)).unwrap();
-        for x in 1 .. world.level().size_x() - 1 {
-            for y in 1 .. world.level().size_y() - 2 {
-                let location = Location::new(x, y);
-                if let Some(score) = tiles[world.level().get_tile_index(location)] {
-                    debug.draw(CustomData::Rect {
-                        pos: location.as_debug(),
-                        size: Vec2F32 { x: 1.0, y: 1.0 },
-                        color: color_from_heat(0.1, ((score - min) / (max - min)) as f32),
-                    });
-                }
-            }
-        }
-        #[cfg(feature = "enable_debug_log")]
-        {
-            if let Some((score, location)) = optimal {
-                let path_info = world.get_path_info(unit_index, location).unwrap();
-                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
-                if let Some(v) = optimal_locations.iter().find(|(id, _)| *id == unit.id).unwrap().1 {
-                    let path_info = world.get_path_info(unit_index, v).unwrap();
-                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, world, &path_info)));
-                }
-            }
-        }
-    }
-
-    optimal
-}
-
-fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World) -> bool {
-    for i in 0 .. optimal_locations.len() {
-        if optimal_locations[i].0 == unit_id {
+pub fn update_locations_score(unit: &Unit, world: &World, optimal_paths: &Vec<(i32, Vec<Location>)>,
+        locations_score: &mut Vec<i32>, debug: &mut Debug) {
+    for index in 0 .. locations_score.len() {
+        if !world.is_reachable(index) {
+            locations_score[index] = std::i32::MIN;
             continue;
         }
-        if let Some(v) = optimal_locations[i].1 {
-            if v == location || v + Vec2i::only_y(-1) == location {
+        let location = world.level().get_tile_location(index);
+        if is_busy_by_other(location, unit.id, optimal_paths, world) {
+            locations_score[index] = std::i32::MIN;
+            continue;
+        }
+        locations_score[index] = get_location_score(location, unit, world);
+    }
+
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
+    render_locations_score(locations_score, world.level(), debug);
+}
+
+fn is_busy_by_other(location: Location, unit_id: i32, optimal_paths: &Vec<(i32, Vec<Location>)>, world: &World) -> bool {
+    for i in 0 .. optimal_paths.len() {
+        if optimal_paths[i].0 == unit_id {
+            continue;
+        }
+        if let Some(v) = optimal_paths[i].1.last() {
+            if *v == location || *v + Vec2i::only_y(-1) == location {
                 return true;
             }
         }
@@ -126,11 +83,11 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
         .is_some()
 }
 
-pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> i32 {
-    as_score(get_location_score_components(location, current_unit, world, path_info).iter().sum())
+pub fn get_location_score(location: Location, current_unit: &Unit, world: &World) -> i32 {
+    as_score(get_location_score_components(location, current_unit, world).iter().sum())
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World) -> [f64; 16] {
     let current_unit_position = location.bottom();
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
@@ -178,10 +135,10 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
             }
         })
         .sum::<f64>();
-    let opponent_obstacle_score = !path_info.has_opponent_unit() as i32 as f64;
-    let teammate_obstacle_score = !path_info.has_teammate_unit() as i32 as f64;
-    let mine_obstacle_score = !path_info.has_mine() as i32 as f64;
-    let bullet_obstacle_score = !path_info.has_bullet() as i32 as f64;
+    let opponent_obstacle_score = !world.has_opponent_unit(location) as i32 as f64;
+    let teammate_obstacle_score = !world.has_teammate_unit(current_unit.id, location) as i32 as f64;
+    let mine_obstacle_score = !world.has_mine(location) as i32 as f64;
+    let bullet_obstacle_score = !world.has_bullet(current_unit.id, location) as i32 as f64;
     let loot_box_mine_score = match world.tile_item(location) {
         Some(&Item::Mine { }) => 1.0,
         _ => 0.0,
@@ -293,4 +250,22 @@ pub fn make_location_rect(location: Location) -> Rect {
 
 fn get_mean_spread(weapon: &Weapon) -> f64 {
     (weapon.params.max_spread + weapon.params.min_spread) / 2.0
+}
+
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
+fn render_locations_score(locations_score: &Vec<i32>, level: &Level, debug: &mut Debug) {
+    let min = locations_score.iter().filter(|v| **v != std::i32::MIN).min().unwrap();
+    let max = locations_score.iter().filter(|v| **v != std::i32::MIN).max().unwrap();
+    for index in 0 .. locations_score.len() {
+        let score = locations_score[index];
+        if score == std::i32::MIN {
+            continue;
+        }
+        let location = level.get_tile_location(index);
+        debug.draw(CustomData::Rect {
+            pos: location.as_debug(),
+            size: Vec2F32 { x: 1.0, y: 1.0 },
+            color: color_from_heat(0.1, ((score - min) / (max - min)) as f32),
+        });
+    }
 }

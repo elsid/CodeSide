@@ -18,7 +18,6 @@ use crate::my_strategy::{
     Debug,
     Location,
     Plan,
-    Positionable,
     Role,
     SeedableRng,
     Vec2,
@@ -26,17 +25,18 @@ use crate::my_strategy::{
     XorShiftRng,
     default_action,
     get_miner_action,
-    get_optimal_destination,
-    get_optimal_location,
+    get_optimal_path,
     get_optimal_plan,
     get_optimal_target,
     get_role,
     get_shooter_action,
+    update_locations_score,
 };
 
 #[cfg(feature = "enable_debug")]
 use crate::my_strategy::{
     Level,
+    Positionable,
     Rectangular,
 };
 
@@ -47,8 +47,8 @@ pub struct MyStrategyImpl {
     world: World,
     rng: XorShiftRng,
     roles: Vec<(i32, Role)>,
-    optimal_locations: Vec<(i32, Option<Location>)>,
-    optimal_destinations: Vec<(i32, Vec2)>,
+    locations_score: Vec<(i32, Vec<i32>)>,
+    optimal_paths: Vec<(i32, Vec<Location>)>,
     optimal_targets: Vec<(i32, Option<Vec2>)>,
     optimal_plans: Vec<(i32, Plan)>,
     optimal_actions: Vec<(i32, UnitAction)>,
@@ -71,8 +71,8 @@ impl MyStrategyImpl {
                 1904458926,
             ]),
             roles: world.units().iter().map(|v| (v.id, Role::Shooter)).collect(),
-            optimal_locations: world.units().iter().map(|v| (v.id, None)).collect(),
-            optimal_destinations: world.units().iter().map(|v| (v.id, v.position())).collect(),
+            locations_score: world.units().iter().map(|v| (v.id, std::iter::repeat(0).take(world.level().size()).collect())).collect(),
+            optimal_paths: world.units().iter().map(|v| (v.id, Vec::new())).collect(),
             optimal_targets: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_plans: world.units().iter().map(|v| (v.id, Plan::default())).collect(),
             optimal_actions: world.units().iter().map(|v| (v.id, default_action())).collect(),
@@ -86,10 +86,10 @@ impl MyStrategyImpl {
         if self.last_tick != game.current_tick {
             self.last_tick = game.current_tick;
 
-            if self.optimal_locations.len() > game.units.len() {
+            if self.roles.len() > game.units.len() {
                 self.roles.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
-                self.optimal_locations.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
-                self.optimal_destinations.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+                self.locations_score.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+                self.optimal_paths.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_targets.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_plans.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
                 self.optimal_actions.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
@@ -103,9 +103,8 @@ impl MyStrategyImpl {
                 self.world.bullets().len(), self.world.units().len()));
 
             self.assign_roles(debug);
-
-            self.set_locations(debug);
-            self.set_destinatons();
+            self.update_locations_score(debug);
+            self.set_paths(debug);
             self.set_targets(debug);
             self.set_plans(debug);
             self.set_actions(debug);
@@ -135,14 +134,11 @@ impl MyStrategyImpl {
             self.update_roles();
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
-            for &(id, v) in self.optimal_locations.iter() {
-                if let Some(location) = v {
-                    render_optimal_location(location, self.world.get_unit(id), debug);
+            for (id, v) in self.optimal_paths.iter() {
+                if let Some(location) = v.last() {
+                    render_optimal_location(*location, self.world.get_unit(*id), debug);
                 }
             }
-
-            #[cfg(all(feature = "enable_debug", feature = "enable_debug_backtrack"))]
-            render_backtrack(self.world.get_backtrack(current_unit.id), self.world.level(), debug);
 
             #[cfg(feature = "enable_debug_bullet")]
             for bullet in self.world.bullets().iter() {
@@ -174,6 +170,16 @@ impl MyStrategyImpl {
         }
     }
 
+    fn update_locations_score(&mut self, debug: &mut Debug) {
+        for i in 0 .. self.locations_score.len() {
+            let unit_id = self.locations_score[i].0;
+            let unit = self.world.get_unit(unit_id);
+            if self.world.is_teammate_unit(unit) {
+                update_locations_score(unit, &self.world, &self.optimal_paths, &mut self.locations_score[i].1, debug);
+            }
+        }
+    }
+
     fn update_roles(&mut self) {
         for i in 0 .. self.roles.len() {
             let unit_id = self.roles[i].0;
@@ -187,34 +193,17 @@ impl MyStrategyImpl {
         }
     }
 
-    fn set_locations(&mut self, debug: &mut Debug) {
-        for i in 0 .. self.optimal_locations.len() {
-            let unit_id = self.optimal_locations[i].0;
+    fn set_paths(&mut self, debug: &mut Debug) {
+        for i in 0 .. self.optimal_paths.len() {
+            let unit_id = self.optimal_paths[i].0;
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
                     Role::Shooter => {
-                        self.optimal_locations[i].1 = get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1);
+                        self.optimal_paths[i].1 = get_optimal_path(unit, &self.locations_score[i].1, &self.world, debug).1;
                     },
                     Role::Miner { .. } => {
-                        self.optimal_locations[i].1 = None;
-                    },
-                }
-            }
-        }
-    }
-
-    fn set_destinatons(&mut self) {
-        for i in 0 .. self.optimal_destinations.len() {
-            let unit_id = self.optimal_destinations[i].0;
-            let unit = self.world.get_unit(unit_id);
-            if self.world.is_teammate_unit(unit) {
-                match &self.roles[i].1 {
-                    Role::Shooter => {
-                        self.optimal_destinations[i].1 = get_optimal_destination(unit, &self.optimal_locations[i].1, &self.world);
-                    },
-                    Role::Miner { .. } => {
-                        self.optimal_destinations[i].1 = unit.position();
+                        self.optimal_paths[i].1 = Vec::new();
                     },
                 }
             }
@@ -245,8 +234,8 @@ impl MyStrategyImpl {
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
                     Role::Shooter => {
-                        let destination = self.optimal_destinations[i].1;
-                        self.optimal_plans[i].1 = get_optimal_plan(unit, destination, &self.world, &mut self.rng, debug);
+                        let path = &self.optimal_paths[i].1;
+                        self.optimal_plans[i].1 = get_optimal_plan(unit, path, &self.world, &mut self.rng, debug);
                     },
                     Role::Miner { .. } => {
                         self.optimal_plans[i].1 = Plan::default();

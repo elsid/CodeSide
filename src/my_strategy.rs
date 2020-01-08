@@ -161,11 +161,11 @@ pub mod optimal_location;
 #[allow(unused_imports)]
 pub use optimal_location::*;
 
-#[path = "optimal_destination.rs"]
-pub mod optimal_destination;
+#[path = "optimal_path.rs"]
+pub mod optimal_path;
 
 #[allow(unused_imports)]
-pub use optimal_destination::*;
+pub use optimal_path::*;
 
 #[path = "optimal_target.rs"]
 pub mod optimal_target;
