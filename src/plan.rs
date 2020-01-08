@@ -12,7 +12,7 @@ use model::{
 
 use crate::my_strategy::{
     Config,
-    Debug,
+    Debug as Dbg,
     IdGenerator,
     Identifiable,
     Simulator,
@@ -44,7 +44,7 @@ impl<'c, 's> Planner<'c, 's> {
         Self { target, config, simulator, max_distance, max_score }
     }
 
-    pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Debug) -> Plan {
+    pub fn make(&self, current_tick: i32, rng: &mut XorShiftRng, debug: &mut Dbg) -> Plan {
         let mut visitor = VisitorImpl::new(current_tick, rng, debug);
 
         let initial_state = visitor.make_initial_state(self.clone());
@@ -138,14 +138,14 @@ pub struct UnitState {
 pub struct VisitorImpl<'r, 'd1, 'd2> {
     current_tick: i32,
     rng: &'r mut XorShiftRng,
-    debug: &'r mut Debug<'d1, 'd2>,
+    debug: &'r mut Dbg<'d1, 'd2>,
     state_id_generator: IdGenerator,
     transition_id_generator: IdGenerator,
     applied: std::collections::BTreeSet<UnitState>,
 }
 
 impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
-    pub fn new(current_tick: i32, rng: &'r mut XorShiftRng, debug: &'r mut Debug<'d1, 'd2>) -> Self {
+    pub fn new(current_tick: i32, rng: &'r mut XorShiftRng, debug: &'r mut Dbg<'d1, 'd2>) -> Self {
         VisitorImpl {
             current_tick,
             rng,
