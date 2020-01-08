@@ -10,7 +10,7 @@ pub struct State<State: Clone + std::fmt::Debug> {
 
 pub trait Visitor<State, Transition> {
     fn is_final(&self, state: &State) -> bool;
-    fn get_transitions(&mut self, state: &State) -> Vec<Transition>;
+    fn get_transitions(&mut self, iteration: usize, state: &State) -> Vec<Transition>;
     fn apply(&mut self, iteration: usize, state: &State, transition: &Transition) -> State;
     fn get_transition_cost(&mut self, source_state: &State, destination_state: &State, transition: &Transition) -> i32;
     fn get_score(&self, state: &State) -> i32;
@@ -20,62 +20,53 @@ pub trait Identifiable {
     fn id(&self) -> i32;
 }
 
-pub struct Search {
-    pub max_iterations: usize,
-}
+pub fn search<S, T, V>(current_tick: i32, initial: S, visitor: &mut V) -> (Vec<T>, Option<S>, usize)
+    where S: Clone + std::fmt::Debug + Identifiable,
+            T: Clone + std::fmt::Debug,
+            V: Visitor<S, T> {
 
-impl Search {
-    pub fn perform<S, T, V>(&self, current_tick: i32, initial: S, visitor: &mut V) -> (Vec<T>, Option<S>, usize)
-        where S: Clone + std::fmt::Debug + Identifiable,
-              T: Clone + std::fmt::Debug,
-              V: Visitor<S, T> {
+    let mut iteration: usize = 0;
+    let mut transitions = Vec::new();
+    let mut frontier = BinaryHeap::new();
 
-        let mut iterations: usize = 0;
-        let mut transitions = Vec::new();
-        let mut frontier = BinaryHeap::new();
+    let initial_state = State {
+        id: initial.id(),
+        cost: 0,
+        score: visitor.get_score(&initial),
+        state: initial,
+        transition: None,
+    };
 
-        let initial_state = State {
-            id: initial.id(),
-            cost: 0,
-            score: visitor.get_score(&initial),
-            state: initial,
-            transition: None,
-        };
+    frontier.push(initial_state);
 
-        frontier.push(initial_state);
+    let mut optimal_final_state: Option<State<S>> = None;
 
-        let mut optimal_final_state: Option<State<S>> = None;
-
-        while let Some(state) = frontier.pop() {
-            if (optimal_final_state.is_none() || optimal_final_state.as_ref().unwrap().score < state.score)
-                && visitor.is_final(&state.state) {
-                optimal_final_state = Some(state.clone());
-                log!(current_tick, "optimal_final_state={:?}", state.state);
-            }
-            if iterations >= self.max_iterations {
-                continue;
-            }
-            iterations += 1;
-            for transition in visitor.get_transitions(&state.state) {
-                let next_state = visitor.apply(iterations, &state.state, &transition);
-                let next_search_state = State {
-                    id: next_state.id(),
-                    cost: state.cost + visitor.get_transition_cost(&state.state, &next_state, &transition),
-                    score: visitor.get_score(&next_state),
-                    state: next_state,
-                    transition: Some(transitions.len()),
-                };
-                frontier.push(next_search_state);
-                transitions.push((state.transition, transition));
-            }
+    while let Some(state) = frontier.pop() {
+        if (optimal_final_state.is_none() || optimal_final_state.as_ref().unwrap().score < state.score)
+            && visitor.is_final(&state.state) {
+            optimal_final_state = Some(state.clone());
+            log!(current_tick, "optimal_final_state={:?}", state.state);
         }
-
-        (
-            reconstruct_sequence(&transitions, &optimal_final_state),
-            optimal_final_state.map(|v| v.state),
-            iterations
-        )
+        iteration += 1;
+        for transition in visitor.get_transitions(iteration, &state.state) {
+            let next_state = visitor.apply(iteration, &state.state, &transition);
+            let next_search_state = State {
+                id: next_state.id(),
+                cost: state.cost + visitor.get_transition_cost(&state.state, &next_state, &transition),
+                score: visitor.get_score(&next_state),
+                state: next_state,
+                transition: Some(transitions.len()),
+            };
+            frontier.push(next_search_state);
+            transitions.push((state.transition, transition));
+        }
     }
+
+    (
+        reconstruct_sequence(&transitions, &optimal_final_state),
+        optimal_final_state.map(|v| v.state),
+        iteration
+    )
 }
 
 impl<S> Clone for State<S>

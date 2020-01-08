@@ -15,13 +15,13 @@ use crate::my_strategy::{
     Debug,
     IdGenerator,
     Identifiable,
-    Search,
     Simulator,
     UnitExt,
     Vec2,
     Visitor,
     XorShiftRng,
     as_score,
+    search,
 };
 
 #[derive(Clone, Default)]
@@ -51,9 +51,7 @@ impl<'c, 's> Planner<'c, 's> {
 
         log!(current_tick, "state={:?}", initial_state);
 
-        let (transitions, final_state, _iterations) = Search {
-            max_iterations: self.config.plan_max_iterations,
-        }.perform(current_tick, initial_state, &mut visitor);
+        let (transitions, final_state, _iterations) = search(current_tick, initial_state, &mut visitor);
 
         let planner = final_state.map(|v| v.planner).unwrap_or(self.clone());
 
@@ -168,8 +166,8 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         state.depth >= state.planner.config.plan_min_state_depth
     }
 
-    fn get_transitions(&mut self, state: &State) -> Vec<Transition> {
-        if state.depth >= state.planner.config.plan_max_state_depth {
+    fn get_transitions(&mut self, iteration: usize, state: &State) -> Vec<Transition> {
+        if iteration > state.planner.config.plan_max_iterations || state.depth >= state.planner.config.plan_max_state_depth {
             return Vec::new();
         }
 
