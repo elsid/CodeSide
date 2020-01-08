@@ -36,8 +36,8 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(f64, Location)> {
-    let mut optimal: Option<(f64, Location)> = None;
+pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(i32, Location)> {
+    let mut optimal: Option<(i32, Location)> = None;
 
     #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
     let mut tiles: Vec<Option<f64>> = std::iter::repeat(None)
@@ -126,8 +126,8 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
         .is_some()
 }
 
-pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
-    get_location_score_components(location, current_unit, world, path_info).iter().sum()
+pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> i32 {
+    as_score(get_location_score_components(location, current_unit, world, path_info).iter().sum())
 }
 
 pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
