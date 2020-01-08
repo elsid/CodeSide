@@ -138,14 +138,14 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
     );
-    let distance_to_position_score = path_info.distance() / world.max_path_distance();
+    let distance_to_position_score = 1.0 - path_info.distance() / world.max_path_distance();
     let health_pack_score = match world.tile_item(location) {
         Some(&Item::HealthPack { .. }) => 1.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
         _ => 0.0,
     };
     let first_weapon_score = if current_unit.weapon.is_none() {
         match world.tile_item(location) {
-            Some(&Item::Weapon { .. }) => 1.0 - distance_to_position_score,
+            Some(&Item::Weapon { .. }) => distance_to_position_score,
             _ => 0.0,
         }
     } else {
@@ -158,7 +158,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         _ => false,
     }) as i32 as f64;
     let target = HitTarget::new(current_unit.id, current_unit_rect.clone());
-    let hit_by_opponent_score = world.units().iter()
+    let hit_by_opponent_score = world.number_of_opponents() as f64 - world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
@@ -178,14 +178,14 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
             }
         })
         .sum::<f64>();
-    let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
-    let teammate_obstacle_score = path_info.has_teammate_unit() as i32 as f64;
-    let mine_obstacle_score = path_info.has_mine() as i32 as f64;
-    let bullet_obstacle_score = path_info.has_bullet() as i32 as f64;
-    let loot_box_mine_score = (match world.tile_item(location) {
-        Some(&Item::Mine { }) => true,
-        _ => false,
-    }) as i32 as f64;
+    let opponent_obstacle_score = !path_info.has_opponent_unit() as i32 as f64;
+    let teammate_obstacle_score = !path_info.has_teammate_unit() as i32 as f64;
+    let mine_obstacle_score = !path_info.has_mine() as i32 as f64;
+    let bullet_obstacle_score = !path_info.has_bullet() as i32 as f64;
+    let loot_box_mine_score = match world.tile_item(location) {
+        Some(&Item::Mine { }) => 1.0,
+        _ => 0.0,
+    };
     let nearest_opponent = if let Some(weapon) = current_unit.weapon.as_ref() {
         world.units().iter()
             .filter(|unit| {
@@ -215,22 +215,22 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     let number_of_bullets = world.bullets().iter()
         .filter(|v| v.unit_id != current_unit.id)
         .count();
-    let bullets_score = if number_of_bullets > 0 {
+    let bullets_score = number_of_bullets as f64 - if number_of_bullets > 0 {
         world.bullets().iter()
             .filter(|v| v.unit_id != current_unit.id && v.rect().has_collision(&location_rect))
-            .count() as f64
+            .count()
     } else {
-        0.0
-    };
-    let mines_score = if world.mines().len() > 0 {
+        0
+    } as f64;
+    let mines_score = world.mines().len() as f64 - if world.mines().len() > 0 {
         let mine_half = Vec2::new(world.properties().mine_trigger_radius, world.properties().mine_trigger_radius);
         world.mines().iter()
             .filter(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
-            .count() as f64
+            .count()
     } else {
-        0.0
-    };
-    let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (current_unit.weapon.as_ref(), nearest_opponent) {
+        0
+    } as f64;
+    let hit_teammates_score = world.number_of_opponents() as f64 - if let (Some(weapon), Some(opponent)) = (current_unit.weapon.as_ref(), nearest_opponent) {
         if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
             let opponent_rect = opponent.rect();
             world.units().iter()

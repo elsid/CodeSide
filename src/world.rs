@@ -48,6 +48,7 @@ pub struct World {
     unit_index: Vec<i32>,
     max_distance: f64,
     number_of_teammates: usize,
+    number_of_opponents: usize,
     max_path_distance: f64,
     max_score: i32,
     is_complex_level: bool,
@@ -79,6 +80,7 @@ impl World {
             has_bullet: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
             unit_index,
             number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
+            number_of_opponents: game.units.iter().filter(|v| v.player_id != player_id).count(),
             config,
             current_tick: game.current_tick,
             properties: game.properties.clone(),
@@ -116,6 +118,7 @@ impl World {
         let new_units_locations = get_units_locations(&self.units);
 
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count() - 1;
+        self.number_of_opponents = game.units.iter().filter(|v| self.is_opponent_unit(v)).count();
         self.my_player_index = self.players().iter().position(|v| v.id == self.player_id).unwrap();
         self.opponent_player_index = (self.my_player_index + 1) % 2;
 
@@ -204,6 +207,10 @@ impl World {
 
     pub fn number_of_teammates(&self) -> usize {
         self.number_of_teammates
+    }
+
+    pub fn number_of_opponents(&self) -> usize {
+        self.number_of_opponents
     }
 
     pub fn max_score(&self) -> i32 {
