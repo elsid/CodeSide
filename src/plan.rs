@@ -161,6 +161,15 @@ impl<'r, 'd1, 'd2> VisitorImpl<'r, 'd1, 'd2> {
     }
 }
 
+const TRANSITIONS: &[TransitionKind] = &[
+    TransitionKind::Jump,
+    TransitionKind::JumpLeft,
+    TransitionKind::JumpRight,
+    TransitionKind::Left,
+    TransitionKind::Right,
+    TransitionKind::JumpDown,
+];
+
 impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r, 'd1, 'd2> {
     fn is_final(&self, state: &State) -> bool {
         state.depth >= state.planner.config.plan_min_state_depth
@@ -171,16 +180,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             return Vec::new();
         }
 
-        let transitions = [
-            TransitionKind::Jump,
-            TransitionKind::JumpLeft,
-            TransitionKind::JumpRight,
-            TransitionKind::Left,
-            TransitionKind::Right,
-            TransitionKind::JumpDown,
-        ];
-
-        let mut result = Vec::with_capacity(transitions.len());
+        let mut result = Vec::with_capacity(TRANSITIONS.len());
 
         let unit = state.planner.simulator.unit();
         let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
@@ -190,7 +190,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         let health = unit.base().health;
         let tick = state.planner.simulator.current_tick();
 
-        for kind in &transitions {
+        for kind in TRANSITIONS {
             let unit_state = UnitState { transition: *kind, x, y, jump_ticks_left, health, tick };
             if !self.applied.contains(&unit_state) {
                 let id = self.transition_id_generator.next();
