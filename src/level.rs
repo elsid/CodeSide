@@ -99,8 +99,9 @@ pub fn parse_level(text: &str) -> Level {
     let size_y = text.lines().count();
     let mut tiles = std::iter::repeat(Tile::Wall).take(size_x * size_y).collect::<Vec<_>>();
     let mut x = 0;
-    let mut y = size_y - 1;
+    let mut y = size_y;
     for line in text.lines() {
+        y -= 1;
         for symbol in line.chars() {
             tiles[y + x * size_y] = match symbol {
                 '.' => Tile::Empty,
@@ -113,7 +114,6 @@ pub fn parse_level(text: &str) -> Level {
             x += 1
         }
         x = 0;
-        y -= 1;
     }
     Level::new(size_x, size_y, tiles)
 }
