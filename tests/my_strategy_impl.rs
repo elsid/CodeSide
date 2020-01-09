@@ -37,7 +37,7 @@ fn test_my_strategy_impl_get_action_initial() {
     let result = my_strategy.get_action(&unit, &world.game(), &mut Debug::new(&mut debug));
     assert_eq!(UnitActionWrapper(&result), UnitActionWrapper(&UnitAction {
         velocity: -10.0,
-        jump: false,
+        jump: true,
         jump_down: false,
         aim: model::Vec2F64 {
             x: 0.0,
@@ -62,7 +62,7 @@ fn test_my_strategy_impl_get_action_with_assault_rifle() {
     let result = my_strategy.get_action(&unit, &world.game(), &mut Debug::new(&mut debug));
     assert_eq!(UnitActionWrapper(&result), UnitActionWrapper(&UnitAction {
         velocity: -10.0,
-        jump: false,
+        jump: true,
         jump_down: false,
         aim: model::Vec2F64 {
             x: 0.0,

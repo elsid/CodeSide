@@ -34,7 +34,7 @@ fn test_get_optimal_path() {
         get_optimal_path(&unit, &locations_score, &world, &mut Debug::new(&mut debug)),
         (
             1223333,
-            vec![Location::new(33, 1), Location::new(32, 1), Location::new(29, 1)]
+            vec![Location::new(33, 2), Location::new(29, 1)]
         )
     );
 }

@@ -222,6 +222,9 @@ fn is_valid_shortcut(begin: Location, end: Location, level: &Level) -> bool {
         }
         true
     } else if begin.y() == end.y() {
+        if level.get_tile(begin) == Tile::JumpPad {
+            return false;
+        }
         let mut x = begin.x() as isize;
         let shift: isize = if x < end.x() as isize { 1 } else { -1 };
         while x != end.x() as isize {
@@ -253,9 +256,11 @@ fn is_tile_reachable_from(source: Location, destination: Location, level: &Level
         Tile::Empty => {
             match level.get_tile(source) {
                 Tile::Wall => false,
-                Tile::Ladder | Tile::Platform | Tile::JumpPad => true,
+                Tile::Ladder | Tile::Platform => true,
+                Tile::JumpPad => source.y() < destination.y(),
                 Tile::Empty => source.y() > destination.y()
-                    || source.y() == destination.y() && (is_walkable(level.get_tile(source + Vec2i::new(0, -1))) || is_walkable(level.get_tile(destination + Vec2i::new(0, -1))))
+                    || source.y() == destination.y()
+                        && (is_walkable(level.get_tile(source + Vec2i::new(0, -1))) || is_walkable(level.get_tile(destination + Vec2i::new(0, -1))))
                     || source.y() < destination.y()
                         && (source.x() as isize - destination.x() as isize).abs() <= 1
                         && (1 .. source.y() as isize + 1)
