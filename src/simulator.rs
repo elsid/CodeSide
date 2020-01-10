@@ -884,6 +884,14 @@ impl UnitExt {
     pub fn mines(&self) -> i32 {
         self.base.mines
     }
+
+    pub fn upper_center(&self) -> Vec2 {
+        Vec2::new(self.holding_center_x(), self.holding_top() - self.base.size.x / 2.0)
+    }
+
+    pub fn lower_center(&self) -> Vec2 {
+        Vec2::new(self.holding_center_x(), self.holding_bottom() + self.base.size.x / 2.0)
+    }
 }
 
 #[derive(Clone, Debug)]
