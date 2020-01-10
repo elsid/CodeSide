@@ -401,16 +401,6 @@ pub fn get_distance_to_nearest_hit_wall_by_horizontal(begin: Vec2, end: Vec2, le
     }
 }
 
-pub fn wall_or_jump_pad_on_the_way(begin: Vec2, end: Vec2, level: &Level) -> bool {
-    for position in WalkGrid::new(begin, end) {
-        let tile = level.get_tile(position.as_location());
-        if tile == Tile::Wall || tile == Tile::JumpPad {
-            return true;
-        }
-    }
-    false
-}
-
 pub fn get_distance_to_nearest_hit_wall_by_line(begin: Vec2, end: Vec2, level: &Level) -> Option<f64> {
     for position in WalkGrid::new(begin, end) {
         if level.get_tile(position.as_location()) == Tile::Wall {

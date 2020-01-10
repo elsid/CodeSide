@@ -20,9 +20,9 @@ use crate::my_strategy::{
     Rectangular,
     Vec2,
     Vec2i,
+    WalkGrid,
     as_score,
     make_location_rect,
-    wall_or_jump_pad_on_the_way,
 };
 
 #[derive(Debug, Clone)]
@@ -327,7 +327,7 @@ impl World {
 
         while end > 0 {
             let mut tile = 0;
-            while tile < end && wall_or_jump_pad_on_the_way(current.center(), tiles_path[tile].center(), &self.level) {
+            while tile < end && !is_valid_shortcut(current.center(), tiles_path[tile].center(), &self.level) {
                 tile += 1;
             }
             if tile == end {
@@ -608,4 +608,14 @@ fn is_complex_level(level: &Level) -> bool {
     }
 
     (0 .. level.size()).find(|v| !used[*v] && level.get_tile_by_index(*v) == Tile::Wall).is_some()
+}
+
+fn is_valid_shortcut(begin: Vec2, end: Vec2, level: &Level) -> bool {
+    for position in WalkGrid::new(begin, end) {
+        let tile = level.get_tile(position.as_location());
+        if tile == Tile::Wall || tile == Tile::JumpPad {
+            return false;
+        }
+    }
+    true
 }
