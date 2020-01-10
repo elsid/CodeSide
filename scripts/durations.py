@@ -22,10 +22,19 @@ def main():
     system_time = numpy.array(system_time) * 1000
     ticks = numpy.array(ticks)
     print(len(ticks), len(user_time), len(system_time))
-    matplotlib.pyplot.hist(user_time / ticks, label='User time per tick (ms)')
-    matplotlib.pyplot.hist(system_time / ticks, label='System time per tick (ms)')
-    matplotlib.pyplot.grid(True)
-    matplotlib.pyplot.legend()
+    fig, ax = matplotlib.pyplot.subplots()
+    fig.canvas.set_window_title('Time')
+    ax.set_title('Time')
+    ax.hist(user_time / ticks, label='User time per tick (ms)')
+    ax.hist(system_time / ticks, label='System time per tick (ms)')
+    ax.grid(True)
+    ax.legend()
+    fig, ax = matplotlib.pyplot.subplots()
+    fig.canvas.set_window_title('Ticks')
+    ax.set_title('Ticks')
+    ax.hist(ticks, label='Ticks')
+    ax.grid(True)
+    ax.legend()
     matplotlib.pyplot.show()
 
 
