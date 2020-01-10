@@ -3,19 +3,29 @@ mod helpers;
 use model::{
     Item,
     MineState,
-    Weapon,
     WeaponType,
 };
+
+#[cfg(feature = "simulator_pickup_weapon")]
+use model::{
+    Weapon,
+};
+
 use helpers::{
-    WeaponWrapper,
     make_unit_ext,
     with_bullet,
     with_loot_box,
     with_mine,
     with_my_position,
-    with_my_unit_with_weapon,
     with_unit_position,
 };
+
+#[cfg(feature = "simulator_pickup_weapon")]
+use helpers::{
+    WeaponWrapper,
+    with_my_unit_with_weapon,
+};
+
 use aicup2019::{
     examples::{
         EXAMPLE_MY_PLAYER_ID,
