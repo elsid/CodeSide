@@ -104,6 +104,8 @@ impl World {
 
     pub fn update(&mut self, game: &Game) {
         let old_units_locations = get_units_locations(&self.units);
+        let old_empty_bullets = self.bullets.is_empty();
+        let old_empty_mines = self.mines.is_empty();
         self.current_tick = game.current_tick;
         self.players = game.players.clone();
         self.units = game.units.clone();
@@ -114,6 +116,8 @@ impl World {
             .map(|v| (v.location(), v.item.clone()))
             .collect();
         let new_units_locations = get_units_locations(&self.units);
+        let new_empty_bullets = self.bullets.is_empty();
+        let new_empty_mines = self.mines.is_empty();
 
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count() - 1;
         self.my_player_index = self.players().iter().position(|v| v.id == self.player_id).unwrap();
@@ -129,7 +133,10 @@ impl World {
             self.has_bullet.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
         }
 
-        if self.current_tick == 0 || old_units_locations != new_units_locations {
+        if self.current_tick == 0
+                || old_empty_bullets != new_empty_bullets
+                || old_empty_mines != new_empty_mines
+                || old_units_locations != new_units_locations {
             self.max_path_distance = 0.0;
             for i in 0 .. self.unit_index.len() {
                 let unit = self.get_unit(self.unit_index[i]);
