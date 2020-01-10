@@ -181,13 +181,14 @@ def get_stats(games):
     wins_dynamic = defaultdict(list)
     losses_dynamic = defaultdict(list)
     for number, game in enumerate(games):
-        game_scores = numpy.array(sorted(frozenset(v['score'] for v in game['results'].values()), reverse=True))
-        if len(game_scores) == 1:
+        game_scores = numpy.array(sorted(v['score'] for v in game['results'].values()))
+        unique_game_scores = numpy.array(sorted(frozenset(v['score'] for v in game['results'].values()), reverse=True))
+        if len(unique_game_scores) == 1:
             draws += 1
-            if game_scores[0] == 0:
+            if unique_game_scores[0] == 0:
                 zero_draws += 1
-        max_score = max(game_scores)
-        min_score = min(game_scores)
+        max_score = max(unique_game_scores)
+        min_score = min(unique_game_scores)
         if 1 == sum(1 for v in game_scores if v == max_score):
             winner = next(k for k, v in game['results'].items() if v['score'] == max_score)
             wins[winner] += 1
@@ -196,7 +197,7 @@ def get_stats(games):
             loser = next(k for k, v in game['results'].items() if v['score'] == min_score)
             losses[loser] += 1
             losses_dynamic[loser].append(1)
-        for place, score in enumerate(game_scores):
+        for place, score in enumerate(unique_game_scores):
             for k, v in game['results'].items():
                 if v['score'] == score:
                     places[place + 1][k] += 1
