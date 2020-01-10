@@ -12,7 +12,6 @@ pub trait Visitor<State, Transition> {
     fn is_final(&self, state: &State) -> bool;
     fn get_transitions(&mut self, iteration: usize, state: &State) -> Vec<Transition>;
     fn apply(&mut self, iteration: usize, state: &State, transition: &Transition) -> State;
-    fn get_transition_cost(&mut self, source_state: &State, destination_state: &State, transition: &Transition) -> i32;
     fn get_score(&self, state: &State) -> i32;
 }
 
@@ -50,10 +49,11 @@ pub fn search<S, T, V>(current_tick: i32, initial: S, visitor: &mut V) -> (Vec<T
         iteration += 1;
         for transition in visitor.get_transitions(iteration, &state.state) {
             let next_state = visitor.apply(iteration, &state.state, &transition);
+            let next_state_score = visitor.get_score(&next_state);
             let next_search_state = State {
                 id: next_state.id(),
-                cost: state.cost + visitor.get_transition_cost(&state.state, &next_state, &transition),
-                score: visitor.get_score(&next_state),
+                cost: state.cost + state.score - next_state_score,
+                score: next_state_score,
                 state: next_state,
                 transition: Some(transitions.len()),
             };

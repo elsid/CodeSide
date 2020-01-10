@@ -250,10 +250,6 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         next
     }
 
-    fn get_transition_cost(&mut self, source_state: &State, destination_state: &State, transition: &Transition) -> i32 {
-        source_state.get_score() - destination_state.get_score()
-    }
-
     fn get_score(&self, state: &State) -> i32 {
         state.get_score()
     }
