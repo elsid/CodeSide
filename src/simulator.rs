@@ -30,6 +30,7 @@ use crate::my_strategy::{
     Vec2,
     World,
     XorShiftRng,
+    minimize1d,
     remove_if,
 };
 
@@ -189,6 +190,8 @@ impl<'r> Simulator<'r> {
                 continue;
             }
 
+            self.units[unit].reset_velocity();
+
             let velocity_x = self.units[unit].action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval;
 
             if velocity_x != 0.0 {
@@ -247,7 +250,7 @@ impl<'r> Simulator<'r> {
                 continue;
             }
 
-            if self.collide_bullet_and_units(bullet, &mut explosions) {
+            if self.collide_bullet_and_units(bullet, time_interval, &mut explosions) {
                 continue;
             }
 
@@ -524,12 +527,12 @@ impl<'r> Simulator<'r> {
         }
     }
 
-    fn collide_bullet_and_units(&mut self, bullet: usize, explosions: &mut Vec<Explosion>) -> bool {
+    fn collide_bullet_and_units(&mut self, bullet: usize, time_interval: f64, explosions: &mut Vec<Explosion>) -> bool {
         for unit in 0 .. self.units.len() {
             if self.units[unit].ignore() {
                 continue;
             }
-            if let Some(explosion) = collide_unit_and_bullet(self.properties.kill_score, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
+            if let Some(explosion) = collide_unit_and_bullet(self.properties.kill_score, time_interval, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
                 explosions.push(explosion);
             }
             if self.bullets[bullet].hit {
@@ -716,10 +719,14 @@ impl UnitExt {
         self.moving_center_y() - self.moving_size_y() / 2.0
     }
 
+    pub fn holding_half(&self) -> Vec2 {
+        Vec2::new(self.holding_size_x(), self.holding_size_y()) / 2.0
+    }
+
     pub fn holding_rect(&self) -> Rect {
         Rect::new(
             Vec2::new(self.holding_center_x(), self.holding_center_y()),
-            Vec2::new(self.holding_size_x(), self.holding_size_y()) / 2.0
+            self.holding_half()
         )
     }
 
@@ -761,10 +768,6 @@ impl UnitExt {
 
     pub fn holding_center_y(&self) -> f64 {
         self.base.position.y + self.base.size.y / 2.0
-    }
-
-    pub fn holding_center(&self) -> Vec2 {
-        Vec2::new(self.holding_center_x(), self.holding_center_y())
     }
 
     pub fn moving_center_x(&self) -> f64 {
@@ -855,12 +858,10 @@ impl UnitExt {
 
     pub fn finish_move_by_x(&mut self) {
         self.base.position.x += self.velocity_x;
-        self.velocity_x = 0.0;
     }
 
     pub fn finish_move_by_y(&mut self) {
         self.base.position.y += self.velocity_y;
-        self.velocity_y = 0.0;
     }
 
     pub fn ignore(&self) -> bool {
@@ -892,6 +893,33 @@ impl UnitExt {
     pub fn lower_center(&self) -> Vec2 {
         Vec2::new(self.holding_center_x(), self.holding_bottom() + self.base.size.x / 2.0)
     }
+
+    pub fn reset_velocity(&mut self) {
+        self.velocity_x = 0.0;
+        self.velocity_y = 0.0;
+    }
+
+    pub fn moving_back_rect(&self) -> Rect {
+        Rect::new(
+            Vec2::new(
+                self.base.position.x - self.velocity_x / 2.0,
+                self.base.position.y + (self.base.size.y - self.velocity_y) / 2.0
+            ),
+            Vec2::new(self.moving_size_x(), self.moving_size_y()) / 2.0
+        )
+    }
+
+    pub fn velocity(&self) -> Vec2 {
+        Vec2::new(self.velocity_x, self.velocity_y)
+    }
+
+    pub fn holding_center(&self) -> Vec2 {
+        Vec2::new(self.holding_center_x(), self.holding_center_y())
+    }
+
+    pub fn rect_back_at(&self, time: f64) -> Rect {
+        Rect::new(self.holding_center() - self.velocity() * time, self.holding_half())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -911,16 +939,20 @@ impl BulletExt {
     }
 
     pub fn half_size(&self) -> f64 {
-        self.base.size * 0.5
+        self.base.size / 2.0
     }
 
     pub fn center(&self) -> Vec2 {
         Vec2::from_model(&self.base.position)
     }
 
+    pub fn half(&self) -> Vec2 {
+        let half_size = self.half_size();
+        Vec2::new(half_size, half_size)
+    }
+
     pub fn rect(&self) -> Rect {
-        let half_size = self.base.size * 0.5;
-        Rect::new(self.center(), Vec2::new(half_size, half_size))
+        Rect::new(self.center(), self.half())
     }
 
     pub fn explosion_params(&self) -> &Option<ExplosionParams> {
@@ -946,6 +978,20 @@ impl BulletExt {
 
     pub fn bottom(&self) -> f64 {
         self.base.position.y - self.half_size()
+    }
+
+    pub fn velocity(&self) -> Vec2 {
+        Vec2::from_model(&self.base.velocity)
+    }
+
+    pub fn moving_rect(&self, time_interval: f64) -> Rect {
+        let shift = self.velocity() * time_interval / 2.0;
+        let half = self.half() + shift.abs();
+        Rect::new(self.center() + shift, half)
+    }
+
+    pub fn rect_at(&self, time: f64) -> Rect {
+        Rect::new(self.center() + self.velocity() * time, self.half())
     }
 }
 
@@ -1068,10 +1114,25 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
     }
 }
 
-fn collide_unit_and_bullet(kill_score: i32, bullet: &mut BulletExt, unit: &mut UnitExt, players: &mut Vec<Player>) -> Option<Explosion> {
-    if bullet.base.unit_id == unit.base.id || !bullet.rect().has_collision(&unit.holding_rect()) {
+fn collide_unit_and_bullet(kill_score: i32, time_interval: f64, bullet: &mut BulletExt, unit: &mut UnitExt, players: &mut Vec<Player>) -> Option<Explosion> {
+    if bullet.base.unit_id == unit.base.id || !bullet.moving_rect(time_interval).has_collision(&unit.moving_back_rect()) {
         return None;
     }
+
+    let get_nearest_distance = |time| {
+        let bullet_center = bullet.center() + bullet.velocity() * time;
+        let unit_shift = unit.velocity() * (time_interval - time);
+        let distance_to_upper_center = bullet_center.distance(unit.upper_center() - unit_shift);
+        let distance_to_lower_center = bullet_center.distance(unit.lower_center() - unit_shift);
+        distance_to_upper_center.min(distance_to_lower_center)
+    };
+
+    let nearest_time = minimize1d(0.0, time_interval, 10, get_nearest_distance);
+
+    if !bullet.rect_at(nearest_time).has_collision(&unit.rect_back_at(time_interval - nearest_time)) {
+        return None;
+    }
+
     bullet.hit = true;
     let score = unit.damage(bullet.base.damage);
     if score > 0 && bullet.player_index != unit.player_index {

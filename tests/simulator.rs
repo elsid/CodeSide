@@ -37,6 +37,7 @@ use aicup2019::{
         example_world,
     },
     my_strategy::{
+        BulletExt,
         Simulator,
         Vec2,
     },
@@ -1032,6 +1033,70 @@ fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
 }
 
 #[test]
+fn test_simulator_bullet_on_corner_hit_unit() {
+    let world = with_my_position(
+        with_bullet(
+            example_world(),
+            WeaponType::AssaultRifle, Vec2::new(36.3, 3.05), Vec2::new(1.0, 1.0), EXAMPLE_OPPONENT_UNIT_ID
+        ),
+        Vec2::new(37.5, 2.0)
+    );
+    let mut rng = example_rng(7348172934612063328);
+    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    for _ in 0 .. 3 {
+        simulator1.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator1.unit().health(), 95);
+    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    for _ in 0 .. 3 {
+        simulator2.tick(
+            world.tick_time_interval(),
+            world.config().plan_microticks_per_tick,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator2.unit().health(), 95);
+}
+
+#[test]
+fn test_simulator_bullet_on_corner_miss_unit() {
+    let world = with_my_position(
+        with_bullet(
+            example_world(),
+            WeaponType::AssaultRifle, Vec2::new(36.3, 3.07), Vec2::new(1.0, 1.0), EXAMPLE_OPPONENT_UNIT_ID
+        ),
+        Vec2::new(37.5, 2.0)
+    );
+    let mut rng = example_rng(7348172934612063328);
+    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    for _ in 0 .. 4 {
+        simulator1.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator1.unit().health(), 100);
+    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    for _ in 0 .. 4 {
+        simulator2.tick(
+            world.tick_time_interval(),
+            1,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator2.unit().health(), 100);
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
@@ -1155,4 +1220,44 @@ fn test_collide_with_unit_by_y_without_penetration_by_x() {
     a.collide_with_unit_by_y(&b);
     a.finish_move_by_y();
     assert_eq!(a.position(), Vec2::new(9.5, 9.5));
+}
+
+#[test]
+fn test_bullet_ext_moving_rect_by_zero() {
+    let source = Vec2::new(31.5, 5.8);
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, source, Vec2::new(1.0, 0.0), EXAMPLE_MY_UNIT_ID);
+    let bullet_ext = BulletExt::new(world.bullets()[0].clone(), 0);
+    let moving_rect = bullet_ext.moving_rect(0.0);
+
+    assert_eq!((moving_rect.min(), moving_rect.max()), (Vec2::new(31.3, 5.6), Vec2::new(31.7, 6.0)));
+}
+
+#[test]
+fn test_bullet_ext_moving_rect_by_x() {
+    let source = Vec2::new(31.5, 5.8);
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, source, Vec2::new(1.0, 0.0), EXAMPLE_MY_UNIT_ID);
+    let bullet_ext = BulletExt::new(world.bullets()[0].clone(), 0);
+    let moving_rect = bullet_ext.moving_rect(1.0);
+
+    assert_eq!((moving_rect.min(), moving_rect.max()), (Vec2::new(31.3, 5.6), Vec2::new(51.7, 6.0)));
+}
+
+#[test]
+fn test_bullet_ext_moving_rect_by_y() {
+    let source = Vec2::new(31.5, 5.8);
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, source, Vec2::new(0.0, 1.0), EXAMPLE_MY_UNIT_ID);
+    let bullet_ext = BulletExt::new(world.bullets()[0].clone(), 0);
+    let moving_rect = bullet_ext.moving_rect(1.0);
+
+    assert_eq!((moving_rect.min(), moving_rect.max()), (Vec2::new(31.3, 5.600000000000001), Vec2::new(31.7, 26.0)));
+}
+
+#[test]
+fn test_bullet_ext_moving_rect_by_x_and_y() {
+    let source = Vec2::new(31.5, 5.8);
+    let world = with_bullet(example_world(), WeaponType::RocketLauncher, source, Vec2::new(1.0, 1.0), EXAMPLE_MY_UNIT_ID);
+    let bullet_ext = BulletExt::new(world.bullets()[0].clone(), 0);
+    let moving_rect = bullet_ext.moving_rect(1.0);
+
+    assert_eq!((moving_rect.min(), moving_rect.max()), (Vec2::new(31.3, 5.6), Vec2::new(45.842135623730954, 20.14213562373095)));
 }
