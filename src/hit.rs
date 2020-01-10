@@ -52,8 +52,8 @@ impl HitTarget {
 pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget,
         spread: f64, bullet_size: f64, world: &World, number_of_directions: usize) -> HitProbabilities {
     let to_target = direction * world.max_distance();
-    let left = direction.left() * bullet_size;
-    let right = direction.right() * bullet_size;
+    let left = direction.left() * bullet_size / 2.0;
+    let right = direction.right() * bullet_size / 2.0;
 
     let mut hit_wall = 0;
     let mut hit_opponent_units = 0;
@@ -121,8 +121,8 @@ pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &HitT
         spread: f64, bullet: &BulletParams, explosion: &Option<ExplosionParams>,
         world: &World, number_of_directions: usize) -> HitDamage {
     let to_target = direction * world.max_distance();
-    let left = direction.left() * bullet.size;
-    let right = direction.right() * bullet.size;
+    let left = direction.left() * bullet.size / 2.0;
+    let right = direction.right() * bullet.size / 2.0;
     let is_teammate = world.is_teammate_unit(world.get_unit(unit_id));
 
     let mut min_distance = None;
