@@ -41,6 +41,7 @@ pub fn search<S, T, V>(current_tick: i32, initial: S, visitor: &mut V) -> (Vec<T
     let mut optimal_final_state: Option<State<S>> = None;
 
     while let Some(state) = frontier.pop() {
+        log!(current_tick, "[{}] pop cost={}", state.id, state.cost);
         if (optimal_final_state.is_none() || optimal_final_state.as_ref().unwrap().score < state.score)
             && visitor.is_final(&state.state) {
             optimal_final_state = Some(state.clone());
@@ -57,6 +58,7 @@ pub fn search<S, T, V>(current_tick: i32, initial: S, visitor: &mut V) -> (Vec<T
                 state: next_state,
                 transition: Some(transitions.len()),
             };
+            log!(current_tick, "[{}] push cost={}", next_search_state.id, next_search_state.cost);
             frontier.push(next_search_state);
             transitions.push((state.transition, transition));
         }

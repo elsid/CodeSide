@@ -125,7 +125,7 @@ impl<'c, 's> Planner<'c, 's> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub struct UnitState {
     transition: TransitionKind,
     x: i32,
@@ -134,6 +134,40 @@ pub struct UnitState {
     health: i32,
     tick: i32,
 }
+
+impl PartialOrd for UnitState {
+    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
+        if (self.tick - rhs.tick).abs() <= 1 {
+            (self.transition, self.x, self.y, self.jump_ticks_left, self.health)
+                .partial_cmp(&(rhs.transition, rhs.x, rhs.y, rhs.jump_ticks_left, rhs.health))
+        } else {
+            (self.transition, self.x, self.y, self.jump_ticks_left, self.health, self.tick)
+                .partial_cmp(&(rhs.transition, rhs.x, rhs.y, rhs.jump_ticks_left, rhs.health, rhs.tick))
+        }
+    }
+}
+
+impl Ord for UnitState {
+    fn cmp(&self, rhs: &Self) -> std::cmp::Ordering {
+        if (self.tick - rhs.tick).abs() <= 1 {
+            (self.transition, self.x, self.y, self.jump_ticks_left, self.health)
+                .cmp(&(rhs.transition, rhs.x, rhs.y, rhs.jump_ticks_left, rhs.health))
+        } else {
+            (self.transition, self.x, self.y, self.jump_ticks_left, self.health, self.tick)
+                .cmp(&(rhs.transition, rhs.x, rhs.y, rhs.jump_ticks_left, rhs.health, rhs.tick))
+        }
+    }
+}
+
+impl PartialEq for UnitState {
+    fn eq(&self, rhs: &Self) -> bool {
+        (self.transition, self.x, self.y, self.jump_ticks_left, self.health)
+            .eq(&(rhs.transition, rhs.x, rhs.y, rhs.jump_ticks_left, rhs.health))
+            && (self.tick - rhs.tick).abs() <= 1
+    }
+}
+
+impl Eq for UnitState {}
 
 pub struct VisitorImpl<'r, 'd1, 'd2> {
     current_tick: i32,
@@ -225,8 +259,8 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
             tick: state.planner.simulator.current_tick(),
         };
 
-        log!(self.current_tick, "[{}][{} -> {}] transition_id={} score={} {:?} -> {:?}",
-            next.depth, state.id, next.id, transition.id, next.get_score(), unit_state,
+        log!(self.current_tick, "[{}][{} -> {}] transition_id={} score={} {:?} {:?} -> {:?}",
+            next.depth, state.id, next.id, transition.id, next.get_score(), next.planner.get_score_components(), unit_state,
             UnitState {
                 transition: transition.kind,
                 x: (next.planner.simulator.unit().base().position.x * 1000.0).round() as i32,
