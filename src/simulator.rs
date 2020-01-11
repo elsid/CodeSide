@@ -532,7 +532,7 @@ impl<'r> Simulator<'r> {
             if self.units[unit].ignore() {
                 continue;
             }
-            if let Some(explosion) = collide_unit_and_bullet(self.properties.kill_score, time_interval, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
+            if let Some(explosion) = collide_bullet_and_unit(self.properties.kill_score, time_interval, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
                 explosions.push(explosion);
             }
             if self.bullets[bullet].hit {
@@ -1114,7 +1114,7 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
     }
 }
 
-fn collide_unit_and_bullet(kill_score: i32, time_interval: f64, bullet: &mut BulletExt, unit: &mut UnitExt, players: &mut Vec<Player>) -> Option<Explosion> {
+fn collide_bullet_and_unit(kill_score: i32, time_interval: f64, bullet: &mut BulletExt, unit: &mut UnitExt, players: &mut Vec<Player>) -> Option<Explosion> {
     if bullet.base.unit_id == unit.base.id || !bullet.moving_rect(time_interval).has_collision(&unit.moving_back_rect()) {
         return None;
     }
