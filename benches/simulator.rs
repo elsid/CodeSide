@@ -9,6 +9,7 @@ use aicup2019::{
         example_world,
     },
     my_strategy::{
+        SIMULATOR_DEFAULT_FLAGS,
         Simulator,
     },
 };
@@ -16,12 +17,12 @@ use aicup2019::{
 fn simulator_tick(c: &mut Criterion) {
     c.bench_function("simulator_tick", |b| {
         let world = example_world();
-        let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+        let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
         let time_interval = world.tick_time_interval();
         let micro_ticks_per_tick = world.properties().updates_per_tick as usize;
         let mut rng = example_rng(7348172934612063328);
         b.iter(move || {
-            simulator.tick(time_interval, micro_ticks_per_tick, &mut rng, &mut None);
+            simulator.tick(time_interval, micro_ticks_per_tick, &mut Some(&mut rng), &mut None);
         })
     });
 }
@@ -29,12 +30,12 @@ fn simulator_tick(c: &mut Criterion) {
 fn simulator_tick_with_half_micro_ticks(c: &mut Criterion) {
     c.bench_function("simulator_tick_with_half_micro_ticks", |b| {
         let world = example_world();
-        let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+        let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
         let time_interval = world.tick_time_interval();
         let micro_ticks_per_tick = world.properties().updates_per_tick as usize / 2;
         let mut rng = example_rng(7348172934612063328);
         b.iter(move || {
-            simulator.tick(time_interval, micro_ticks_per_tick, &mut rng, &mut None);
+            simulator.tick(time_interval, micro_ticks_per_tick, &mut Some(&mut rng), &mut None);
         })
     });
 }
@@ -42,12 +43,12 @@ fn simulator_tick_with_half_micro_ticks(c: &mut Criterion) {
 fn simulator_tick_with_single_micro_tick(c: &mut Criterion) {
     c.bench_function("simulator_tick_with_single_micro_tick", |b| {
         let world = example_world();
-        let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+        let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
         let time_interval = world.tick_time_interval();
         let micro_ticks_per_tick = 1;
         let mut rng = example_rng(7348172934612063328);
         b.iter(move || {
-            simulator.tick(time_interval, micro_ticks_per_tick, &mut rng, &mut None);
+            simulator.tick(time_interval, micro_ticks_per_tick, &mut Some(&mut rng), &mut None);
         })
     });
 }

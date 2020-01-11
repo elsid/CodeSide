@@ -219,6 +219,10 @@ pub mod my_strategy_test;
 #[path = "my_strategy_pusher.rs"]
 pub mod my_strategy_pusher;
 
+#[cfg(feature = "bullets_spread")]
+#[path = "my_strategy_bullets_spread.rs"]
+pub mod my_strategy_bullets_spread;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
@@ -226,6 +230,7 @@ pub mod my_strategy_pusher;
     not(feature = "jump"),
     not(feature = "test"),
     not(feature = "pusher"),
+    not(feature = "bullets_spread"),
 ))]
 #[path = "my_strategy_impl.rs"]
 pub mod my_strategy_impl;
@@ -251,6 +256,9 @@ pub use self::my_strategy_test::MyStrategyImpl;
 #[cfg(feature = "pusher")]
 pub use self::my_strategy_pusher::MyStrategyImpl;
 
+#[cfg(feature = "bullets_spread")]
+pub use self::my_strategy_bullets_spread::MyStrategyImpl;
+
 #[cfg(all(
     not(feature = "dump_examples"),
     not(feature = "dump_opponent"),
@@ -259,6 +267,7 @@ pub use self::my_strategy_pusher::MyStrategyImpl;
     not(feature = "check_simulator"),
     not(feature = "test"),
     not(feature = "pusher"),
+    not(feature = "bullets_spread"),
 ))]
 pub use self::my_strategy_impl::MyStrategyImpl;
 

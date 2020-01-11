@@ -12,7 +12,6 @@ use model::{
 
 use crate::my_strategy::{
     Debug,
-    HitTarget,
     Positionable,
     Rectangular,
     Vec2,
@@ -23,9 +22,7 @@ use crate::my_strategy::{
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
 use crate::my_strategy::{
-    ObjectType,
     WalkGrid,
-    get_nearest_hit,
     normalize_angle,
 };
 
@@ -42,7 +39,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
         let unit = world.units().iter()
             .filter(|unit| {
                 world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world)
+                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, debug)
             })
             .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
 
@@ -59,9 +56,9 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
     }
 }
 
-fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
-    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, &HitTarget::from_unit(&opponent), weapon,
-        world, world.config().optimal_action_number_of_directions)
+fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, debug: &mut Debug) -> bool {
+    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, opponent, weapon,
+        world, world.config().optimal_action_number_of_directions, &mut Some(debug))
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
@@ -74,44 +71,11 @@ fn render_target(unit: &Unit, opponent: &Unit, world: &World, debug: &mut Debug)
         });
     }
     if let Some(weapon) = unit.weapon.as_ref() {
-        let source = unit.rect().center();
-        let direction = (opponent.rect().center() - source).normalized();
-        let to_target = direction * world.max_distance();
-        let left = direction.left() * weapon.params.bullet.size;
-        let right = direction.right() * weapon.params.bullet.size;
-        let number_of_directions = world.config().optimal_action_number_of_directions;
-
-        for i in 0 .. number_of_directions {
-            let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * weapon.spread;
-            let destination = source + to_target.rotated(normalize_angle(angle));
-            let (src, dst) = if i == 0 {
-                (source + right, destination + right)
-            } else if i == number_of_directions - 1 {
-                (source + left, destination + left)
-            } else {
-                (source, destination)
-            };
-            if let Some(hit) = get_nearest_hit(unit.id, src, dst, &HitTarget::from_unit(opponent), &world) {
-                let color = match hit.object_type {
-                    ObjectType::Wall => ColorF32 { a: 0.5, r: 0.66, g: 0.66, b: 0.66 },
-                    ObjectType::Unit => if hit.is_teammate {
-                        ColorF32 { a: 0.5, r: 0.66, g: 0.33, b: 0.0 }
-                    } else {
-                        ColorF32 { a: 0.5, r: 0.0, g: 0.66, b: 0.33 }
-                    },
-                    ObjectType::Mine => if hit.is_teammate {
-                        ColorF32 { a: 0.5, r: 0.33, g: 0.5, b: 0.0 }
-                    } else {
-                        ColorF32 { a: 0.5, r: 0.5, g: 0.33, b: 0.0 }
-                    },
-                };
-                debug.draw(CustomData::Line {
-                    p1: src.as_debug(),
-                    p2: (src + (dst - src).normalized() * hit.distance).as_debug(),
-                    width: 0.075,
-                    color,
-                });
-            }
-        }
+        debug.draw(CustomData::Line {
+            p1: unit.rect().center().as_debug(),
+            p2: opponent.rect().center().as_debug(),
+            width: 0.075,
+            color: ColorF32 { a: 0.5, r: 0.66, g: 0.0, b: 0.0 },
+        });
     }
 }

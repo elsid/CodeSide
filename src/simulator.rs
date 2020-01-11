@@ -54,6 +54,7 @@ pub struct Simulator<'r> {
     unit_index: usize,
     player_index: usize,
     stats: Stats,
+    move_units: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -62,34 +63,63 @@ pub struct Stats {
     pub triggered_mines_by_me: usize,
 }
 
+pub const SIMULATOR_ADD_UNITS: usize = 0x1;
+pub const SIMULATOR_ADD_BULLETS: usize = 0x1 << 1;
+pub const SIMULATOR_ADD_LOOT_BOXES: usize = 0x1 << 2;
+pub const SIMULATOR_ADD_MINES: usize = 0x1 << 3;
+pub const SIMULATOR_MOVE_UNITS: usize = 0x1 << 4;
+
+pub const SIMULATOR_DEFAULT_FLAGS: usize =
+    SIMULATOR_ADD_UNITS
+    | SIMULATOR_ADD_BULLETS
+    | SIMULATOR_ADD_LOOT_BOXES
+    | SIMULATOR_ADD_MINES
+    | SIMULATOR_MOVE_UNITS;
+
 impl<'r> Simulator<'r> {
-    pub fn new(world: &'r World, me_id: i32) -> Self {
+    pub fn new(world: &'r World, me_id: i32, flags: usize) -> Self {
         let player_id = world.get_unit(me_id).player_id;
-        let units: Vec<UnitExt> = world.units().iter()
-            .map(|unit| {
-                let is_me = unit.id == me_id;
-                let is_teammate = unit.player_id == player_id;
-                let player_index = world.players().iter().position(|v| unit.player_id == v.id).unwrap();
-                UnitExt::new(unit.clone(), is_me, is_teammate, player_index)
-            })
-            .collect();
+        let units: Vec<UnitExt> = if flags & SIMULATOR_ADD_UNITS == SIMULATOR_ADD_UNITS {
+            world.units().iter()
+                .map(|unit| {
+                    let is_me = unit.id == me_id;
+                    let is_teammate = unit.player_id == player_id;
+                    let player_index = world.players().iter().position(|v| unit.player_id == v.id).unwrap();
+                    UnitExt::new(unit.clone(), is_me, is_teammate, player_index)
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         let unit_index = units.iter().position(|v| v.is_me()).unwrap();
-        let bullets: Vec<BulletExt> = world.bullets().iter()
-            .map(|bullet| {
-                let player_index = world.players().iter().position(|v| bullet.player_id == v.id).unwrap();
-                BulletExt::new(bullet.clone(), player_index)
-            })
-            .collect();
-        let loot_boxes: Vec<LootBoxExt> = world.loot_boxes().iter()
-            .filter(|v| is_loot_box_enabled(v))
-            .map(|v| LootBoxExt::new(v.clone()))
-            .collect();
-        let mines: Vec<MineExt> = world.mines().iter()
-            .map(|mine| {
-                let player_index = world.players().iter().position(|v| mine.player_id == v.id).unwrap();
-                MineExt::new(mine.clone(), player_index)
-            })
-            .collect();
+        let bullets: Vec<BulletExt> = if flags & SIMULATOR_ADD_BULLETS == SIMULATOR_ADD_BULLETS {
+            world.bullets().iter()
+                .map(|bullet| {
+                    let player_index = world.players().iter().position(|v| bullet.player_id == v.id).unwrap();
+                    BulletExt::new(bullet.clone(), player_index)
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let loot_boxes: Vec<LootBoxExt> = if flags & SIMULATOR_ADD_LOOT_BOXES == SIMULATOR_ADD_LOOT_BOXES {
+            world.loot_boxes().iter()
+                .filter(|v| is_loot_box_enabled(v))
+                .map(|v| LootBoxExt::new(v.clone()))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let mines: Vec<MineExt> = if flags & SIMULATOR_ADD_MINES == SIMULATOR_ADD_MINES {
+            world.mines().iter()
+                .map(|mine| {
+                    let player_index = world.players().iter().position(|v| mine.player_id == v.id).unwrap();
+                    MineExt::new(mine.clone(), player_index)
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         Simulator {
             players: world.players().clone(),
             units,
@@ -104,11 +134,8 @@ impl<'r> Simulator<'r> {
             unit_index,
             player_index: world.players().iter().position(|v| v.id == player_id).unwrap(),
             stats: Stats::default(),
+            move_units: flags & SIMULATOR_MOVE_UNITS == SIMULATOR_MOVE_UNITS,
         }
-    }
-
-    pub fn my_player(&self) -> &Player {
-        &self.players[self.player_index]
     }
 
     pub fn players(&self) -> &Vec<Player> {
@@ -165,7 +192,18 @@ impl<'r> Simulator<'r> {
         }
     }
 
-    pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut XorShiftRng, debug: &mut Option<&mut Dbg>) {
+    pub fn add_bullet(&mut self, bullet: Bullet) {
+        let player_index = self.players.iter().position(|v| bullet.player_id == v.id).unwrap();
+        self.bullets.push(BulletExt::new(bullet, player_index))
+    }
+
+    pub fn set_unit_position(&mut self, unit_id: i32, position: Vec2) {
+        if let Some(unit) = self.units.iter_mut().find(|v| v.base.id == unit_id) {
+            unit.base.position = position.as_model();
+        }
+    }
+
+    pub fn tick(&mut self, time_interval: f64, micro_ticks_per_tick: usize, rng: &mut Option<&mut XorShiftRng>, debug: &mut Option<&mut Dbg>) {
         let micro_tick_time_interval = time_interval / micro_ticks_per_tick as f64;
         for _ in 0..micro_ticks_per_tick {
             self.micro_tick(micro_tick_time_interval, rng, debug);
@@ -179,63 +217,67 @@ impl<'r> Simulator<'r> {
         remove_if(&mut self.loot_boxes, |v| v.used);
     }
 
-    fn micro_tick(&mut self, time_interval: f64, rng: &mut XorShiftRng, debug: &mut Option<&mut Dbg>) {
-        rng.shuffle(&mut self.units[..]);
-
-        for unit in 0 .. self.units.len() {
-            if self.units[unit].ignore() {
-                continue;
+    fn micro_tick(&mut self, time_interval: f64, rng: &mut Option<&mut XorShiftRng>, debug: &mut Option<&mut Dbg>) {
+        if self.move_units {
+            if let Some(v) = rng {
+                v.shuffle(&mut self.units[..]);
             }
 
-            self.units[unit].reset_velocity();
+            for unit in 0 .. self.units.len() {
+                if self.units[unit].ignore() {
+                    continue;
+                }
 
-            let velocity_x = self.units[unit].action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval;
+                self.units[unit].reset_velocity();
 
-            if velocity_x != 0.0 {
-                self.units[unit].start_move_by_x(velocity_x);
-                self.collide_moving_unit_and_tiles_by_x(unit);
-                self.collide_units_by_x(unit);
-                self.units[unit].finish_move_by_x();
-            }
+                let velocity_x = self.units[unit].action.velocity.min(self.properties.unit_max_horizontal_speed) * time_interval;
 
-            self.collide_holding_unit_and_tiles(unit);
+                if velocity_x != 0.0 {
+                    self.units[unit].start_move_by_x(velocity_x);
+                    self.collide_moving_unit_and_tiles_by_x(unit);
+                    self.collide_units_by_x(unit);
+                    self.units[unit].finish_move_by_x();
+                }
 
-            if !self.units[unit].base.on_ladder || self.units[unit].action.jump_down || self.units[unit].action.jump {
-                if self.units[unit].base.jump_state.can_jump && (self.units[unit].action.jump || !self.units[unit].base.jump_state.can_cancel) {
-                    let jump_time = shift_jump_max_time(&mut self.units[unit], time_interval);
-                    let velocity_y = self.units[unit].base.jump_state.speed * jump_time;
-                    self.units[unit].start_move_by_y(velocity_y);
-                    if self.units[unit].base.jump_state.max_time == 0.0 {
+                self.collide_holding_unit_and_tiles(unit);
+
+                if !self.units[unit].base.on_ladder || self.units[unit].action.jump_down || self.units[unit].action.jump {
+                    if self.units[unit].base.jump_state.can_jump && (self.units[unit].action.jump || !self.units[unit].base.jump_state.can_cancel) {
+                        let jump_time = shift_jump_max_time(&mut self.units[unit], time_interval);
+                        let velocity_y = self.units[unit].base.jump_state.speed * jump_time;
+                        self.units[unit].start_move_by_y(velocity_y);
+                        if self.units[unit].base.jump_state.max_time == 0.0 {
+                            cancel_jump(&mut self.units[unit]);
+                        }
+                    } else {
+                        self.units[unit].start_move_by_y(-self.properties.unit_fall_speed * time_interval);
                         cancel_jump(&mut self.units[unit]);
                     }
-                } else {
-                    self.units[unit].start_move_by_y(-self.properties.unit_fall_speed * time_interval);
-                    cancel_jump(&mut self.units[unit]);
-                }
-                self.units[unit].base.on_ground = false;
-            }
-
-            if self.units[unit].velocity_y != 0.0 {
-                if self.units[unit].velocity_y > 0.0 {
-                    self.collide_moving_up_unit_and_tiles_by_y(unit);
-                } else {
-                    self.collide_moving_down_unit_and_tiles_by_y(unit);
+                    self.units[unit].base.on_ground = false;
                 }
 
-                self.collide_units_by_y(unit);
+                if self.units[unit].velocity_y != 0.0 {
+                    if self.units[unit].velocity_y > 0.0 {
+                        self.collide_moving_up_unit_and_tiles_by_y(unit);
+                    } else {
+                        self.collide_moving_down_unit_and_tiles_by_y(unit);
+                    }
 
-                self.units[unit].finish_move_by_y();
-            }
+                    self.collide_units_by_y(unit);
 
-            self.collide_holding_unit_and_tiles(unit);
+                    self.units[unit].finish_move_by_y();
+                }
 
-            #[cfg(feature = "verify_collisions")]
-            self.verify_collisions(unit, "after_y");
+                self.collide_holding_unit_and_tiles(unit);
 
-            #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
-            {
-                if let Some(d) = debug {
-                    d.rect_border(&self.units[unit].base.rect(), ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }, 0.1);
+                #[cfg(feature = "verify_collisions")]
+                self.verify_collisions(unit, "after_y");
+
+                #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
+                {
+                    if let Some(d) = debug {
+                        d.rect_border(&self.units[unit].base.rect(), ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }, 0.1);
+                    }
                 }
             }
         }
