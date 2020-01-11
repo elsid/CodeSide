@@ -18,9 +18,11 @@ use crate::my_strategy::{
     Positionable,
     Rect,
     Rectangular,
+    Rng,
     Vec2,
     Vec2i,
     WalkGrid,
+    XorShiftRng,
     as_score,
     make_location_rect,
 };
@@ -54,6 +56,9 @@ pub struct World {
     my_player_index: usize,
     opponent_player_index: usize,
     rect: Rect,
+    score_dynamic: Vec<i32>,
+    configs: Vec<(f64, Config)>,
+    max_score_dynamic: f64,
 }
 
 impl World {
@@ -99,13 +104,18 @@ impl World {
             my_player_index: game.players.iter().position(|v| v.id == player_id).unwrap(),
             opponent_player_index: game.players.iter().position(|v| v.id != player_id).unwrap(),
             rect: Rect::new(size / 2.0, size / 2.0),
+            score_dynamic: Vec::with_capacity(game.properties.max_tick_count as usize),
+            configs: Vec::with_capacity(game.properties.max_tick_count as usize),
+            max_score_dynamic: 0.0,
         }
     }
 
-    pub fn update(&mut self, game: &Game) {
+    pub fn update(&mut self, game: &Game, rng: &mut XorShiftRng) {
         let old_units_locations = get_units_locations(&self.units);
         let old_empty_bullets = self.bullets.is_empty();
         let old_empty_mines = self.mines.is_empty();
+        let old_score = self.get_player().score;
+
         self.current_tick = game.current_tick;
         self.players = game.players.clone();
         self.units = game.units.clone();
@@ -115,13 +125,46 @@ impl World {
         self.items_by_tile = game.loot_boxes.iter()
             .map(|v| (v.location(), v.item.clone()))
             .collect();
+
         let new_units_locations = get_units_locations(&self.units);
         let new_empty_bullets = self.bullets.is_empty();
         let new_empty_mines = self.mines.is_empty();
+        let new_score = self.get_player().score;
 
         self.number_of_teammates = game.units.iter().filter(|v| self.is_teammate_unit(v)).count() - 1;
         self.my_player_index = self.players().iter().position(|v| v.id == self.player_id).unwrap();
         self.opponent_player_index = (self.my_player_index + 1) % 2;
+        self.score_dynamic.push(new_score - old_score);
+
+        if self.current_tick % 100 == 0 && self.score_dynamic.len() >= 1000 {
+            let score_dynamic = self.score_dynamic.iter().rev().take(1000).sum::<i32>() as f64 / 1000.0;
+            println!("[{}] {}", self.current_tick, score_dynamic);
+            if self.max_score_dynamic < score_dynamic {
+                self.max_score_dynamic = score_dynamic;
+                self.configs.push((score_dynamic, self.config.clone()));
+            }
+            if self.current_tick % 10000 == 0 && !self.configs.is_empty() {
+                self.config = self.configs.iter().max_by_key(|(v, _)| as_score(*v)).unwrap().1.clone();
+            }
+            for _ in 0 .. 4 {
+                let factor = match rng.next_u32() % 2 {
+                    0 => 1.01,
+                    1 => 0.99,
+                    _ => 1.0,
+                };
+                match rng.next_u32() % 8 {
+                    0 => self.config.optimal_location_distance_to_position_score_weight *= factor,
+                    1 => self.config.optimal_location_hit_by_opponent_score_weight *= factor,
+                    2 => self.config.optimal_location_opponent_obstacle_score_weight *= factor,
+                    3 => self.config.optimal_location_hit_nearest_opponent_score_weight *= factor,
+                    4 => self.config.optimal_location_height_score_weight *= factor,
+                    5 => self.config.optimal_location_over_ground_score_weight *= factor,
+                    6 => self.config.optimal_location_bullets_score_weight *= factor,
+                    7 => self.config.optimal_location_bullet_obstacle_score_weight *= factor,
+                    _ => (),
+                }
+            }
+        }
 
         if self.unit_index.len() > self.units.len() {
             self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
@@ -466,6 +509,15 @@ impl World {
             if distance != std::f64::MAX {
                 self.max_path_distance = self.max_path_distance.max(distance);
             }
+        }
+    }
+}
+
+impl Drop for World {
+    fn drop(&mut self) {
+        self.configs.sort_by_key(|(v, _)| -as_score(*v));
+        for i in 0 .. 3 {
+            println!("{:?}", self.configs[i]);
         }
     }
 }

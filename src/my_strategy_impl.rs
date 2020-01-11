@@ -95,7 +95,7 @@ impl MyStrategyImpl {
                 self.optimal_actions.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             }
 
-            self.world.update(game);
+            self.world.update(game, &mut self.rng);
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
             debug.log(format!("[{}] mines={} loot_boxes={} bullets={} units={}",
