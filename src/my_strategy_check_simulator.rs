@@ -5,6 +5,7 @@ use model::{
 };
 
 use crate::my_strategy::{
+    SIMULATOR_DEFAULT_FLAGS,
     Config,
     Debug,
     Positionable,
@@ -144,7 +145,7 @@ impl MyStrategyImpl {
                 }
             }
 
-            let mut simulator = Simulator::new(&self.world, unit.id);
+            let mut simulator = Simulator::new(&self.world, unit.id, SIMULATOR_DEFAULT_FLAGS);
 
             for (id, action) in self.actions.iter() {
                 simulator.set_unit_action(*id, action.clone());

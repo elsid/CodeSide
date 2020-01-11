@@ -1,17 +1,24 @@
 use model::{
+    Bullet,
     BulletParams,
     ExplosionParams,
     Tile,
     Unit,
     Weapon,
+    WeaponType,
 };
 
 use crate::my_strategy::{
+    SIMULATOR_ADD_MINES,
+    SIMULATOR_ADD_UNITS,
+    Debug as Dbg,
     Level,
     Location,
+    Positionable,
     Rect,
     Rectangular,
     Sector,
+    Simulator,
     Vec2,
     WalkGrid,
     World,
@@ -447,53 +454,70 @@ fn get_distance_to_nearest_hit_mine_by_line(source: Vec2, target: Vec2, world: &
         .map(|(factor, is_teammate)| MineHit { distance: factor * target.distance(source), is_teammate })
 }
 
-pub fn is_allowed_to_shoot(current_unit_id: i32, current_unit_center: Vec2, spread: f64, target: &HitTarget,
-        weapon: &Weapon, world: &World, number_of_directions: usize) -> bool {
-    if let Some(explosion) = weapon.params.explosion.as_ref() {
-        let direction = (target.rect.center() - current_unit_center).normalized();
-        let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, target,
-            spread, &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
+pub fn is_allowed_to_shoot(unit_id: i32, source: Vec2, spread: f64, opponent: &Unit,
+        weapon: &Weapon, world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> bool {
+    let direction = (opponent.center() - source).normalized();
+    let shoot_result = simulate_shoot(unit_id, source, direction, opponent.id, opponent.position(), spread, &weapon.typ,
+        &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions, debug);
+    let max_damage = weapon.params.bullet.damage + weapon.params.explosion.as_ref().map(|v| v.damage).unwrap_or(0);
 
-        if hit_damage.teammate_units_kills > 0
-                || hit_damage.teammate_units_damage_from_teammate > weapon.params.bullet.damage {
-            return false;
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_hit"))]
+    {
+        if let Some(v) = debug {
+            v.log(format!("[{}] shoot_result={:?} max_damage={} opponent={} {:?}",
+                unit_id, shoot_result, max_damage, opponent.id, opponent.position()));
+        }
+    }
+
+    shoot_result.player_score - max_damage >= shoot_result.opponent_score
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct ShootResult {
+    pub player_score: i32,
+    pub opponent_score: i32,
+}
+
+pub fn simulate_shoot(unit_id: i32, source: Vec2, direction: Vec2, target_unit_id: i32, target_unit_position: Vec2,
+        spread: f64, weapon_type: &WeaponType, bullet: &BulletParams, explosion: &Option<ExplosionParams>,
+        world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> ShootResult {
+    let mut initial_simulator = Simulator::new(world, unit_id, SIMULATOR_ADD_UNITS | SIMULATOR_ADD_MINES);
+    let player_id = world.get_unit(unit_id).player_id;
+    let to_target = direction * world.max_distance();
+    let time_interval = world.tick_time_interval();
+    let initial_player_score = initial_simulator.player().score;
+    let initial_opponent_score = initial_simulator.opponent().score;
+
+    initial_simulator.set_unit_position(unit_id, source - Vec2::only_y(world.properties().unit_size.y / 2.0));
+    initial_simulator.set_unit_position(target_unit_id, target_unit_position);
+
+    let mut player_score = 0;
+    let mut opponent_score = 0;
+
+    for i in 0 .. number_of_directions {
+        let angle = ((2 * i) as f64 / (number_of_directions - 1) as f64 - 1.0) * spread;
+        let destination = source + to_target.rotated(normalize_angle(angle));
+        let current_direction = (destination - source).normalized();
+        let mut simulator = initial_simulator.clone();
+
+        simulator.add_bullet(Bullet {
+            weapon_type: weapon_type.clone(),
+            unit_id: unit_id,
+            player_id,
+            position: source.as_model(),
+            velocity: (current_direction.normalized() * bullet.speed).as_model(),
+            damage: bullet.damage,
+            size: bullet.size,
+            explosion_params: explosion.clone(),
+        });
+
+        while !simulator.bullets().is_empty() {
+            simulator.tick(time_interval, 1, &mut None, debug);
         }
 
-        return get_player_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
-            - (weapon.params.bullet.damage + explosion.damage) as f64 / number_of_directions as f64
-            >= get_opponent_score_for_hit(&hit_damage, world.properties().kill_score, number_of_directions)
+        player_score += simulator.player().score - initial_player_score;
+        opponent_score += simulator.opponent().score - initial_opponent_score;
     }
 
-    let hit_probability_by_spread = get_hit_probability_by_spread(current_unit_center, &target.rect,
-        spread, weapon.params.bullet.size);
-
-    if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
-        return false;
-    }
-
-    let direction = (target.rect.center() - current_unit_center).normalized();
-    let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        target, spread, weapon.params.bullet.size, world, number_of_directions);
-
-    return hit_probabilities.target + hit_probabilities.opponent_units >= world.config().min_target_hits_to_shoot
-        && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot;
-}
-
-fn get_player_score_for_hit(hit_damage: &HitDamage, kill_score: i32, number_of_directions: usize) -> f64 {
-    (
-        hit_damage.target_damage_from_teammate
-        + hit_damage.target_damage_from_opponent
-        + hit_damage.opponent_units_damage_from_teammate
-        + hit_damage.opponent_units_damage_from_opponent
-        + (hit_damage.target_kills + hit_damage.opponent_units_kills) as i32 * kill_score
-    ) as f64 / number_of_directions as f64
-}
-
-fn get_opponent_score_for_hit(hit_damage: &HitDamage, kill_score: i32, number_of_directions: usize) -> f64 {
-    (
-        hit_damage.shooter_damage_from_teammate
-        + hit_damage.shooter_damage_from_opponent
-        + hit_damage.teammate_units_damage_from_opponent
-        + (hit_damage.shooter_kills + hit_damage.teammate_units_kills) as i32 * kill_score
-    ) as f64 / number_of_directions as f64
+    ShootResult { player_score, opponent_score }
 }

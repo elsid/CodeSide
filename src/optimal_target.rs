@@ -12,7 +12,6 @@ use model::{
 
 use crate::my_strategy::{
     Debug,
-    HitTarget,
     Positionable,
     Rectangular,
     Vec2,
@@ -42,7 +41,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
         let unit = world.units().iter()
             .filter(|unit| {
                 world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world)
+                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, debug)
             })
             .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
 
@@ -59,9 +58,9 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
     }
 }
 
-fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
-    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, &HitTarget::from_unit(&opponent), weapon,
-        world, world.config().optimal_action_number_of_directions)
+fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, debug: &mut Debug) -> bool {
+    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, opponent, weapon,
+        world, world.config().optimal_action_number_of_directions, &mut Some(debug))
 }
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]

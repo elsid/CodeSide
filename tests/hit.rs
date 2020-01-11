@@ -18,8 +18,10 @@ use aicup2019::{
         HitDamage,
         HitTarget,
         Level,
+        Positionable,
         Rect,
         Rectangular,
+        ShootResult,
         Vec2,
         get_distance_to_nearest_hit_wall_by_horizontal,
         get_distance_to_nearest_hit_wall_by_line,
@@ -27,6 +29,8 @@ use aicup2019::{
         get_hit_damage,
         get_hit_probability_by_spread,
         get_hit_probability_by_spread_with_destination,
+        is_allowed_to_shoot,
+        simulate_shoot,
     },
 };
 
@@ -466,4 +470,20 @@ fn test_get_hit_damage_2x2_with_rocket_launcher() {
         target_kills: 11,
         shooter_kills: 11,
     });
+}
+
+#[test]
+fn test_simulate_shoot_with_assault_rifle_far_from_healthy_opponent() {
+    let world = with_my_unit_with_weapon(example_world(), WeaponType::Pistol);
+    let my_unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let opponent_unit = world.get_unit(EXAMPLE_OPPONENT_UNIT_ID);
+    let direction = (opponent_unit.center() - my_unit.center()).normalized();
+    let weapon = my_unit.weapon.as_ref().unwrap();
+    let number_of_directions = 11;
+
+    let shoot_result = simulate_shoot(EXAMPLE_MY_UNIT_ID, my_unit.center(), direction,
+        opponent_unit.id, opponent_unit.position(), weapon.params.min_spread, &weapon.typ,
+        &weapon.params.bullet, &weapon.params.explosion, &world, number_of_directions, &mut None);
+
+    assert_eq!(shoot_result, ShootResult { player_score: 20, opponent_score: 0 });
 }

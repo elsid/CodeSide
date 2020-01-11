@@ -14,6 +14,7 @@ use aicup2019::{
         example_world,
     },
     my_strategy::{
+        SIMULATOR_DEFAULT_FLAGS,
         Debug,
         Planner,
         Simulator,
@@ -68,13 +69,13 @@ fn test_planner() {
     let mut config = world.config().clone();
     config.plan_max_state_depth = 65;
     config.plan_max_iterations = 73097;
-    let mut simulator = Simulator::new(&world, unit.id);
+    let mut simulator = Simulator::new(&world, unit.id, SIMULATOR_DEFAULT_FLAGS);
     let planner = Planner::new(destination, &config, simulator.clone(), world.max_distance(), world.max_score());
     let plan = planner.make(world.current_tick(), &mut rng, &mut Debug::new(&mut debug));
     let time_interval = world.config().plan_time_interval_factor / world.properties().ticks_per_second as f64;
     for transition in plan.transitions.iter() {
         simulator.set_unit_action(unit.id, transition.get_action(world.properties()));
-        simulator.tick(time_interval, world.config().plan_microticks_per_tick, &mut rng, &mut Some(&mut Debug::new(&mut debug)));
+        simulator.tick(time_interval, world.config().plan_microticks_per_tick, &mut Some(&mut rng), &mut Some(&mut Debug::new(&mut debug)));
         println!("[{}] {:?} {:?}", simulator.current_tick(), simulator.unit().position(), transition.get_action(world.properties()));
     }
     assert_eq!(simulator.unit().position(), destination);
