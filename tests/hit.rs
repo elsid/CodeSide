@@ -11,15 +11,20 @@ use aicup2019::{
         EXAMPLE_MY_UNIT_ID_1,
         EXAMPLE_OPPONENT_UNIT_ID,
         EXAMPLE_OPPONENT_UNIT_ID_1,
+        example_rng,
         example_world,
         example_world_with_team_size,
     },
     my_strategy::{
+        SIMULATOR_DEFAULT_FLAGS,
+        Hit,
         HitDamage,
         HitTarget,
         Level,
+        ObjectType,
         Rect,
         Rectangular,
+        Simulator,
         Vec2,
         get_distance_to_nearest_hit_wall_by_horizontal,
         get_distance_to_nearest_hit_wall_by_line,
@@ -27,10 +32,12 @@ use aicup2019::{
         get_hit_damage,
         get_hit_probability_by_spread,
         get_hit_probability_by_spread_with_destination,
+        get_nearest_hit,
     },
 };
 
 use helpers::{
+    with_bullet,
     with_my_position,
     with_my_unit_with_weapon,
     with_unit_health,
@@ -466,4 +473,57 @@ fn test_get_hit_damage_2x2_with_rocket_launcher() {
         target_kills: 11,
         shooter_kills: 11,
     });
+}
+
+#[test]
+fn test_get_nearest_hit_with_rocket_launcher_verified_by_simulation() {
+    let source = Vec2::new(31.5, 5.8);
+    let direction = Vec2::new(1.0, -1.0).normalized();
+    let world = with_bullet(
+        with_my_position(
+            with_my_unit_with_weapon(example_world(), WeaponType::RocketLauncher),
+            Vec2::new(31.5, 5.0)
+        ),
+        WeaponType::RocketLauncher, source, direction, EXAMPLE_MY_UNIT_ID
+    );
+    let mut rng = example_rng(7348172934612063328);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
+
+    assert_eq!(simulator.unit().base().health, 100);
+    assert_eq!(simulator.bullets().len(), 1);
+
+    for _ in 0 .. 3 {
+        simulator.tick(
+            world.tick_time_interval(),
+            1,
+            &mut rng,
+            &mut None,
+        );
+    }
+
+    assert_eq!(simulator.unit().base().health, 50);
+    assert_eq!(simulator.bullets().len(), 0);
+
+    let far_destination = source + direction * world.max_distance();
+    let destination = source + (far_destination - source)
+        * world.rect().get_intersection_with_line(source, far_destination).unwrap();
+    let opponent_unit = world.get_unit(EXAMPLE_OPPONENT_UNIT_ID);
+    let target = HitTarget::from_unit(&opponent_unit);
+
+    let hit = get_nearest_hit(EXAMPLE_MY_UNIT_ID, source, destination, &target, &world);
+
+    assert_eq!(hit, Some(Hit {
+        distance: 6.788225099390859,
+        object_type: ObjectType::Wall,
+        is_target: false,
+        is_teammate: false,
+        unit_id: None,
+    }));
+
+    let center = source + (destination - source).normalized() * hit.unwrap().distance;
+    let explosion_radius = world.properties().weapon_params[&WeaponType::RocketLauncher].explosion.as_ref().unwrap().radius;
+    let explosion_rect = Rect::new(center, Vec2::new(explosion_radius, explosion_radius));
+    let my_unit_rect = world.get_unit(EXAMPLE_MY_UNIT_ID).rect();
+
+    assert!(explosion_rect.has_collision(&my_unit_rect));
 }

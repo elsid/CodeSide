@@ -1,17 +1,22 @@
 use model::{
+    Bullet,
     BulletParams,
     ExplosionParams,
     Tile,
     Unit,
     Weapon,
+    WeaponType,
 };
 
 use crate::my_strategy::{
+    SIMULATOR_ADD_MINES,
+    SIMULATOR_ADD_UNITS,
     Level,
     Location,
     Rect,
     Rectangular,
     Sector,
+    Simulator,
     Vec2,
     WalkGrid,
     World,
@@ -49,11 +54,11 @@ impl HitTarget {
 }
 
 #[inline(never)]
-pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget,
-        spread: f64, bullet_size: f64, world: &World, number_of_directions: usize) -> HitProbabilities {
+pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget, spread: f64,
+        weapon_type: WeaponType, bullet: &BulletParams, world: &World, number_of_directions: usize) -> HitProbabilities {
     let to_target = direction * world.max_distance();
-    let left = direction.left() * bullet_size / 2.0;
-    let right = direction.right() * bullet_size / 2.0;
+    let left = direction.left() * bullet.size / 2.0;
+    let right = direction.right() * bullet.size / 2.0;
 
     let mut hit_wall = 0;
     let mut hit_opponent_units = 0;
@@ -75,7 +80,7 @@ pub fn get_hit_probabilities(unit_id: i32, source: Vec2, direction: Vec2, target
         } else {
             (source, destination)
         };
-        if let Some(hit) = get_nearest_hit(unit_id, src, dst, target, world) {
+        if let Some(hit) = get_nearest_hit(unit_id, src, dst, weapon_type.clone(), bullet, target, world) {
             hit_opponent_units += !hit.is_target as usize & !hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
             hit_teammate_units += !hit.is_target as usize & hit.is_teammate as usize & (hit.object_type == ObjectType::Unit) as usize;
             hit_opponent_mines += !hit.is_target as usize & !hit.is_teammate as usize & (hit.object_type == ObjectType::Mine) as usize;
@@ -118,7 +123,7 @@ pub struct HitDamage {
 
 #[inline(never)]
 pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &HitTarget,
-        spread: f64, bullet: &BulletParams, explosion: &Option<ExplosionParams>,
+        spread: f64, weapon_type: WeaponType, bullet: &BulletParams, explosion: &Option<ExplosionParams>,
         world: &World, number_of_directions: usize) -> HitDamage {
     let to_target = direction * world.max_distance();
     let left = direction.left() * bullet.size / 2.0;
@@ -152,7 +157,7 @@ pub fn get_hit_damage(unit_id: i32, source: Vec2, direction: Vec2, target: &HitT
         } else {
             (source, destination)
         };
-        if let Some(hit) = get_nearest_hit(unit_id, src, dst, target, world) {
+        if let Some(hit) = get_nearest_hit(unit_id, src, dst, weapon_type.clone(), bullet, target, world) {
             if min_distance.is_none() || min_distance.unwrap() > hit.distance {
                 min_distance = Some(hit.distance);
             }
@@ -259,6 +264,15 @@ pub struct Hit {
     pub unit_id: Option<i32>,
 }
 
+impl PartialEq for Hit {
+    fn eq(&self, rhs: &Self) -> bool {
+        (self.distance, self.object_type, self.is_target, self.is_teammate, self.unit_id)
+            .eq(&(rhs.distance, rhs.object_type, rhs.is_target, rhs.is_teammate, rhs.unit_id))
+    }
+}
+
+impl Eq for Hit {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(usize)]
 pub enum ObjectType {
@@ -268,7 +282,26 @@ pub enum ObjectType {
 }
 
 #[inline(never)]
-pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, target: &HitTarget, world: &World) -> Option<Hit> {
+pub fn get_nearest_hit(unit_id: i32, source: Vec2, mut destination: Vec2, weapon_type: WeaponType, bullet: &BulletParams,
+        target: &HitTarget, world: &World) -> Option<Hit> {
+    let mut simulator = Simulator::new(world, unit_id, SIMULATOR_ADD_UNITS | SIMULATOR_ADD_MINES);
+    simulator.add_bullet(Bullet {
+        weapon_type,
+        unit_id: unit_id,
+        player_id: world.get_unit(unit_id).player_id,
+        position: source.as_model(),
+        velocity: ((destination - source).normalized() * bullet.speed).as_model(),
+        damage: bullet.damage,
+        size: bullet.size,
+        explosion_params: None,
+    });
+
+    let time_interval = world.config().plan_time_interval_factor / world.properties().ticks_per_second as f64;
+
+    while !simulator.bullets().is_empty() {
+        simulator.tick(time_interval, 1, &mut None, &mut None);
+    }
+
     let to_destination = destination - source;
     let destination_distance = to_destination.norm();
     let mut max_distance = destination_distance;
@@ -452,7 +485,7 @@ pub fn is_allowed_to_shoot(current_unit_id: i32, current_unit_center: Vec2, spre
     if let Some(explosion) = weapon.params.explosion.as_ref() {
         let direction = (target.rect.center() - current_unit_center).normalized();
         let hit_damage = get_hit_damage(current_unit_id, current_unit_center, direction, target,
-            spread, &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
+            spread, weapon.typ.clone(), &weapon.params.bullet, &weapon.params.explosion, world, number_of_directions);
 
         if hit_damage.teammate_units_kills > 0
                 || hit_damage.teammate_units_damage_from_teammate > weapon.params.bullet.damage {
@@ -473,7 +506,7 @@ pub fn is_allowed_to_shoot(current_unit_id: i32, current_unit_center: Vec2, spre
 
     let direction = (target.rect.center() - current_unit_center).normalized();
     let hit_probabilities = get_hit_probabilities(current_unit_id, current_unit_center, direction,
-        target, spread, weapon.params.bullet.size, world, number_of_directions);
+        target, spread, weapon.typ.clone(), &weapon.params.bullet, world, number_of_directions);
 
     return hit_probabilities.target + hit_probabilities.opponent_units >= world.config().min_target_hits_to_shoot
         && hit_probabilities.teammate_units <= world.config().max_teammates_hits_to_shoot;

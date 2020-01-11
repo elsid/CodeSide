@@ -37,6 +37,7 @@ use aicup2019::{
         example_world,
     },
     my_strategy::{
+        SIMULATOR_DEFAULT_FLAGS,
         BulletExt,
         Simulator,
         Vec2,
@@ -46,12 +47,12 @@ use aicup2019::{
 #[test]
 fn test_simulator_single_tick() {
     let world = example_world();
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -63,13 +64,13 @@ fn test_simulator_single_tick() {
 #[test]
 fn test_simulator_unit_move_horizontal_for_one_tick() {
     let world = example_world();
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = world.properties().unit_max_horizontal_speed;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -81,13 +82,13 @@ fn test_simulator_unit_move_horizontal_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_from_wall_for_one_tick() {
     let world = example_world();
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -99,13 +100,13 @@ fn test_simulator_unit_jump_from_wall_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_from_platform_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(7.5, 8.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -117,13 +118,13 @@ fn test_simulator_unit_jump_from_platform_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_from_ladder_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(5.5, 5.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -135,12 +136,12 @@ fn test_simulator_unit_jump_from_ladder_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_from_jump_pad_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(13.5, 1.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -152,13 +153,13 @@ fn test_simulator_unit_jump_from_jump_pad_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_on_ladder_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(5.5, 3.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -170,13 +171,13 @@ fn test_simulator_unit_jump_on_ladder_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_in_air_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(15.5, 8.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -188,13 +189,13 @@ fn test_simulator_unit_jump_in_air_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_down_by_ladder_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(22.5, 2.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump_down = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -206,13 +207,13 @@ fn test_simulator_unit_jump_down_by_ladder_for_one_tick() {
 #[test]
 fn test_simulator_unit_fall_down_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(37.5, 2.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump_down = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -224,12 +225,12 @@ fn test_simulator_unit_fall_down_for_one_tick() {
 #[test]
 fn test_simulator_unit_stand_on_platform_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(15.5, 5.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -241,13 +242,13 @@ fn test_simulator_unit_stand_on_platform_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_down_through_platform_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(15.5, 5.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump_down = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -259,14 +260,14 @@ fn test_simulator_unit_jump_down_through_platform_for_one_tick() {
 #[test]
 fn test_simulator_unit_jump_from_wall_until_land() {
     let world = example_world();
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     for _ in 0..33 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -279,7 +280,7 @@ fn test_simulator_unit_jump_from_wall_until_land() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -292,14 +293,14 @@ fn test_simulator_unit_jump_from_wall_until_land() {
 #[test]
 fn test_simulator_unit_cancel_jump() {
     let world = example_world();
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     for _ in 0..2 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -312,7 +313,7 @@ fn test_simulator_unit_cancel_jump() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -325,13 +326,13 @@ fn test_simulator_unit_cancel_jump() {
 #[test]
 fn test_simulator_unit_run_into_wall() {
     let world = with_my_position(example_world(), Vec2::new(18.549999999, 1.000000001));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = world.properties().unit_max_horizontal_speed;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -343,14 +344,14 @@ fn test_simulator_unit_run_into_wall() {
 #[test]
 fn test_simulator_unit_run_into_unit() {
     let world = with_my_position(example_world(), Vec2::new(3.5, 1.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     for _ in 0 .. 10 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -363,13 +364,13 @@ fn test_simulator_unit_run_into_unit() {
 #[test]
 fn test_simulator_unit_fall_onto_unit() {
     let world = with_my_position(example_world(), Vec2::new(2.5, 3.5));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 10 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -382,7 +383,7 @@ fn test_simulator_unit_fall_onto_unit() {
 #[test]
 fn test_simulator_bullet_hit_unit() {
     let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), EXAMPLE_OPPONENT_UNIT_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.opponent().score, 0);
     assert_eq!(simulator.player().score, 0);
@@ -390,7 +391,7 @@ fn test_simulator_bullet_hit_unit() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -403,13 +404,13 @@ fn test_simulator_bullet_hit_unit() {
 #[test]
 fn test_simulator_bullet_does_not_hit_its_shooter() {
     let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), EXAMPLE_MY_UNIT_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 10 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -420,7 +421,7 @@ fn test_simulator_bullet_does_not_hit_its_shooter() {
 #[test]
 fn test_simulator_bullet_explode_unit() {
     let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), EXAMPLE_OPPONENT_UNIT_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.opponent().score, 0);
     assert_eq!(simulator.player().score, 0);
@@ -428,7 +429,7 @@ fn test_simulator_bullet_explode_unit() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -441,13 +442,13 @@ fn test_simulator_bullet_explode_unit() {
 #[test]
 fn test_simulator_bullet_hit_wall() {
     let world = with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(15.832623548153254, 5.93438708445076), Vec2::new(1.0, 0.0), EXAMPLE_OPPONENT_UNIT_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 30 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -457,7 +458,7 @@ fn test_simulator_bullet_hit_wall() {
 #[test]
 fn test_simulator_bullet_explode_on_hit_wall() {
     let world = with_bullet(example_world(), WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), EXAMPLE_MY_UNIT_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.opponent().score, 0);
     assert_eq!(simulator.player().score, 0);
@@ -465,7 +466,7 @@ fn test_simulator_bullet_explode_on_hit_wall() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -479,7 +480,7 @@ fn test_simulator_bullet_explode_on_hit_wall() {
 #[test]
 fn test_simulator_unit_pickup_weapon() {
     let world = with_loot_box(example_world(), Item::Weapon {weapon_type: WeaponType::RocketLauncher}, Vec2::new(36.5, 1.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     assert!(simulator.unit().weapon().is_none());
@@ -488,7 +489,7 @@ fn test_simulator_unit_pickup_weapon() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -511,7 +512,7 @@ fn test_simulator_unit_pickup_weapon() {
 #[test]
 fn test_simulator_unit_pickup_health_pack() {
     let world = with_loot_box(example_world(), Item::HealthPack {health: 40}, Vec2::new(36.5, 1.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     simulator.unit_mut().damage(20);
@@ -521,7 +522,7 @@ fn test_simulator_unit_pickup_health_pack() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -533,7 +534,7 @@ fn test_simulator_unit_pickup_health_pack() {
 #[test]
 fn test_simulator_unit_pickup_mine() {
     let world = with_loot_box(example_world(), Item::Mine {}, Vec2::new(36.5, 1.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = -world.properties().unit_max_horizontal_speed;
     simulator.unit_mut().damage(20);
@@ -543,7 +544,7 @@ fn test_simulator_unit_pickup_mine() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -554,12 +555,12 @@ fn test_simulator_unit_pickup_mine() {
 #[test]
 fn test_simulator_single_tick_unit_on_edge() {
     let world = with_my_position(example_world(), Vec2::new(38.55, 24.55555555555557));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -571,14 +572,14 @@ fn test_simulator_single_tick_unit_on_edge() {
 #[test]
 fn test_simulator_single_tick_unit_left_border_on_right_edge() {
     let world = with_my_position(example_world(), Vec2::new(38.49444444444444, 27.16500000099991));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().velocity = world.properties().unit_max_horizontal_speed;
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -590,12 +591,12 @@ fn test_simulator_single_tick_unit_left_border_on_right_edge() {
 #[test]
 fn test_simulator_unit_stay_on_ladder_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(5.25, 3.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -607,12 +608,12 @@ fn test_simulator_unit_stay_on_ladder_for_one_tick() {
 #[test]
 fn test_simulator_unit_fall_through_ladder_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(4.9, 3.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -624,12 +625,12 @@ fn test_simulator_unit_fall_through_ladder_for_one_tick() {
 #[test]
 fn test_simulator_unit_fall_through_platform_for_one_tick() {
     let world = with_my_position(example_world(), Vec2::new(7.5, 7.5));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -641,13 +642,13 @@ fn test_simulator_unit_fall_through_platform_for_one_tick() {
 #[test]
 fn test_simulator_mine_change_state() {
     let world = with_mine(example_world(), Vec2::new(25.716666665660146, 9.000000000999998), EXAMPLE_MY_PLAYER_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 70 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -659,7 +660,7 @@ fn test_simulator_mine_change_state() {
 #[test]
 fn test_simulator_mine_explosion() {
     let world = with_mine(example_world(), Vec2::new(37.5, 1.0), EXAMPLE_OPPONENT_PLAYER_ID);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.unit().health(), 100);
     assert_eq!(simulator.opponent().score, 0);
@@ -668,7 +669,7 @@ fn test_simulator_mine_explosion() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -681,13 +682,13 @@ fn test_simulator_mine_explosion() {
 #[test]
 fn test_simulator_unit_land_on_platform() {
     let world = with_my_position(example_world(), Vec2::new(15.5, 5.3));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 3 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -700,14 +701,14 @@ fn test_simulator_unit_land_on_platform() {
 #[test]
 fn test_simulator_unit_land_on_platform_and_jump() {
     let world = with_my_position(example_world(), Vec2::new(15.5, 5.3));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     for _ in 0 .. 2 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -718,7 +719,7 @@ fn test_simulator_unit_land_on_platform_and_jump() {
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -730,13 +731,13 @@ fn test_simulator_unit_land_on_platform_and_jump() {
 #[test]
 fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
     let world = with_my_position(example_world(), Vec2::new(15.5, 5.3));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 3 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -748,7 +749,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -760,7 +761,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(
@@ -778,7 +779,7 @@ fn test_simulator_bullet_explode_and_kill_unit() {
         ),
         WeaponType::RocketLauncher, Vec2::new(30.0, 2.0), Vec2::new(1.0, 0.0), EXAMPLE_OPPONENT_UNIT_ID
     );
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.opponent().score, 0);
     assert_eq!(simulator.player().score, 0);
@@ -786,7 +787,7 @@ fn test_simulator_bullet_explode_and_kill_unit() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -805,7 +806,7 @@ fn test_simulator_my_bullet_explode_and_kill_unit() {
         ),
         WeaponType::RocketLauncher, Vec2::new(36.0, 5.0), Vec2::new(0.0, -1.0), EXAMPLE_MY_UNIT_ID
     );
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.opponent().score, 0);
     assert_eq!(simulator.player().score, 0);
@@ -813,7 +814,7 @@ fn test_simulator_my_bullet_explode_and_kill_unit() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -826,12 +827,12 @@ fn test_simulator_my_bullet_explode_and_kill_unit() {
 #[test]
 fn test_simulator_unit_set_jump_false_cancel_jump() {
     let world = example_world();
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert!(simulator.unit().base().jump_state.can_jump);
@@ -840,7 +841,7 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -849,7 +850,7 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert!(!simulator.unit().base().jump_state.can_jump);
@@ -858,14 +859,14 @@ fn test_simulator_unit_set_jump_false_cancel_jump() {
 #[test]
 fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
     let world = with_my_position(example_world(), Vec2::new(9.5, 8.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().jump = true;
     for _ in 0 .. 5 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -878,7 +879,7 @@ fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -892,13 +893,13 @@ fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
 #[test]
 fn test_simulator_shoot() {
     let world = with_my_unit_with_weapon(example_world(), WeaponType::Pistol);
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     simulator.unit_mut().action_mut().shoot = true;
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(simulator.bullets().len(), 1);
@@ -912,7 +913,7 @@ fn test_simulator_bullet_hit_mine() {
         with_bullet(example_world(), WeaponType::AssaultRifle, Vec2::new(20.0, 9.25), Vec2::new(1.0, 0.0), EXAMPLE_MY_UNIT_ID),
         Vec2::new(25.716666665660146, 9.000000000999998), EXAMPLE_MY_PLAYER_ID
     );
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.mines().len(), 1);
     assert_eq!(simulator.mines()[0].base().state, MineState::Preparing,
@@ -922,7 +923,7 @@ fn test_simulator_bullet_hit_mine() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -939,7 +940,7 @@ fn test_simulator_bullet_explosion_chain() {
         ),
         Vec2::new(28.716666665660146, 9.000000000999998), EXAMPLE_MY_PLAYER_ID
     );
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.mines().len(), 2);
     assert_eq!(simulator.bullets().len(), 1);
@@ -947,7 +948,7 @@ fn test_simulator_bullet_explosion_chain() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -958,13 +959,13 @@ fn test_simulator_bullet_explosion_chain() {
 #[test]
 fn test_simulator_unit_land_on_unit() {
     let world = with_my_position(example_world(), Vec2::new(2.5, 3.5));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     for _ in 0 .. 10 {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -975,13 +976,13 @@ fn test_simulator_unit_land_on_unit() {
 #[test]
 fn test_simulator_unit_jump_from_unit_below() {
     let world = with_my_position(example_world(), Vec2::new(2.5, 2.800000002));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.unit().base().jump_state.can_jump, false);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000002));
@@ -990,7 +991,7 @@ fn test_simulator_unit_jump_from_unit_below() {
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.9666666686666483));
@@ -999,13 +1000,13 @@ fn test_simulator_unit_jump_from_unit_below() {
 #[test]
 fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
     let world = with_unit_position(example_world(), EXAMPLE_OPPONENT_UNIT_ID, Vec2::new(37.5, 5.0));
-    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.unit().base().jump_state.can_jump, false);
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.000000001));
@@ -1015,7 +1016,7 @@ fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
         simulator.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -1025,7 +1026,7 @@ fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
     simulator.tick(
         world.tick_time_interval(),
         world.properties().updates_per_tick as usize,
-        &mut rng,
+        &mut Some(&mut rng),
         &mut None,
     );
     assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.8666666656665296));
@@ -1042,22 +1043,22 @@ fn test_simulator_bullet_on_corner_hit_unit() {
         Vec2::new(37.5, 2.0)
     );
     let mut rng = example_rng(7348172934612063328);
-    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     for _ in 0 .. 3 {
         simulator1.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
     assert_eq!(simulator1.unit().health(), 95);
-    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     for _ in 0 .. 3 {
         simulator2.tick(
             world.tick_time_interval(),
             world.config().plan_microticks_per_tick,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
@@ -1074,22 +1075,22 @@ fn test_simulator_bullet_on_corner_miss_unit() {
         Vec2::new(37.5, 2.0)
     );
     let mut rng = example_rng(7348172934612063328);
-    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     for _ in 0 .. 4 {
         simulator1.tick(
             world.tick_time_interval(),
             world.properties().updates_per_tick as usize,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }
     assert_eq!(simulator1.unit().health(), 100);
-    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
     for _ in 0 .. 4 {
         simulator2.tick(
             world.tick_time_interval(),
             1,
-            &mut rng,
+            &mut Some(&mut rng),
             &mut None,
         );
     }

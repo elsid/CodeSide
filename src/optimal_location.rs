@@ -164,7 +164,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world,
+                        &target, get_mean_spread(weapon), weapon.typ.clone(), &weapon.params.bullet, world,
                         world.config().optimal_location_number_of_directions);
                     (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
                 } else {
@@ -198,7 +198,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
             let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &HitTarget::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
+                &HitTarget::from_unit(unit), get_mean_spread(weapon), weapon.typ.clone(), &weapon.params.bullet, world,
                 world.config().optimal_location_number_of_directions);
             (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
         } else {
@@ -239,7 +239,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 .map(|v| {
                     let direction = (opponent.center() - current_unit_center).normalized();
                     get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &HitTarget::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
+                        &HitTarget::from_unit(v), get_mean_spread(weapon), weapon.typ.clone(), &weapon.params.bullet, world,
                         world.config().optimal_location_number_of_directions)
                 })
                 .map(|v| v.teammate_units as f64 / v.total as f64)
