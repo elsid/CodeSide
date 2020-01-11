@@ -89,12 +89,9 @@ impl<'c, 's> Planner<'c, 's> {
         let health_diff_score = 1.0 - (opponnents_health - teammates_health) as f64
             / (self.simulator.units().len() as i32 * self.simulator.properties().unit_max_health) as f64;
 
-        let my_score = self.simulator.my_player().score;
+        let my_score = self.simulator.player().score;
 
-        let opponents_score = self.simulator.players().iter()
-            .filter(|v| v.id != self.simulator.my_player().id)
-            .map(|v| v.score)
-            .sum::<i32>();
+        let opponents_score = self.simulator.opponent().score;
 
         let game_score_diff_score = 1.0 - (opponents_score - my_score) as f64 / self.max_score as f64;
 
@@ -256,7 +253,12 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         next.id = self.state_id_generator.next();
         next.depth += 1;
         *next.planner.simulator.unit_mut().action_mut() = transition.get_action(state.properties());
-        next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, self.rng, &mut Some(self.debug));
+
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_plan", feature = "enable_debug_plan_simulator"))]
+        next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, &mut Some(self.rng), &mut Some(self.debug));
+
+        #[cfg(not(feature = "enable_debug_plan_simulator"))]
+        next.planner.simulator.tick(time_interval, state.planner.config.plan_microticks_per_tick, &mut Some(self.rng), &mut None);
 
         let unit = state.planner.simulator.unit();
         let unit_state = UnitState {

@@ -40,6 +40,9 @@ spectator = []
 test = []
 pusher = []
 enable_debug_bullet = []
+bullets_spread = []
+enable_debug_hit = []
+enable_debug_plan_simulator = []
 
 [[bench]]
 name = "simulator"

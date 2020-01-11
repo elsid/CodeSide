@@ -19,7 +19,6 @@ use crate::my_strategy::{
 
 use crate::my_strategy::{
     Debug,
-    HitTarget,
     Location,
     Positionable,
     Rect,
@@ -29,9 +28,9 @@ use crate::my_strategy::{
     Vec2i,
     World,
     as_score,
-    get_hit_probabilities,
     get_hit_probability_by_spread_with_destination,
     is_allowed_to_shoot,
+    simulate_shoot,
 };
 
 #[inline(never)]
@@ -132,7 +131,6 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
 pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
-    let current_unit_rect = Rect::new(current_unit_center, Vec2::from_model(&current_unit.size) / 2.0);
     let location_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
@@ -156,17 +154,18 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         },
         _ => false,
     }) as i32 as f64;
-    let target = HitTarget::new(current_unit.id, current_unit_rect.clone());
     let hit_by_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
                 if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
                     let direction = (current_unit_center - unit.center()).normalized();
-                    let hit_probabilities = get_hit_probabilities(unit.id, unit.center(), direction,
-                        &target, get_mean_spread(weapon), weapon.params.bullet.size, world,
-                        world.config().optimal_location_number_of_directions);
-                    (hit_probabilities.target + hit_probabilities.teammate_units) as f64 / hit_probabilities.total as f64
+                    let shoot_result = simulate_shoot(unit.id, unit.center(), direction,
+                        current_unit.id, current_unit_position, get_mean_spread(weapon),
+                        &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
+                        world, world.config().optimal_location_number_of_directions, &mut None);
+                    (shoot_result.player_score - shoot_result.opponent_score) as f64
+                        / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64
                 } else {
                     0.0
                 }
@@ -197,10 +196,12 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         if (weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer)
                 && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
             let direction = (unit.center() - current_unit_center).normalized();
-            let hit_probabilities = get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                &HitTarget::from_unit(unit), get_mean_spread(weapon), weapon.params.bullet.size, world,
-                world.config().optimal_location_number_of_directions);
-            (hit_probabilities.target + hit_probabilities.opponent_units) as f64 / hit_probabilities.total as f64
+            let shoot_result = simulate_shoot(current_unit.id, current_unit_center, direction,
+                unit.id, unit.position(), get_mean_spread(weapon),
+                &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
+                world, world.config().optimal_location_number_of_directions, &mut None);
+            (shoot_result.player_score - shoot_result.opponent_score) as f64
+                / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64
         } else {
             0.0
         }
@@ -230,19 +231,24 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (current_unit.weapon.as_ref(), nearest_opponent) {
         if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
             let opponent_rect = opponent.rect();
+            let max_damage = weapon.params.bullet.damage + weapon.params.explosion.as_ref().map(|v| v.damage).unwrap_or(0);
             world.units().iter()
                 .filter(|v| {
                     world.is_opponent_unit(v)
                     && get_hit_probability_by_spread_with_destination(current_unit_center, opponent_rect.center(), &opponent_rect,
                         get_mean_spread(weapon), weapon.params.bullet.size) > 0.0
                 })
-                .map(|v| {
+                .map(|unit| {
                     let direction = (opponent.center() - current_unit_center).normalized();
-                    get_hit_probabilities(current_unit.id, current_unit_center, direction,
-                        &HitTarget::from_unit(v), get_mean_spread(weapon), weapon.params.bullet.size, world,
-                        world.config().optimal_location_number_of_directions)
+                    simulate_shoot(current_unit.id, current_unit_center, direction,
+                        unit.id, unit.position(), get_mean_spread(weapon),
+                        &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
+                        world, world.config().optimal_location_number_of_directions, &mut None)
                 })
-                .map(|v| v.teammate_units as f64 / v.total as f64)
+                .map(|shoot_result| {
+                    (shoot_result.teammates_damage + shoot_result.unit_damage) as f64
+                        / (max_damage * world.config().optimal_location_number_of_directions as i32) as f64
+                })
                 .sum::<f64>()
         } else {
             0.0
@@ -280,8 +286,8 @@ pub fn get_weapon_score(weapon_type: &WeaponType) -> u32 {
 }
 
 fn may_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World) -> bool {
-    is_allowed_to_shoot(current_unit_id, current_unit_center, get_mean_spread(weapon), &HitTarget::from_unit(&opponent),
-        weapon, world, world.config().optimal_location_number_of_directions)
+    is_allowed_to_shoot(current_unit_id, current_unit_center, get_mean_spread(weapon), opponent,
+        weapon, world, world.config().optimal_location_number_of_directions, &mut None)
 }
 
 pub fn make_location_rect(location: Location) -> Rect {

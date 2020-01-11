@@ -53,9 +53,9 @@ impl Config {
             optimal_location_health_pack_score_weight: 4.0,
             optimal_location_first_weapon_score_weight: 3.0,
             optimal_location_swap_weapon_score_weight: 1.0,
-            optimal_location_hit_by_opponent_score_weight: -1.0,
+            optimal_location_hit_by_opponent_score_weight: -300.0,
             optimal_location_opponent_obstacle_score_weight: -2.0,
-            optimal_location_hit_nearest_opponent_score_weight: 2.0,
+            optimal_location_hit_nearest_opponent_score_weight: 600.0,
             optimal_location_loot_box_mine_score_weight: 0.1,
             optimal_location_height_score_weight: 0.1,
             optimal_location_over_ground_score_weight: 0.5,
@@ -70,7 +70,7 @@ impl Config {
             min_hit_probability_by_spread_to_shoot: 0.3,
             max_teammates_hits_to_shoot: 1,
             min_target_hits_to_shoot: 1,
-            optimal_action_number_of_directions: 11,
+            optimal_action_number_of_directions: 9,
         }
     }
 
