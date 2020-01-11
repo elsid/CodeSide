@@ -47,7 +47,7 @@ impl Config {
             plan_health_diff_score_weight: 1.0,
             plan_game_score_diff_score_weight: 1.0,
             plan_triggered_mines_by_me_score_weight: 1.0,
-            plan_distance_to_nearest_bullet_score_weight: 0.01,
+            plan_distance_to_nearest_bullet_score_weight: 0.05,
             plan_time_interval_factor: 3.0,
             optimal_location_distance_to_position_score_weight: -0.25,
             optimal_location_health_pack_score_weight: 4.0,
