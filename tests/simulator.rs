@@ -1097,6 +1097,37 @@ fn test_simulator_bullet_on_corner_miss_unit() {
 }
 
 #[test]
+fn test_simulator_bullet_on_corner_hit_tile() {
+    let world = with_bullet(
+        with_my_position(example_world(), Vec2::new(31.5, 5.0)),
+        WeaponType::RocketLauncher, Vec2::new(31.5, 5.8),  Vec2::new(1.0, -1.0), EXAMPLE_MY_UNIT_ID
+    );
+    let mut rng = example_rng(7348172934612063328);
+    let mut simulator1 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    for _ in 0 .. 3 {
+        simulator1.tick(
+            world.tick_time_interval(),
+            world.properties().updates_per_tick as usize,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator1.unit().base().health, 50);
+    assert_eq!(simulator1.bullets().len(), 0);
+    let mut simulator2 = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
+    for _ in 0 .. 4 {
+        simulator2.tick(
+            world.tick_time_interval(),
+            1,
+            &mut rng,
+            &mut None,
+        );
+    }
+    assert_eq!(simulator2.unit().base().health, 50);
+    assert_eq!(simulator2.bullets().len(), 0);
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);

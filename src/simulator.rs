@@ -254,15 +254,15 @@ impl<'r> Simulator<'r> {
                 continue;
             }
 
-            self.bullets[bullet].advance(time_interval);
-
-            if self.collide_bulles_and_tiles(bullet, &mut explosions) {
+            if self.collide_bulles_and_tiles(bullet, time_interval, &mut explosions) {
                 continue
             }
 
-            if self.collide_bullet_and_mines(bullet, &mut explosions) {
+            if self.collide_bullet_and_mines(bullet, time_interval, &mut explosions) {
                 continue;
             }
+
+            self.bullets[bullet].advance(time_interval);
 
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
             {
@@ -542,17 +542,21 @@ impl<'r> Simulator<'r> {
         false
     }
 
-    fn collide_bulles_and_tiles(&mut self, bullet: usize, explosions: &mut Vec<Explosion>) -> bool {
-        let min_x = self.bullets[bullet].left() as usize;
-        let max_x = (self.bullets[bullet].right() as usize + 1).min(self.level.size_x());
-        let min_y = self.bullets[bullet].bottom() as usize;
-        let max_y = (self.bullets[bullet].top() as usize + 1).min(self.level.size_y());
+    fn collide_bulles_and_tiles(&mut self, bullet: usize, time_interval: f64, explosions: &mut Vec<Explosion>) -> bool {
+        let moving_rect = self.bullets[bullet].moving_rect(time_interval);
+        let min = moving_rect.min();
+        let max = moving_rect.max();
+
+        let min_x = min.x() as usize;
+        let max_x = (max.x() as usize + 1).min(self.level.size_x());
+        let min_y = min.y() as usize;
+        let max_y = (max.y() as usize + 1).min(self.level.size_y());
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
                 match self.level.get_tile(Location::new(x, y)) {
                     Tile::Wall => {
-                        collide_bullet_and_tile(x, y, &mut self.bullets[bullet], explosions);
+                        collide_bullet_and_tile(x, y, time_interval, &mut self.bullets[bullet], explosions);
                         if self.bullets[bullet].hit {
                             return true;
                         }
@@ -564,12 +568,12 @@ impl<'r> Simulator<'r> {
         false
     }
 
-    fn collide_bullet_and_mines(&mut self, bullet: usize, explosions: &mut Vec<Explosion>) -> bool {
+    fn collide_bullet_and_mines(&mut self, bullet: usize, time_interval: f64, explosions: &mut Vec<Explosion>) -> bool {
         for mine in 0 .. self.mines.len() {
             if self.mines[mine].ignore() {
                 continue;
             }
-            collide_bullet_and_mine(&mut self.bullets[bullet], &mut self.mines[mine], explosions);
+            collide_bullet_and_mine(time_interval, &mut self.bullets[bullet], &mut self.mines[mine], explosions);
             if self.bullets[bullet].hit {
                 return true;
             }
@@ -964,22 +968,6 @@ impl BulletExt {
         self.base.position.y += self.base.velocity.y * time_interval;
     }
 
-    pub fn right(&self) -> f64 {
-        self.base.position.x + self.half_size()
-    }
-
-    pub fn left(&self) -> f64 {
-        self.base.position.x - self.half_size()
-    }
-
-    pub fn top(&self) -> f64 {
-        self.base.position.y + self.half_size()
-    }
-
-    pub fn bottom(&self) -> f64 {
-        self.base.position.y - self.half_size()
-    }
-
     pub fn velocity(&self) -> Vec2 {
         Vec2::from_model(&self.base.velocity)
     }
@@ -1166,8 +1154,16 @@ fn explode_mine(explosion: &Explosion, mine: &mut MineExt, explosions: &mut Vec<
     explosions.push(Explosion { params: mine.base.explosion_params.clone(), position: mine.center(), player_index: mine.player_index })
 }
 
-fn collide_bullet_and_tile(x: usize, y: usize, bullet: &mut BulletExt, explosions: &mut Vec<Explosion>) {
-    if !make_tile_rect(x, y).has_collision(&bullet.rect()) {
+fn collide_bullet_and_tile(x: usize, y: usize, time_interval: f64, bullet: &mut BulletExt, explosions: &mut Vec<Explosion>) {
+    let tile_rect = make_tile_rect(x, y);
+    if !bullet.moving_rect(time_interval).has_collision(&tile_rect) {
+        return;
+    }
+    let get_nearest_distance = |time| {
+        tile_rect.center().distance(bullet.center() + bullet.velocity() * time)
+    };
+    let nearest_time = minimize1d(0.0, time_interval, 10, get_nearest_distance);
+    if !bullet.rect_at(nearest_time).has_collision(&tile_rect) {
         return;
     }
     bullet.hit = true;
@@ -1176,8 +1172,16 @@ fn collide_bullet_and_tile(x: usize, y: usize, bullet: &mut BulletExt, explosion
     }
 }
 
-fn collide_bullet_and_mine(bullet: &mut BulletExt, mine: &mut MineExt, explosions: &mut Vec<Explosion>) {
-    if !bullet.rect().has_collision(&mine.rect()) {
+fn collide_bullet_and_mine(time_interval: f64, bullet: &mut BulletExt, mine: &mut MineExt, explosions: &mut Vec<Explosion>) {
+    let mine_rect = mine.rect();
+    if !bullet.moving_rect(time_interval).has_collision(&mine_rect) {
+        return;
+    }
+    let get_nearest_distance = |time| {
+        mine_rect.center().distance(bullet.center() + bullet.velocity() * time)
+    };
+    let nearest_time = minimize1d(0.0, time_interval, 10, get_nearest_distance);
+    if !bullet.rect_at(nearest_time).has_collision(&mine_rect) {
         return;
     }
     bullet.hit = true;
