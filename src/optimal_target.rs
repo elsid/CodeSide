@@ -26,16 +26,8 @@ use crate::my_strategy::{
     normalize_angle,
 };
 
-pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Vec2> {
+pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<i32> {
     if let Some(weapon) = current_unit.weapon.as_ref() {
-        let mine = world.mines().iter()
-            .find(|mine| world.is_teammate_mine(mine) && mine.position().distance(current_unit.position()) < 2.0 * current_unit.size.x)
-            .map(|mine| mine.center());
-
-        if let Some(position) = mine {
-            return Some(position);
-        }
-
         let unit = world.units().iter()
             .filter(|unit| {
                 world.is_opponent_unit(unit)
@@ -50,7 +42,7 @@ pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug)
             }
         }
 
-        unit.map(|unit| unit.center())
+        unit.map(|unit| unit.id)
     } else {
         None
     }
