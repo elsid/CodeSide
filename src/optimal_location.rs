@@ -20,6 +20,7 @@ use crate::my_strategy::{
 use crate::my_strategy::{
     Debug,
     Location,
+    NeighborhoodScoreCounter,
     Positionable,
     Rect,
     Rectangular,
@@ -34,7 +35,8 @@ use crate::my_strategy::{
 };
 
 #[inline(never)]
-pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World, debug: &mut Debug) -> Option<(f64, Location)> {
+pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Location>)>, world: &World,
+        neighborhood_score_counter: &NeighborhoodScoreCounter, debug: &mut Debug) -> Option<(f64, Location)> {
     let mut optimal: Option<(f64, Location)> = None;
 
     #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
@@ -52,7 +54,7 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 continue;
             }
             if let Some(path_info) = world.get_path_info(unit_index, location) {
-                let candidate_score = get_location_score(location, unit, world, &path_info);
+                let candidate_score = get_location_score(location, unit, world, &path_info, neighborhood_score_counter);
                 if optimal.is_none() || optimal.unwrap().0 < candidate_score {
                     optimal = Some((candidate_score, location));
                 }
@@ -84,10 +86,12 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
         {
             if let Some((score, location)) = optimal {
                 let path_info = world.get_path_info(unit_index, location).unwrap();
-                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
+                let components = get_location_score_components(location, unit, world, &path_info, neighborhood_score_counter);
+                debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, components));
                 if let Some(v) = optimal_locations.iter().find(|(id, _)| *id == unit.id).unwrap().1 {
                     let path_info = world.get_path_info(unit_index, v).unwrap();
-                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, world, &path_info)));
+                    let components = get_location_score_components(v, unit, world, &path_info, neighborhood_score_counter);
+                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, components));
                 }
             }
         }
@@ -124,11 +128,13 @@ fn is_busy_by_other(location: Location, unit_id: i32, optimal_locations: &Vec<(i
         .is_some()
 }
 
-pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> f64 {
-    get_location_score_components(location, current_unit, world, path_info).iter().sum()
+pub fn get_location_score(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo,
+        neighborhood_score_counter: &NeighborhoodScoreCounter) -> f64 {
+    get_location_score_components(location, current_unit, world, path_info, neighborhood_score_counter).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo,
+        neighborhood_score_counter: &NeighborhoodScoreCounter) -> [f64; 18] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let location_rect = Rect::new(
@@ -256,6 +262,15 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         0.0
     };
+    let historical_location_score = neighborhood_score_counter.get_location_score(world.level().get_tile_index(location)) as f64
+        / world.max_score() as f64;
+    let neighborhood_score = neighborhood_score_counter.get_neighborhood_score(world.get_neighborhood(location));
+    let historical_neighborhood_score = if neighborhood_score != 0 {
+        neighborhood_score_counter.get_neighborhood_score(world.get_neighborhood(location)) as f64
+            / neighborhood_score_counter.max_neighborhood_score().abs().max(neighborhood_score_counter.min_neighborhood_score().abs()) as f64
+    } else {
+        0.0
+    };
 
     [
         distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
@@ -274,6 +289,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         hit_teammates_score * world.config().optimal_location_hit_teammates_score_weight,
         teammate_obstacle_score * world.config().optimal_location_teammate_obstacle_score_weight,
         bullet_obstacle_score * world.config().optimal_location_bullet_obstacle_score_weight,
+        historical_location_score * world.config().optimal_location_historical_location_score_weight,
+        historical_neighborhood_score * world.config().optimal_location_historical_neighborhood_score_weight,
     ]
 }
 

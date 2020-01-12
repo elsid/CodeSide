@@ -15,6 +15,7 @@ use crate::my_strategy::{
     ImplicitProperties,
     Level,
     Location,
+    Neighborhood,
     Positionable,
     Rect,
     Rectangular,
@@ -22,6 +23,7 @@ use crate::my_strategy::{
     Vec2i,
     WalkGrid,
     as_score,
+    get_neighborhood,
     make_location_rect,
 };
 
@@ -54,6 +56,7 @@ pub struct World {
     my_player_index: usize,
     opponent_player_index: usize,
     rect: Rect,
+    neighborhoods: Vec<Neighborhood>,
 }
 
 impl World {
@@ -83,6 +86,7 @@ impl World {
             current_tick: game.current_tick,
             properties: game.properties.clone(),
             is_complex_level: is_complex_level(&level),
+            neighborhoods: (0 .. level.size()).map(|v| get_neighborhood(level.get_tile_location(v), &level)).collect(),
             level,
             players: game.players.clone(),
             units: game.units.clone(),
@@ -397,6 +401,10 @@ impl World {
 
     pub fn max_path_distance(&self) -> f64 {
         self.max_path_distance
+    }
+
+    pub fn get_neighborhood(&self, location: Location) -> &Neighborhood {
+        &self.neighborhoods[self.level.get_tile_index(location)]
     }
 
     fn update_tile_path_infos(&mut self, unit_index: usize, source: Location) {

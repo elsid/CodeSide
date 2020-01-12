@@ -14,9 +14,11 @@ use model::{
 };
 
 use crate::my_strategy::{
+    NEIGHBORHOOD_SCORE,
     Config,
     Debug,
     Location,
+    NeighborhoodScoreCounter,
     Plan,
     Positionable,
     Role,
@@ -39,6 +41,7 @@ use crate::my_strategy::{
 use crate::my_strategy::{
     Level,
     Rectangular,
+    color_from_heat,
 };
 
 #[cfg(feature = "dump_level")]
@@ -54,11 +57,14 @@ pub struct MyStrategyImpl {
     optimal_plans: Vec<(i32, Plan)>,
     optimal_actions: Vec<(i32, UnitAction)>,
     last_tick: i32,
+    neighborhood_score_counter: NeighborhoodScoreCounter,
 }
 
 impl MyStrategyImpl {
     pub fn new(config: Config, current_unit: Unit, game: Game) -> Self {
         let world = World::new(config, current_unit.player_id, game);
+        let mut neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
+        neighborhood_score_counter.fill(NEIGHBORHOOD_SCORE);
         #[cfg(feature = "dump_level")]
         println!("{}", dump_level(world.level()));
         #[cfg(not(feature = "disable_output"))]
@@ -77,6 +83,7 @@ impl MyStrategyImpl {
             optimal_targets: world.units().iter().map(|v| (v.id, None)).collect(),
             optimal_plans: world.units().iter().map(|v| (v.id, Plan::default())).collect(),
             optimal_actions: world.units().iter().map(|v| (v.id, default_action())).collect(),
+            neighborhood_score_counter,
             world,
             last_tick: -1,
         }
@@ -98,10 +105,15 @@ impl MyStrategyImpl {
 
             self.world.update(game);
 
+            self.neighborhood_score_counter.update(&self.world);
+
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
             debug.log(format!("[{}] mines={} loot_boxes={} bullets={} units={}",
                 self.world.current_tick(), self.world.mines().len(), self.world.loot_boxes().len(),
                 self.world.bullets().len(), self.world.units().len()));
+
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_location_score"))]
+            render_location_score(&self.location_score_counter, self.world.level(), debug);
 
             self.assign_roles(debug);
 
@@ -135,7 +147,7 @@ impl MyStrategyImpl {
 
             self.update_roles();
 
-            #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location"))]
+            #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_location", not(feature = "enable_debug_location_score")))]
             for &(id, v) in self.optimal_locations.iter() {
                 if let Some(location) = v {
                     render_optimal_location(location, self.world.get_unit(id), debug);
@@ -195,7 +207,7 @@ impl MyStrategyImpl {
             if self.world.is_teammate_unit(unit) {
                 match &self.roles[i].1 {
                     Role::Shooter => {
-                        self.optimal_locations[i].1 = get_optimal_location(unit, &self.optimal_locations, &self.world, debug).map(|v| v.1);
+                        self.optimal_locations[i].1 = get_optimal_location(unit, &self.optimal_locations, &self.world, &self.neighborhood_score_counter, debug).map(|v| v.1);
                     },
                     Role::Miner { .. } => {
                         self.optimal_locations[i].1 = None;
@@ -284,6 +296,11 @@ impl Drop for MyStrategyImpl {
             "result {}",
             self.world.current_tick()
         );
+        #[cfg(feature = "collect_neighborhood_score")]
+        std::fs::write(
+            std::env::var("NEIGHBORHOOD_SCORE").expect("NEIGHBORHOOD_SCORE env is not found"),
+            rustc_serialize::json::encode(&self.neighborhood_score_counter.get_neighborhoods()).unwrap()
+        );
     }
 }
 
@@ -343,4 +360,23 @@ fn render_bullet(bullet: &Bullet, debug: &mut Debug) {
         width: 0.05,
         color: ColorF32 { a: 0.66, r: 1.0, g: 0.66, b: 0.0 },
     });
+}
+
+#[cfg(all(feature = "enable_debug", feature = "enable_debug_location_score"))]
+fn render_location_score(counter: &LocationScoreCounter, level: &Level, debug: &mut Debug) {
+    let mut min = (0 .. level.size()).map(|v| counter.get_location_score(v)).min().unwrap();
+    let mut max = (0 .. level.size()).map(|v| counter.get_location_score(v)).max().unwrap();
+
+    if min == max {
+        return;
+    }
+
+    for index in 0 .. level.size() {
+        let score = counter.get_location_score(index);
+        debug.draw(CustomData::Rect {
+            pos: level.get_tile_location(index).as_debug(),
+            size: Vec2F32 { x: 1.0, y: 1.0 },
+            color: color_from_heat(0.2, (score - min) as f32 / (max - min) as f32),
+        });
+    }
 }

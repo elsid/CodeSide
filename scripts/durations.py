@@ -12,7 +12,7 @@ def main():
     for path in sys.argv[1:]:
         with open(path) as stream:
             for line in stream:
-                if 'result' in line:
+                if 'result ' in line:
                     ticks.append(int(line.strip().split(' ')[-1]))
                 elif 'User time (seconds)' in line and len(ticks) > len(user_time):
                     user_time.append(float(line.strip().split(' ')[-1]))

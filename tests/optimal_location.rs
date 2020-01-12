@@ -21,11 +21,11 @@ use aicup2019::{
     my_strategy::{
         Debug,
         Location,
+        NeighborhoodScoreCounter,
         Positionable,
         Vec2,
-        get_optimal_location,
         get_location_score,
-        get_location_score_components,
+        get_optimal_location,
     },
 };
 
@@ -39,9 +39,10 @@ fn test_get_optimal_location() {
     let world = updated_world(example_world());
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let mut debug = aicup2019::Debug(&mut stream);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
 
     assert_eq!(
-        get_optimal_location(&unit, &Vec::new(), &world, &mut Debug::new(&mut debug)),
+        get_optimal_location(&unit, &Vec::new(), &world, &neighborhood_score_counter, &mut Debug::new(&mut debug)),
         Some((2.9638381036025487, Location::new(29, 1)))
     );
 }
@@ -53,9 +54,10 @@ fn test_get_location_score_random_tile() {
     let location = Location::new(10, 5);
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         0.38195989284442283
     );
 }
@@ -69,9 +71,10 @@ fn test_get_location_score_for_tile_with_bullet() {
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         -1.0945366945602066
     );
 }
@@ -83,9 +86,10 @@ fn test_get_location_score_for_tile_with_opponent() {
     let location = world.get_unit(EXAMPLE_OPPONENT_UNIT_ID).location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         -1.6728730735451247
     );
 }
@@ -99,9 +103,10 @@ fn test_get_location_score_for_tile_with_weapon() {
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         1.2128554234218871
     );
 }
@@ -115,9 +120,10 @@ fn test_get_location_score_my_unit_with_weapon_for_tile_with_weapon() {
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         1.3917581094939915
     );
 }
@@ -131,9 +137,10 @@ fn test_get_location_score_for_tile_with_health_pack() {
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         0.38514813591467045
     );
 }
@@ -147,9 +154,10 @@ fn test_get_location_score_for_tile_with_loot_box_mine() {
         .unwrap().location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         0.5191556949929832
     );
 }
@@ -161,9 +169,10 @@ fn test_get_location_score_for_tile_with_mine() {
     let location = world.mines()[0].location();
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         -5.541984881843375
     );
 }
@@ -175,9 +184,10 @@ fn test_get_location_score_for_tile_with_mine_on_the_way() {
     let location = Location::new(24, 9);
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         -5.546685564362448
     );
 }
@@ -189,9 +199,10 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_without_weapon
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         0.3412289740120976
     );
 }
@@ -203,9 +214,10 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_without_weapon() 
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         2.3412289740120977
     );
 }
@@ -217,9 +229,10 @@ fn test_get_location_score_my_unit_without_weapon_nearby_opponent_with_weapon() 
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         -0.6587710259879023
     );
 }
@@ -231,9 +244,10 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
     let path_info = world.get_path_info(unit_index, location);
+    let neighborhood_score_counter = NeighborhoodScoreCounter::new(&world);
     assert!(path_info.is_some());
     assert_eq!(
-        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        get_location_score(location, &unit, &world, &path_info.unwrap(), &neighborhood_score_counter),
         1.3412289740120977
     );
 }

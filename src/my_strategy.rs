@@ -191,6 +191,18 @@ pub mod optimal_action;
 #[allow(unused_imports)]
 pub use optimal_action::*;
 
+#[path = "neighborhood_score.rs"]
+pub mod neighborhood_score;
+
+#[allow(unused_imports)]
+pub use neighborhood_score::*;
+
+#[path = "const_neighborhood_score.rs"]
+pub mod const_neighborhood_score;
+
+#[allow(unused_imports)]
+pub use const_neighborhood_score::*;
+
 #[cfg(feature = "dump_examples")]
 #[path = "my_strategy_dump_examples.rs"]
 pub mod my_strategy_dump_examples;

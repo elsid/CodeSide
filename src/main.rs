@@ -1,4 +1,4 @@
-#[cfg(any(feature = "dump_properties_json", feature = "read_config"))]
+#[cfg(any(feature = "dump_properties_json", feature = "read_config", feature = "collect_neighborhood_score"))]
 extern crate rustc_serialize;
 
 mod my_strategy;

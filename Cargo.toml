@@ -43,6 +43,8 @@ enable_debug_bullet = []
 bullets_spread = []
 enable_debug_hit = []
 enable_debug_plan_simulator = []
+enable_debug_location_score = []
+collect_neighborhood_score = []
 
 [[bench]]
 name = "simulator"
