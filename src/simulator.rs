@@ -247,7 +247,7 @@ impl<'r> Simulator<'r> {
                 continue;
             }
 
-            if self.collide_bullet_and_units(bullet, time_interval, &mut explosions) {
+            if self.collide_bullet_and_units(bullet, time_interval, &mut explosions, debug) {
                 continue;
             }
 
@@ -264,7 +264,7 @@ impl<'r> Simulator<'r> {
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
             {
                 if let Some(d) = debug {
-                    d.draw(self.bullets[bullet].rect().as_debug(ColorF32 { a: 0.01, r: 0.8, g: 0.8, b: 0.8 }));
+                    d.draw(self.bullets[bullet].rect().as_debug(ColorF32 { a: 0.5, r: 0.8, g: 0.4, b: 0.2 }));
                 }
             }
         }
@@ -308,7 +308,7 @@ impl<'r> Simulator<'r> {
             #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
             {
                 if let Some(d) = debug {
-                    d.rect_border(&explosion.rect(), ColorF32 { a: 0.01, r: 0.8, g: 0.0, b: 0.0 }, 0.1);
+                    d.rect_border(&explosion.rect(), ColorF32 { a: 0.5, r: 0.8, g: 0.0, b: 0.0 }, 0.1);
                 }
             }
         }
@@ -526,12 +526,13 @@ impl<'r> Simulator<'r> {
         }
     }
 
-    fn collide_bullet_and_units(&mut self, bullet: usize, time_interval: f64, explosions: &mut Vec<Explosion>) -> bool {
+    fn collide_bullet_and_units(&mut self, bullet: usize, time_interval: f64, explosions: &mut Vec<Explosion>, debug: &mut Option<&mut Dbg>) -> bool {
         for unit in 0 .. self.units.len() {
             if self.units[unit].ignore() {
                 continue;
             }
-            if let Some(explosion) = collide_bullet_and_unit(self.properties.kill_score, time_interval, &mut self.bullets[bullet], &mut self.units[unit], &mut self.players) {
+            if let Some(explosion) = collide_bullet_and_unit(self.properties.kill_score, time_interval,
+                    &mut self.bullets[bullet], &mut self.units[unit], &mut self.players, debug) {
                 explosions.push(explosion);
             }
             if self.bullets[bullet].hit {
@@ -1107,7 +1108,8 @@ pub fn shift_jump_max_time(unit: &mut UnitExt, time_interval: f64) -> f64 {
     }
 }
 
-fn collide_bullet_and_unit(kill_score: i32, time_interval: f64, bullet: &mut BulletExt, unit: &mut UnitExt, players: &mut Vec<Player>) -> Option<Explosion> {
+fn collide_bullet_and_unit(kill_score: i32, time_interval: f64, bullet: &mut BulletExt, unit: &mut UnitExt,
+        players: &mut Vec<Player>, debug: &mut Option<&mut Dbg>) -> Option<Explosion> {
     if bullet.base.unit_id == unit.base.id || !bullet.moving_rect(time_interval).has_collision(&unit.moving_back_rect()) {
         return None;
     }
@@ -1124,6 +1126,13 @@ fn collide_bullet_and_unit(kill_score: i32, time_interval: f64, bullet: &mut Bul
 
     if !bullet.rect_at(nearest_time).has_collision(&unit.rect_back_at(time_interval - nearest_time)) {
         return None;
+    }
+
+    #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
+    {
+        if let Some(d) = debug {
+            d.draw(bullet.rect_at(nearest_time).as_debug(ColorF32 { a: 0.8, r: 0.8, g: 0.4, b: 0.2 }));
+        }
     }
 
     bullet.hit = true;
