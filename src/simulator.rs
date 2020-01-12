@@ -32,6 +32,7 @@ use crate::my_strategy::{
     XorShiftRng,
     minimize1d,
     remove_if,
+    root_search,
 };
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_simulator"))]
@@ -987,6 +988,10 @@ impl BulletExt {
     pub fn rect_at(&self, time: f64) -> Rect {
         Rect::new(self.center() + self.velocity() * time, self.half())
     }
+
+    pub fn center_at(&self, time: f64) -> Vec2 {
+        self.center() + self.velocity() * time
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -1144,7 +1149,12 @@ fn collide_bullet_and_unit(kill_score: i32, time_interval: f64, bullet: &mut Bul
         players[(unit.player_index + 1) % 2].score += kill_score;
     }
     bullet.explosion_params().as_ref()
-        .map(|v| Explosion {params: v.clone(), position: bullet.center(), player_index: bullet.player_index})
+        .map(|v| {
+            let has_collision = |time| bullet.rect_at(time).has_collision(&unit.rect_back_at(time_interval - time));
+            let hit_time = root_search(0.0, nearest_time, 10, has_collision);
+
+            Explosion { params: v.clone(), position: bullet.center_at(hit_time), player_index: bullet.player_index }
+        })
 }
 
 fn explode_unit(explosion: &Explosion, kill_score: i32, unit: &mut UnitExt, players: &mut Vec<Player>) {

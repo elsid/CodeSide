@@ -1128,6 +1128,27 @@ fn test_simulator_bullet_on_corner_hit_tile() {
 }
 
 #[test]
+fn test_simulator_bullet_explode_on_rect_border() {
+    let world = with_bullet(
+        with_my_position(example_world(), Vec2::new(6.59, 1.0)),
+        WeaponType::RocketLauncher, Vec2::new(4.0, 1.8),  Vec2::new(-1.0, 0.0), EXAMPLE_MY_UNIT_ID
+    );
+    let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID, SIMULATOR_DEFAULT_FLAGS);
+    let mut rng = example_rng(7348172934612063328);
+    assert_eq!(simulator.unit().health(), 100);
+    for _ in 0 .. 3 {
+        simulator.tick(
+            world.tick_time_interval(),
+            1,
+            &mut Some(&mut rng),
+            &mut None,
+        );
+    }
+    assert_eq!(simulator.unit().health(), 50);
+    assert_eq!(simulator.player().score, 80);
+}
+
+#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_x() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
