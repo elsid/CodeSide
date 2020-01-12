@@ -43,7 +43,7 @@ impl Config {
             plan_microticks_per_tick: 9,
             plan_min_state_depth: 3,
             plan_max_state_depth: 30,
-            plan_distance_score_weight: 0.25,
+            plan_distance_score_weight: 0.01,
             plan_health_diff_score_weight: 1.0,
             plan_game_score_diff_score_weight: 1.0,
             plan_triggered_mines_by_me_score_weight: 1.0,
