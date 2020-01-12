@@ -62,9 +62,6 @@ pub struct Stats {
     pub triggered_mines_by_me: usize,
 }
 
-const LESSER_EPSILON: f64 = 1e-14;
-const GREATER_EPSILON: f64 = 1e-9;
-
 impl<'r> Simulator<'r> {
     pub fn new(world: &'r World, me_id: i32) -> Self {
         let player_id = world.get_unit(me_id).player_id;
@@ -345,8 +342,10 @@ impl<'r> Simulator<'r> {
     }
 
     fn collide_moving_unit_and_tiles_by_x(&mut self, unit: usize) {
-        let min_x = self.units[unit].moving_left().max(0.0) as usize;
-        let max_x = (self.units[unit].moving_right() as usize + 1).min(self.level.size_x());
+        let left = self.units[unit].holding_left();
+        let right = self.units[unit].holding_right();
+        let min_x = left.min(left + self.units[unit].velocity_x) as usize;
+        let max_x = right.max(right + self.units[unit].velocity_x) as usize + 1;
         let min_y = self.units[unit].holding_bottom() as usize;
         let max_y = self.units[unit].holding_top() as usize + 1;
 
@@ -423,8 +422,8 @@ impl<'r> Simulator<'r> {
     fn collide_moving_down_unit_and_tiles_by_y(&mut self, unit: usize) {
         let min_x = self.units[unit].holding_left() as usize;
         let max_x = self.units[unit].holding_right() as usize + 1;
-        let min_y = self.units[unit].moving_bottom().max(0.0) as usize;
-        let max_y = (self.units[unit].holding_center_y() as usize + 1).min(self.level.size_y());
+        let min_y = self.units[unit].moved_bottom() as usize;
+        let max_y = self.units[unit].holding_center_y() as usize + 1;
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
@@ -470,8 +469,8 @@ impl<'r> Simulator<'r> {
     fn collide_moving_up_unit_and_tiles_by_y(&mut self, unit: usize) {
         let min_x = self.units[unit].holding_left() as usize;
         let max_x = self.units[unit].holding_right() as usize + 1;
-        let min_y = self.units[unit].holding_center_y().max(0.0) as usize;
-        let max_y = (self.units[unit].moving_top() as usize + 1).min(self.level.size_y());
+        let min_y = self.units[unit].holding_center_y() as usize;
+        let max_y = self.units[unit].moved_top() as usize + 1;
 
         for x in min_x .. max_x {
             for y in min_y .. max_y {
@@ -601,29 +600,15 @@ impl<'r> Simulator<'r> {
 
     #[cfg(feature = "verify_collisions")]
     fn verify_collisions(&self, unit: usize, place: &str) {
-        assert_eq!(self.units[unit].velocity_x, 0.0);
-        assert_eq!(self.units[unit].velocity_y, 0.0);
+        let left = self.units[unit].holding_left();
+        let right = self.units[unit].holding_right();
+        let bottom = self.units[unit].holding_bottom();
+        let top = self.units[unit].holding_top();
 
-        for x in 0 .. self.level.size_x() {
-            for y in 0 .. self.level.size_y() {
-                match self.level.get_tile(Location::new(x, y)) {
-                    Tile::Wall => {
-                        let tile_size = 1.0;
-                        let tile_y = y as f64 + 0.5;
-                        let half_size_sum_y = (self.units[unit].holding_size_y() + tile_size) / 2.0;
-                        let distance_by_y = (self.units[unit].holding_center_y() - tile_y).abs();
-                        let penetration_by_y = half_size_sum_y - distance_by_y;
-                        let tile_x = x as f64 + 0.5;
-                        let half_size_sum_x = (self.units[unit].holding_size_x() + tile_size) / 2.0;
-                        let distance_by_x = (self.units[unit].holding_center_x() - tile_x).abs();
-                        let penetration_by_x = half_size_sum_x - distance_by_x;
-                        assert!(
-                            penetration_by_x <= LESSER_EPSILON || penetration_by_y <= LESSER_EPSILON,
-                            "\n[{}] {} x={} y={} penetration_by_x={} penetration_by_y={}\n{:?}\n", self.units[unit].base.id, place, x, y, penetration_by_x, penetration_by_y, self.units[unit]
-                        );
-                    },
-                    _ => (),
-                }
+        for x in left as usize .. right as usize + 1 {
+            for y in bottom as usize .. top as usize + 1 {
+                assert!(self.level.get_tile(Location::new(x, y)) != Tile::Wall,
+                    "{} x={} y={} left={} right={} bottom={} top={}", place, x, y, left, right, bottom, top);
             }
         }
     }
@@ -707,20 +692,20 @@ impl UnitExt {
         self.base.position.y
     }
 
-    pub fn moving_right(&self) -> f64 {
-        self.moving_center_x() + self.moving_size_x() / 2.0
+    pub fn moved_right(&self) -> f64 {
+        self.holding_right() + self.velocity_x
     }
 
-    pub fn moving_left(&self) -> f64 {
-        self.moving_center_x() - self.moving_size_x() / 2.0
+    pub fn moved_left(&self) -> f64 {
+        self.holding_left() + self.velocity_x
     }
 
-    pub fn moving_top(&self) -> f64 {
-        self.moving_center_y() + self.moving_size_y() / 2.0
+    pub fn moved_top(&self) -> f64 {
+        self.holding_top() + self.velocity_y
     }
 
-    pub fn moving_bottom(&self) -> f64 {
-        self.moving_center_y() - self.moving_size_y() / 2.0
+    pub fn moved_bottom(&self) -> f64 {
+        self.holding_bottom() + self.velocity_y
     }
 
     pub fn holding_half(&self) -> Vec2 {
@@ -786,77 +771,97 @@ impl UnitExt {
         if self.velocity_x == 0.0 {
             return;
         }
-        let tile_size = 1.0;
-        let tile_y = y as f64 + 0.5;
-        let half_size_sum_y = (self.holding_size_y() + tile_size) / 2.0;
-        let distance_by_y = (self.holding_center_y() - tile_y).abs();
-        let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= LESSER_EPSILON {
+
+        let left = self.moved_left();
+        let right = self.moved_right();
+        let bottom = self.holding_bottom();
+        let top = self.holding_top();
+
+        if left >= (x + 1) as f64 || right <= x as f64 || bottom >= (y + 1) as f64 || top <= y as f64 {
             return;
         }
-        let tile_x = x as f64 + 0.5;
-        let half_size_sum_x = (self.moving_size_x() + tile_size) / 2.0;
-        let distance_by_x = (self.moving_center_x() - tile_x).abs();
-        let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= 0.0 {
-            return;
+
+        if left > x as f64 && left < (x + 1) as f64 {
+            self.velocity_x = (self.velocity_x - left + (x + 1) as f64).max(0.0);
+        } else {
+            self.velocity_x = (self.velocity_x - right + x as f64).min(0.0);
         }
-        self.velocity_x -= (penetration_by_x + GREATER_EPSILON).copysign(self.velocity_x);
     }
 
     pub fn collide_with_tile_by_y(&mut self, x: usize, y: usize) -> bool {
         if self.velocity_y == 0.0 {
             return false;
         }
-        let tile_size = 1.0;
-        let tile_x = x as f64 + 0.5;
-        let half_size_sum_x = (self.holding_size_x() + tile_size) / 2.0;
-        let distance_by_x = (self.holding_center_x() - tile_x).abs();
-        let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= LESSER_EPSILON {
+
+        let left = self.holding_left();
+        let right = self.holding_right();
+        let bottom = self.moved_bottom();
+        let top = self.moved_top();
+
+        if left >= (x + 1) as f64 || right <= x as f64 || bottom >= (y + 1) as f64 || top <= y as f64 {
             return false;
         }
-        let tile_y = y as f64 + 0.5;
-        let half_size_sum_y = (self.moving_size_y() + tile_size) / 2.0;
-        let distance_by_y = (self.moving_center_y() - tile_y).abs();
-        let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= 0.0 {
-            return false;
+
+        if bottom > y as f64 && bottom < (y + 1) as f64 {
+            self.velocity_y = (self.velocity_y - bottom + (y + 1) as f64).max(0.0);
+        } else {
+            self.velocity_y = (self.velocity_y - top + y as f64).min(0.0);
         }
-        self.velocity_y -= (penetration_by_y + GREATER_EPSILON).copysign(self.velocity_y);
+
         true
     }
 
     pub fn collide_with_unit_by_x(&mut self, other: &UnitExt) {
-        let half_size_sum_y = (self.holding_size_y() + other.holding_size_y()) / 2.0;
-        let distance_by_y = (self.holding_center_y() - other.holding_center_y()).abs();
-        let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= LESSER_EPSILON {
+        if self.velocity_x == 0.0 {
             return;
         }
-        let half_size_sum_x = (self.moving_size_x() + other.holding_size_x()) / 2.0;
-        let distance_by_x = (self.moving_center_x() - other.holding_center_x()).abs();
-        let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= 0.0 {
+
+        let left = self.moved_left();
+        let right = self.moved_right();
+        let bottom = self.holding_bottom();
+        let top = self.holding_top();
+
+        let other_left = other.holding_left();
+        let other_right = other.holding_right();
+        let other_bottom = other.holding_bottom();
+        let other_top = other.holding_top();
+
+        if left >= other_right || right <= other_left || bottom >= other_top || top <= other_bottom {
             return;
         }
-        self.velocity_x -= (penetration_by_x + GREATER_EPSILON).copysign(self.velocity_x);
+
+        if left > other_left && left < other_right {
+            self.velocity_x = (self.velocity_x - left + other_right).max(0.0);
+        } else {
+            self.velocity_x = (self.velocity_x - right + other_left).min(0.0);
+        }
     }
 
     pub fn collide_with_unit_by_y(&mut self, other: &UnitExt) -> bool {
-        let half_size_sum_x = (self.holding_size_x() + other.holding_size_x()) / 2.0;
-        let distance_by_x = (self.holding_center_x() - other.holding_center_x()).abs();
-        let penetration_by_x = half_size_sum_x - distance_by_x;
-        if penetration_by_x <= LESSER_EPSILON {
+        if self.velocity_y == 0.0 {
             return false;
         }
-        let half_size_sum_y = (self.moving_size_y() + other.holding_size_y()) / 2.0;
-        let distance_by_y = (self.moving_center_y() - other.holding_center_y()).abs();
-        let penetration_by_y = half_size_sum_y - distance_by_y;
-        if penetration_by_y <= 0.0 {
+
+        let left = self.holding_left();
+        let right = self.holding_right();
+        let bottom = self.moved_bottom();
+        let top = self.moved_top();
+
+        let other_left = other.holding_left();
+        let other_right = other.holding_right();
+        let other_bottom = other.holding_bottom();
+        let other_top = other.holding_top();
+
+        if left >= other_right || right <= other_left || bottom >= other_top || top <= other_bottom {
             return false;
         }
-        self.velocity_y -= (penetration_by_y + GREATER_EPSILON).copysign(self.velocity_y);
+
+        if bottom > other_bottom && bottom < other_top {
+            self.velocity_y = (self.velocity_y - bottom + other_top).max(0.0);
+        } else {
+            self.velocity_y = (self.velocity_y - top + other_bottom).min(0.0);
+        }
+
         true
     }
 
@@ -1061,13 +1066,13 @@ pub fn can_use_ladder(unit: &UnitExt, x: usize, y: usize) -> bool {
 pub fn can_use_ladder_moving(unit: &UnitExt, x: usize, y: usize) -> bool {
     unit.moving_center_x() as usize >= x && unit.moving_center_x() <= (x + 1) as f64
     && (
-        (unit.moving_bottom() as usize >= y && (unit.moving_bottom() <= (y + 1) as f64))
+        (unit.moved_bottom() as usize >= y && (unit.moved_bottom() <= (y + 1) as f64))
         || (unit.moving_center_y() as usize >= y && (unit.moving_center_y() <= (y + 1) as f64))
     )
 }
 
 pub fn cross_tile_border(unit: &UnitExt, y: usize) -> bool {
-    unit.holding_bottom() as usize >= y + 1 && unit.moving_bottom() < (y + 1) as f64
+    unit.holding_bottom() as usize >= y + 1 && unit.moved_bottom() < (y + 1) as f64
 }
 
 fn cancel_jump(unit: &mut UnitExt) {

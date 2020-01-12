@@ -56,7 +56,7 @@ fn test_simulator_single_tick() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.5, 1.000000001)
+        Vec2::new(37.5, 1.0)
     );
 }
 
@@ -74,7 +74,7 @@ fn test_simulator_unit_move_horizontal_for_one_tick() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.666666666666515, 1.000000001)
+        Vec2::new(37.666666666666515, 1.0)
     );
 }
 
@@ -92,7 +92,7 @@ fn test_simulator_unit_jump_from_wall_for_one_tick() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.5, 1.165000001000004)
+        Vec2::new(37.5, 1.1650000000000038)
     );
 }
 
@@ -110,7 +110,7 @@ fn test_simulator_unit_jump_from_platform_for_one_tick() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(7.5, 8.165000001000026)
+        Vec2::new(7.5, 8.165000000000026)
     );
 }
 
@@ -128,7 +128,7 @@ fn test_simulator_unit_jump_from_ladder_for_one_tick() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(5.5, 5.165000001000026)
+        Vec2::new(5.5, 5.165000000000026)
     );
 }
 
@@ -234,7 +234,7 @@ fn test_simulator_unit_stand_on_platform_for_one_tick() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.5, 5.000000001)
+        Vec2::new(15.5, 5.0)
     );
 }
 
@@ -272,7 +272,7 @@ fn test_simulator_unit_jump_from_wall_until_land() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.5, 6.498333334333527)
+        Vec2::new(37.5, 6.498333333333527)
     );
     simulator.unit_mut().action_mut().jump = false;
     for _ in 33..66 {
@@ -285,7 +285,7 @@ fn test_simulator_unit_jump_from_wall_until_land() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.5, 1.000000001)
+        Vec2::new(37.5, 1.0000000000000004)
     );
 }
 
@@ -305,7 +305,7 @@ fn test_simulator_unit_cancel_jump() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.5, 1.3316666676666744)
+        Vec2::new(37.5, 1.3316666666666743)
     );
     simulator.unit_mut().action_mut().jump = false;
     for _ in 2..4 {
@@ -318,7 +318,7 @@ fn test_simulator_unit_cancel_jump() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(37.5, 1.000000001)
+        Vec2::new(37.5, 1.0)
     );
 }
 
@@ -356,7 +356,7 @@ fn test_simulator_unit_run_into_unit() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(3.400000001, 1.000000001)
+        Vec2::new(3.400000000000011, 1.0)
     );
 }
 
@@ -375,7 +375,7 @@ fn test_simulator_unit_fall_onto_unit() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(2.5, 2.800000002)
+        Vec2::new(2.5, 2.800000000000077)
     );
 }
 
@@ -583,7 +583,7 @@ fn test_simulator_single_tick_unit_left_border_on_right_edge() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(38.549999999, 26.998333334333395)
+        Vec2::new(38.54944444444439, 26.998333334333395)
     );
 }
 
@@ -693,7 +693,7 @@ fn test_simulator_unit_land_on_platform() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.5, 5.000000001)
+        Vec2::new(15.5, 5.00166666666662)
     );
 }
 
@@ -713,7 +713,7 @@ fn test_simulator_unit_land_on_platform_and_jump() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.5, 5.033333334333339)
+        Vec2::new(15.5, 5.034999999999958)
     );
     simulator.tick(
         world.tick_time_interval(),
@@ -723,7 +723,7 @@ fn test_simulator_unit_land_on_platform_and_jump() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.5, 5.200000001000031)
+        Vec2::new(15.5, 5.201666666666651)
     );
 }
 
@@ -742,7 +742,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.5, 5.000000001)
+        Vec2::new(15.5, 5.00166666666662)
     );
     simulator.unit_mut().action_mut().jump_down = true;
     simulator.tick(
@@ -753,7 +753,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.5, 4.833333334333307)
+        Vec2::new(15.5, 4.834999999999927)
     );
     simulator.unit_mut().action_mut().velocity = world.properties().unit_max_horizontal_speed;
     simulator.unit_mut().action_mut().jump_down = false;
@@ -765,7 +765,7 @@ fn test_simulator_unit_land_on_platform_and_jump_down_for_one_tick_and_walk() {
     );
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(15.666666666666693, 4.666666667666615)
+        Vec2::new(15.666666666666693, 4.668333333333234)
     );
 }
 
@@ -871,7 +871,7 @@ fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(9.5, 8.831666667666797)
+        Vec2::new(9.5, 8.831666666666797)
     );
     simulator.unit_mut().action_mut().jump = false;
     for _ in 0 .. 6 {
@@ -884,7 +884,7 @@ fn test_simulator_unit_jump_from_ladder_and_land_on_ladder() {
     }
     assert_eq!(
         simulator.unit().position(),
-        Vec2::new(9.5, 8.000000001)
+        Vec2::new(9.5, 8.0)
     );
 }
 
@@ -968,13 +968,13 @@ fn test_simulator_unit_land_on_unit() {
             &mut None,
         );
     }
-    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000002));
+    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000000000077));
     assert_eq!(simulator.unit().base().jump_state.can_jump, true);
 }
 
 #[test]
 fn test_simulator_unit_jump_from_unit_below() {
-    let world = with_my_position(example_world(), Vec2::new(2.5, 2.800000002));
+    let world = with_my_position(example_world(), Vec2::new(2.5, 2.800000000000077));
     let mut simulator = Simulator::new(&world, EXAMPLE_MY_UNIT_ID);
     let mut rng = example_rng(7348172934612063328);
     assert_eq!(simulator.unit().base().jump_state.can_jump, false);
@@ -984,7 +984,7 @@ fn test_simulator_unit_jump_from_unit_below() {
         &mut rng,
         &mut None,
     );
-    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000002));
+    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.800000000000077));
     assert_eq!(simulator.unit().base().jump_state.can_jump, true);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
@@ -993,7 +993,7 @@ fn test_simulator_unit_jump_from_unit_below() {
         &mut rng,
         &mut None,
     );
-    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.9666666686666483));
+    assert_eq!(simulator.unit().position(), Vec2::new(2.5, 2.9666666666667254));
 }
 
 #[test]
@@ -1008,7 +1008,7 @@ fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
         &mut rng,
         &mut None,
     );
-    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.000000001));
+    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.0));
     assert_eq!(simulator.unit().base().jump_state.can_jump, true);
     simulator.unit_mut().action_mut().jump = true;
     for _ in 0 .. 6 {
@@ -1019,7 +1019,7 @@ fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
             &mut None,
         );
     }
-    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 2.000000001000023));
+    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 2.000000000000023));
     assert_eq!(simulator.unit().base().jump_state.can_jump, true);
     simulator.unit_mut().action_mut().jump = true;
     simulator.tick(
@@ -1028,7 +1028,7 @@ fn test_simulator_unit_cancel_jump_on_hit_unit_above() {
         &mut rng,
         &mut None,
     );
-    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.8666666656665296));
+    assert_eq!(simulator.unit().position(), Vec2::new(37.5, 1.86500000000002));
     assert_eq!(simulator.unit().base().jump_state.can_jump, false);
 }
 
@@ -1148,26 +1148,6 @@ fn test_collide_with_tile_by_y_without_penetration_by_y() {
 }
 
 #[test]
-fn test_collide_with_tile_by_x_with_penetration() {
-    let properties = example_properties();
-    let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
-    a.start_move_by_x(1.0);
-    a.collide_with_tile_by_x(10, 10);
-    a.finish_move_by_x();
-    assert_eq!(a.position(), Vec2::new(9.549999999, 10.0));
-}
-
-#[test]
-fn test_collide_with_tile_by_y_with_penetration() {
-    let properties = example_properties();
-    let mut a = make_unit_ext(Vec2::new(10.0, 11.5), &properties);
-    a.start_move_by_y(-1.0);
-    a.collide_with_tile_by_y(10, 10);
-    a.finish_move_by_y();
-    assert_eq!(a.position(), Vec2::new(10.0, 11.000000001));
-}
-
-#[test]
 fn test_collide_with_tile_by_x_without_penetration_by_y() {
     let properties = example_properties();
     let mut a = make_unit_ext(Vec2::new(9.5, 9.0), &properties);
@@ -1207,28 +1187,6 @@ fn test_collide_with_unit_by_y_without_penetration_by_y() {
     a.collide_with_unit_by_y(&b);
     a.finish_move_by_y();
     assert_eq!(a.position(), Vec2::new(10.0, 8.5));
-}
-
-#[test]
-fn test_collide_with_unit_by_x_with_penetration() {
-    let properties = example_properties();
-    let mut a = make_unit_ext(Vec2::new(9.5, 10.0), &properties);
-    let b = make_unit_ext(Vec2::new(10.5, 10.0), &properties);
-    a.start_move_by_x(0.5);
-    a.collide_with_unit_by_x(&b);
-    a.finish_move_by_x();
-    assert_eq!(a.position(), Vec2::new(9.599999999, 10.0));
-}
-
-#[test]
-fn test_collide_with_unit_by_y_with_penetration() {
-    let properties = example_properties();
-    let mut a = make_unit_ext(Vec2::new(10.0, 9.0), &properties);
-    let b = make_unit_ext(Vec2::new(10.0, 11.0), &properties);
-    a.start_move_by_y(0.5);
-    a.collide_with_unit_by_y(&b);
-    a.finish_move_by_y();
-    assert_eq!(a.position(), Vec2::new(10.0, 9.199999999000001));
 }
 
 #[test]

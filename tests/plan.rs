@@ -62,12 +62,12 @@ fn test_planner() {
 ########################################
 ");
     let source = Vec2::new(30.5, 1.0);
-    let destination = Vec2::new(9.450000001000008, 1.000000001000013);
+    let destination = Vec2::new(9.499999999999613, 1.0000000000000004);
     let world = with_my_position(with_level(example_world(), level), source);
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let mut config = world.config().clone();
-    config.plan_max_state_depth = 65;
-    config.plan_max_iterations = 73097;
+    config.plan_max_state_depth = 69;
+    config.plan_max_iterations = 85688;
     let mut simulator = Simulator::new(&world, unit.id);
     let planner = Planner::new(destination, &config, simulator.clone(), world.max_distance(), world.max_score());
     let plan = planner.make(world.current_tick(), &mut rng, &mut Debug::new(&mut debug));
