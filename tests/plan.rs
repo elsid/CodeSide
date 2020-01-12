@@ -68,7 +68,7 @@ fn test_planner() {
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let mut config = world.config().clone();
     config.plan_max_state_depth = 69;
-    config.plan_max_iterations = 85688;
+    config.plan_max_iterations = 85797;
     let mut simulator = Simulator::new(&world, unit.id, SIMULATOR_DEFAULT_FLAGS);
     let planner = Planner::new(destination, &config, simulator.clone(), world.max_distance(), world.max_score());
     let plan = planner.make(world.current_tick(), &mut rng, &mut Debug::new(&mut debug));
