@@ -22,6 +22,7 @@ use crate::my_strategy::{
     get_nearest_hit,
     get_optimal_plan,
     is_health_pack_item,
+    is_mine_item,
     is_weapon_item,
 };
 
@@ -112,8 +113,21 @@ impl MyStrategyImpl {
             .filter(|v| self.world.is_opponent_unit(v))
             .min_by_key(|v| as_score(v.position().distance(current_unit.position())))
             .map(|v| v.position());
-        if let Some(v) = opponent_unit_position {
+
+        let mine_position = self.world.loot_boxes().iter()
+            .filter(|v| is_mine_item(&v.item))
+            .min_by_key(|v| as_score(v.position().distance(current_unit.position())))
+            .map(|v| v.position());
+
+        if let (Some(u), Some(m)) = (opponent_unit_position, mine_position) {
+            if current_unit.position().distance(u) < current_unit.position().distance(m) {
+                return u;
+            }
+            return m;
+        } else if let Some(v) = opponent_unit_position {
             return v;
+        } else if let Some(m) = mine_position {
+            return m;
         }
 
         current_unit.position()

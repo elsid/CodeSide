@@ -27,3 +27,10 @@ pub fn is_health_pack_item(item: &Item) -> bool {
         _ => false,
     }
 }
+
+pub fn is_mine_item(item: &Item) -> bool {
+    match item {
+        Item::Mine { .. } => true,
+        _ => false,
+    }
+}
