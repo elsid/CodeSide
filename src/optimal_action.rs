@@ -10,6 +10,7 @@ use crate::my_strategy::{
     Plan,
     Positionable,
     Rectangular,
+    Target,
     Vec2,
     World,
     get_weapon_score,
@@ -29,12 +30,12 @@ pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
 }
 
 #[inline(never)]
-pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: Option<Vec2>, world: &World,
+pub fn get_shooter_action(current_unit: &Unit, plan: &Plan, target: &Option<Target>, world: &World,
         debug: &mut Debug) -> UnitAction {
-    let (shoot, aim) = if let Some(position) = target {
-        (true, position - current_unit.center())
-    } else {
-        (false, Vec2::zero())
+    let (shoot, aim) = match target {
+        Some(Target::Mine { position }) => (true, *position - current_unit.center()),
+        Some(Target::Unit { id, shoot }) => (*shoot, world.get_unit(*id).center() - current_unit.center()),
+        _ => (false, Vec2::zero()),
     };
 
     let mut action = if plan.transitions.is_empty() {

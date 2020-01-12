@@ -32,10 +32,15 @@ pub fn get_hit_probability_by_spread_with_destination(source: Vec2, destination:
 
 pub fn is_allowed_to_shoot(unit_id: i32, source: Vec2, spread: f64, opponent: &Unit,
         weapon: &Weapon, world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> bool {
+    get_shoot_score(unit_id, source, spread, opponent, weapon, world, number_of_directions, debug) > 0
+}
+
+pub fn get_shoot_score(unit_id: i32, source: Vec2, spread: f64, opponent: &Unit,
+        weapon: &Weapon, world: &World, number_of_directions: usize, debug: &mut Option<&mut Dbg>) -> i32 {
     let hit_probability_by_spread = get_hit_probability_by_spread(source, &opponent.rect(), spread, weapon.params.bullet.size);
 
     if hit_probability_by_spread < world.config().min_hit_probability_by_spread_to_shoot {
-        return false;
+        return 0;
     }
 
     let direction = (opponent.center() - source).normalized();
@@ -51,7 +56,7 @@ pub fn is_allowed_to_shoot(unit_id: i32, source: Vec2, spread: f64, opponent: &U
         }
     }
 
-    shoot_result.player_score >= shoot_result.opponent_score + shoot_result.unit_damage + shoot_result.teammates_damage + max_damage
+    shoot_result.player_score - shoot_result.opponent_score - shoot_result.unit_damage - shoot_result.teammates_damage - max_damage + 1
 }
 
 #[derive(Debug, PartialEq, Eq)]

@@ -11,13 +11,14 @@ use model::{
 };
 
 use crate::my_strategy::{
+    Clamp1,
     Debug,
     Positionable,
     Rectangular,
     Vec2,
     World,
     as_score,
-    is_allowed_to_shoot,
+    get_shoot_score,
 };
 
 #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
@@ -26,38 +27,70 @@ use crate::my_strategy::{
     normalize_angle,
 };
 
-pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Vec2> {
+pub enum Target {
+    Mine {
+        position: Vec2,
+    },
+    Unit {
+        id: i32,
+        shoot: bool,
+    },
+}
+
+pub fn get_optimal_target(current_unit: &Unit, world: &World, debug: &mut Debug) -> Option<Target> {
     if let Some(weapon) = current_unit.weapon.as_ref() {
         let mine = world.mines().iter()
             .find(|mine| world.is_teammate_mine(mine) && mine.position().distance(current_unit.position()) < 2.0 * current_unit.size.x)
             .map(|mine| mine.center());
 
         if let Some(position) = mine {
-            return Some(position);
+            return Some(Target::Mine { position });
         }
 
-        let unit = world.units().iter()
-            .filter(|unit| {
-                world.is_opponent_unit(unit)
-                && should_shoot(current_unit.id, current_unit.center(), &unit, weapon, &world, debug)
-            })
+        let target_by_score = world.units().iter()
+            .filter(|unit| world.is_opponent_unit(unit))
+            .map(|unit| (unit.id, get_target_score(current_unit.id, current_unit.center(), &unit, weapon, &world, debug)))
+            .max_by_key(|(_, score)| *score);
+
+        if let Some((unit_id, score)) = target_by_score {
+            if score > 0 {
+                #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
+                render_target(current_unit, world.get_unit(unit_id), world, debug);
+
+                return Some(Target::Unit { id: unit_id, shoot: true });
+            }
+        }
+
+        let target_by_distance = world.units().iter()
+            .filter(|unit| world.is_opponent_unit(unit))
             .min_by_key(|unit| as_score(current_unit.position().distance(unit.position())));
 
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_optimal_target"))]
         {
-            if let Some(opponent) = unit {
-                render_target(current_unit, opponent, world, debug);
+            if let Some(unit) = target_by_distance {
+                render_target(current_unit, unit, world, debug);
             }
         }
 
-        unit.map(|unit| unit.center())
+        target_by_distance.map(|unit| Target::Unit { id: unit.id, shoot: false })
     } else {
         None
     }
 }
 
-fn should_shoot(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, debug: &mut Debug) -> bool {
-    is_allowed_to_shoot(current_unit_id, current_unit_center, weapon.spread, opponent, weapon,
+fn get_target_score(current_unit_id: i32, current_unit_center: Vec2, opponent: &Unit, weapon: &Weapon, world: &World, debug: &mut Debug) -> i32 {
+    let spread = if let Some(last_angle) = weapon.last_angle {
+        let current_direction = Vec2::i().rotated(last_angle);
+        let required_direction = opponent.center() - current_unit_center;
+        let required_rotation = required_direction.rotation(current_direction);
+
+        (weapon.spread + (required_rotation - weapon.params.aim_speed) * world.tick_time_interval())
+            .clamp1(weapon.params.min_spread, weapon.params.max_spread)
+    } else {
+        weapon.spread
+    };
+
+    get_shoot_score(current_unit_id, current_unit_center, spread, opponent, weapon,
         world, world.config().optimal_action_number_of_directions, &mut Some(debug))
 }
 
