@@ -120,8 +120,8 @@ impl MyStrategyImpl {
                         unit.id, unit.health, unit.mines, unit.position.x, unit.position.y,
                         unit.weapon.as_ref()
                             .map(|v| format!(
-                                "type={:?} magazine={} last_angle={:?} fire_timer={:?}",
-                                v.typ, v.magazine, v.last_angle, v.fire_timer
+                                "type={:?} magazine={} last_angle={:?} fire_timer={:?} spread={}",
+                                v.typ, v.magazine, v.last_angle, v.fire_timer, (v.spread - v.params.min_spread) / (v.params.max_spread - v.params.min_spread)
                             ))
                             .unwrap_or(format!("None"))
                     )
