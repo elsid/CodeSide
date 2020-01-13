@@ -43,7 +43,7 @@ impl Config {
             plan_max_iterations: 160,
             plan_microticks_per_tick: 9,
             plan_min_state_depth: 3,
-            plan_max_state_depth: 30,
+            plan_max_state_depth: 25,
             plan_distance_score_weight: 1.0,
             plan_health_diff_score_weight: 100.0,
             plan_game_score_diff_score_weight: 100.0,
