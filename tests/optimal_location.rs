@@ -248,7 +248,7 @@ fn test_get_location_score_my_unit_nearby_opponent_with_mines() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -2.6587710259879023
+        -5.658771025987902
     );
 }
 
@@ -267,7 +267,7 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_mines() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -0.6587710259879023
+        -3.6587710259879023
     );
 }
 

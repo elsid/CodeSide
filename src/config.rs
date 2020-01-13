@@ -66,7 +66,7 @@ impl Config {
             optimal_location_hit_teammates_score_weight: -1.0,
             optimal_location_teammate_obstacle_score_weight: -1.0,
             optimal_location_bullet_obstacle_score_weight: -1.0,
-            optimal_location_opponent_mine_explosion_score_weight: -3.0,
+            optimal_location_opponent_mine_explosion_score_weight: -6.0,
             optimal_location_min_fire_timer: 0.5,
             optimal_location_number_of_directions: 3,
             min_hit_probability_by_spread_to_shoot: 0.3,

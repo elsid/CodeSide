@@ -272,7 +272,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
             .map(|unit| {
                 let mine_center = Vec2::new(unit.position.x, unit.position.y.floor())
                     + Vec2::only_y(world.properties().mine_size.y / 2.0);
-                let explosion_radius = world.properties().mine_explosion_params.radius;
+                let explosion_radius = world.properties().mine_explosion_params.radius + 1.0;
                 let explosion_rect = Rect::new(mine_center, Vec2::both(explosion_radius));
 
                 explosion_rect.has_collision(&location_rect) as i32 * unit.mines
