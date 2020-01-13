@@ -25,7 +25,6 @@ use aicup2019::{
         Vec2,
         get_optimal_location,
         get_location_score,
-        get_location_score_components,
     },
 };
 

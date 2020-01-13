@@ -158,14 +158,15 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
             if let Some(weapon) = unit.weapon.as_ref() {
-                if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+                let fire_timer_factor = get_fire_timer_factor(weapon.fire_timer, world.config().optimal_location_min_fire_timer);
+                if fire_timer_factor > 0.0 {
                     let direction = (current_unit_center - unit.center()).normalized();
                     let shoot_result = simulate_shoot(unit.id, unit.center(), direction,
                         current_unit.id, current_unit_position, get_mean_spread(weapon),
                         &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
                         world, world.config().optimal_location_number_of_directions, &mut None);
                     (shoot_result.player_score - shoot_result.opponent_score) as f64
-                        / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64
+                        / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64 * fire_timer_factor
                 } else {
                     0.0
                 }
@@ -193,15 +194,15 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         None
     };
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
-        if (weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer)
-                && (unit.weapon.is_none() || unit.weapon.as_ref().unwrap().fire_timer.is_none() || unit.weapon.as_ref().unwrap().fire_timer.unwrap() >= world.config().optimal_location_min_fire_timer) {
+        let fire_timer_factor = get_fire_timer_factor(weapon.fire_timer, world.config().optimal_location_min_fire_timer);
+        if fire_timer_factor > 0.0 {
             let direction = (unit.center() - current_unit_center).normalized();
             let shoot_result = simulate_shoot(current_unit.id, current_unit_center, direction,
                 unit.id, unit.position(), get_mean_spread(weapon),
                 &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
                 world, world.config().optimal_location_number_of_directions, &mut None);
             (shoot_result.player_score - shoot_result.opponent_score) as f64
-                / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64
+                / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64 * fire_timer_factor
         } else {
             0.0
         }
@@ -229,7 +230,8 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         0.0
     };
     let hit_teammates_score = if let (Some(weapon), Some(opponent)) = (current_unit.weapon.as_ref(), nearest_opponent) {
-        if weapon.fire_timer.is_none() || weapon.fire_timer.unwrap() < world.config().optimal_location_min_fire_timer {
+        let fire_timer_factor = get_fire_timer_factor(weapon.fire_timer, world.config().optimal_location_min_fire_timer);
+        if fire_timer_factor > 0.0 {
             let opponent_rect = opponent.rect();
             let max_damage = weapon.params.bullet.damage + weapon.params.explosion.as_ref().map(|v| v.damage).unwrap_or(0);
             world.units().iter()
@@ -249,7 +251,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                     (shoot_result.teammates_damage + shoot_result.unit_damage) as f64
                         / (max_damage * world.config().optimal_location_number_of_directions as i32) as f64
                 })
-                .sum::<f64>()
+                .sum::<f64>() * fire_timer_factor
         } else {
             0.0
         }
@@ -296,4 +298,8 @@ pub fn make_location_rect(location: Location) -> Rect {
 
 fn get_mean_spread(weapon: &Weapon) -> f64 {
     (weapon.params.max_spread + weapon.params.min_spread) / 2.0
+}
+
+fn get_fire_timer_factor(fire_timer: Option<f64>, optimal_location_min_fire_timer: f64) -> f64 {
+    fire_timer.map(|v| 1.0 - (v / optimal_location_min_fire_timer).min(1.0)).unwrap_or(1.0)
 }
