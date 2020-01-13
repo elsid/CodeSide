@@ -208,3 +208,19 @@ pub fn with_unit_with_mines(world: World, unit_id: i32, mines: i32) -> World {
     game.units[index].mines = mines;
     World::new(world.config().clone(), world.player_id(), game)
 }
+
+pub fn with_unit_weapon_fire_timer(world: World, unit_id: i32, fire_timer: Option<f64>) -> World {
+    let mut game = world.game().clone();
+    let index = game.units.iter().position(|v| v.id == unit_id).unwrap();
+    if let Some(weapon) = game.units[index].weapon.as_mut() {
+        weapon.fire_timer = fire_timer;
+    }
+    World::new(world.config().clone(), world.player_id(), game)
+}
+
+pub fn with_unit_with_weapon(world: World, unit_id: i32, weapon_type: WeaponType) -> World {
+    let mut game = world.game().clone();
+    let index = game.units.iter().position(|v| v.id == unit_id).unwrap();
+    game.units[index].weapon = Some(make_weapon(weapon_type.clone(), world.properties()));
+    World::new(world.config().clone(), world.player_id(), game)
+}
