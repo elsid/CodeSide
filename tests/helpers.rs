@@ -201,3 +201,10 @@ pub fn with_unit_health(world: World, unit_id: i32, health: i32) -> World {
     game.units[index].health = health;
     World::new(world.config().clone(), world.player_id(), game)
 }
+
+pub fn with_unit_with_mines(world: World, unit_id: i32, mines: i32) -> World {
+    let mut game = world.game().clone();
+    let index = game.units.iter().position(|v| v.id == unit_id).unwrap();
+    game.units[index].mines = mines;
+    World::new(world.config().clone(), world.player_id(), game)
+}

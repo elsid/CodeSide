@@ -128,7 +128,7 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
     get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 17] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let location_rect = Rect::new(
@@ -258,6 +258,29 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         0.0
     };
+    let number_of_opponents_mines = world.units().iter()
+        .filter(|unit| world.is_opponent_unit(unit))
+        .map(|unit| unit.mines)
+        .sum::<i32>();
+    let opponent_mine_explosion_score = if number_of_opponents_mines > 0 {
+        world.units().iter()
+            .filter(|unit| world.is_opponent_unit(unit) && unit.mines > 0)
+            .filter(|unit| {
+                let tile = world.get_tile(unit.location() + Vec2i::only_y(-1));
+                tile == Tile::Wall || tile == Tile::Platform
+            })
+            .map(|unit| {
+                let mine_center = Vec2::new(unit.position.x, unit.position.y.floor())
+                    + Vec2::only_y(world.properties().mine_size.y / 2.0);
+                let explosion_radius = world.properties().mine_explosion_params.radius;
+                let explosion_rect = Rect::new(mine_center, Vec2::both(explosion_radius));
+
+                explosion_rect.has_collision(&location_rect) as i32 * unit.mines
+            })
+            .sum::<i32>() as f64 / number_of_opponents_mines as f64
+    } else {
+        0.0
+    };
 
     [
         distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
@@ -276,6 +299,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         hit_teammates_score * world.config().optimal_location_hit_teammates_score_weight,
         teammate_obstacle_score * world.config().optimal_location_teammate_obstacle_score_weight,
         bullet_obstacle_score * world.config().optimal_location_bullet_obstacle_score_weight,
+        opponent_mine_explosion_score * world.config().optimal_location_opponent_mine_explosion_score_weight,
     ]
 }
 

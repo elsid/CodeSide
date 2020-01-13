@@ -10,6 +10,7 @@ use helpers::{
     with_mine,
     with_my_unit_with_weapon,
     with_opponent_unit_with_weapon_type,
+    with_unit_with_mines,
 };
 use aicup2019::{
     examples::{
@@ -234,5 +235,52 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
         1.3412289740120977
+    );
+}
+
+#[test]
+fn test_get_location_score_my_unit_nearby_opponent_with_mines() {
+    let world = updated_world(with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2));
+    let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let location = Location::new(5, 1);
+    let unit_index = world.get_unit_index(unit.id);
+    let path_info = world.get_path_info(unit_index, location);
+    assert!(path_info.is_some());
+    assert_eq!(
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        -2.6587710259879023
+    );
+}
+
+#[test]
+fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_mines() {
+    let world = updated_world(
+        with_my_unit_with_weapon(
+            with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2),
+            WeaponType::AssaultRifle
+        )
+    );
+    let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let location = Location::new(5, 1);
+    let unit_index = world.get_unit_index(unit.id);
+    let path_info = world.get_path_info(unit_index, location);
+    assert!(path_info.is_some());
+    assert_eq!(
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        -0.6587710259879023
+    );
+}
+
+#[test]
+fn test_get_location_score_my_unit_outside_mine_explosion_range_for_opponent_with_mines() {
+    let world = updated_world(with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2));
+    let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let location = Location::new(8, 1);
+    let unit_index = world.get_unit_index(unit.id);
+    let path_info = world.get_path_info(unit_index, location);
+    assert!(path_info.is_some());
+    assert_eq!(
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        0.35533102156931995
     );
 }

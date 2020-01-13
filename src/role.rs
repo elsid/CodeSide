@@ -59,10 +59,13 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> us
         return 0;
     }
 
+    let mine_center = Vec2::new(current_unit.position.x, current_unit.position.y.floor())
+        + Vec2::only_y(world.properties().mine_size.y / 2.0);
+
     let increased_radius = world.properties().mine_explosion_params.radius
         + world.properties().jump_pad_jump_speed * world.tick_time_interval();
 
-    let increased_explosion_rect = Rect::new(current_unit.position(), Vec2::new(increased_radius, increased_radius));
+    let increased_explosion_rect = Rect::new(mine_center, Vec2::new(increased_radius, increased_radius));
 
     let collided_teammate_units = world.units().iter()
         .filter(|v| world.is_teammate_unit(v) && v.rect().has_collision(&increased_explosion_rect))
@@ -77,7 +80,7 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> us
     let reduced_radius = world.properties().mine_explosion_params.radius
         - 2.0 * world.properties().jump_pad_jump_speed * world.tick_time_interval();
 
-    let reduced_explosion_rect = Rect::new(current_unit.position(), Vec2::new(reduced_radius, reduced_radius));
+    let reduced_explosion_rect = Rect::new(mine_center, Vec2::new(reduced_radius, reduced_radius));
 
     let collided_opponent_units = world.units().iter()
         .filter(|v| world.is_opponent_unit(v) && v.rect().has_collision(&reduced_explosion_rect))
