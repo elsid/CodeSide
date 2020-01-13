@@ -73,7 +73,7 @@ impl<'c, 's> Planner<'c, 's> {
         as_score(self.get_score_components().iter().sum())
     }
 
-    pub fn get_score_components(&self) -> [f64; 5] {
+    pub fn get_score_components(&self) -> [f64; 6] {
         let distance_score = 1.0 - self.simulator.unit().position().distance(self.target) / self.max_distance;
 
         let teammates_health = self.simulator.units().iter()
@@ -109,12 +109,25 @@ impl<'c, 's> Planner<'c, 's> {
             .map(|v| v / self.max_distance)
             .unwrap_or(1.0);
 
+        let distance_to_nearest_opponent_score = if self.simulator.unit().base().weapon.is_some() {
+            self.simulator.bullets().iter()
+                .filter(|v| v.base().player_id != self.simulator.unit().base().player_id)
+                .map(|v| v.center().distance(self.simulator.unit().lower_center())
+                    .min(v.center().distance(self.simulator.unit().upper_center())))
+                .min_by_key(|v| as_score(*v))
+                .map(|v| v / self.max_distance)
+                .unwrap_or(1.0)
+        } else {
+            1.0
+        };
+
         [
             distance_score * self.config.plan_distance_score_weight,
             health_diff_score * self.config.plan_health_diff_score_weight,
             game_score_diff_score * self.config.plan_game_score_diff_score_weight,
             triggered_mines_by_me_score * self.config.plan_triggered_mines_by_me_score_weight,
             distance_to_nearest_bullet_score * self.config.plan_distance_to_nearest_bullet_score_weight,
+            distance_to_nearest_opponent_score * self.config.plan_distance_to_nearest_opponent_score_weight,
         ]
     }
 
