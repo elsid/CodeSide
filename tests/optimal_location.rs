@@ -10,7 +10,9 @@ use helpers::{
     with_mine,
     with_my_unit_with_weapon,
     with_opponent_unit_with_weapon_type,
+    with_unit_weapon_fire_timer,
     with_unit_with_mines,
+    with_unit_with_weapon,
 };
 use aicup2019::{
     examples::{
@@ -239,8 +241,10 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_weapon() {
 }
 
 #[test]
-fn test_get_location_score_my_unit_nearby_opponent_with_mines() {
-    let world = updated_world(with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2));
+fn test_get_location_score_my_unit_nearby_opponent_with_mines_without_weapon() {
+    let world = updated_world(
+        with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2)
+    );
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(5, 1);
     let unit_index = world.get_unit_index(unit.id);
@@ -248,16 +252,19 @@ fn test_get_location_score_my_unit_nearby_opponent_with_mines() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -5.658771025987902
+        0.3412289740120976
     );
 }
 
 #[test]
-fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_mines() {
+fn test_get_location_score_my_unit_nearby_opponent_with_mines_not_ready_to_shoot() {
     let world = updated_world(
-        with_my_unit_with_weapon(
-            with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2),
-            WeaponType::AssaultRifle
+        with_unit_weapon_fire_timer(
+            with_unit_with_weapon(
+                with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2),
+                EXAMPLE_OPPONENT_UNIT_ID, WeaponType::AssaultRifle
+            ),
+            EXAMPLE_OPPONENT_UNIT_ID, Some(1.0)
         )
     );
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
@@ -267,13 +274,56 @@ fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_mines() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -3.6587710259879023
+        0.3412289740120976
+    );
+}
+
+#[test]
+fn test_get_location_score_my_unit_nearby_opponent_with_mines_ready_to_shoot() {
+    let world = updated_world(
+        with_unit_with_weapon(
+            with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2),
+            EXAMPLE_OPPONENT_UNIT_ID, WeaponType::AssaultRifle
+        )
+    );
+    let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let location = Location::new(5, 1);
+    let unit_index = world.get_unit_index(unit.id);
+    let path_info = world.get_path_info(unit_index, location);
+    assert!(path_info.is_some());
+    assert_eq!(
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        -6.658771025987902
+    );
+}
+
+#[test]
+fn test_get_location_score_my_unit_with_weapon_nearby_opponent_with_mines() {
+    let world = updated_world(
+        with_unit_with_weapon(
+            with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2),
+            EXAMPLE_OPPONENT_UNIT_ID, WeaponType::AssaultRifle
+        )
+    );
+    let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
+    let location = Location::new(5, 1);
+    let unit_index = world.get_unit_index(unit.id);
+    let path_info = world.get_path_info(unit_index, location);
+    assert!(path_info.is_some());
+    assert_eq!(
+        get_location_score(location, &unit, &world, &path_info.unwrap()),
+        -6.658771025987902
     );
 }
 
 #[test]
 fn test_get_location_score_my_unit_outside_mine_explosion_range_for_opponent_with_mines() {
-    let world = updated_world(with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2));
+    let world = updated_world(
+        with_unit_with_weapon(
+            with_unit_with_mines(example_world(), EXAMPLE_OPPONENT_UNIT_ID, 2),
+            EXAMPLE_OPPONENT_UNIT_ID, WeaponType::AssaultRifle
+        )
+    );
     let unit = world.get_unit(EXAMPLE_MY_UNIT_ID);
     let location = Location::new(8, 1);
     let unit_index = world.get_unit_index(unit.id);
@@ -281,6 +331,6 @@ fn test_get_location_score_my_unit_outside_mine_explosion_range_for_opponent_wit
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        0.35533102156931995
+        0.021997688235986634
     );
 }

@@ -264,20 +264,23 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         .sum::<i32>();
     let opponent_mine_explosion_score = if number_of_opponents_mines > 0 {
         world.units().iter()
-            .filter(|unit| world.is_opponent_unit(unit) && unit.mines > 0)
+            .filter(|unit| world.is_opponent_unit(unit) && unit.mines > 0 && unit.weapon.is_some())
             .filter(|unit| {
                 let tile = world.get_tile(unit.location() + Vec2i::only_y(-1));
                 tile == Tile::Wall || tile == Tile::Platform
             })
             .map(|unit| {
+                let fire_timer_factor = get_fire_timer_factor(unit.weapon.as_ref().unwrap().fire_timer, world.config().optimal_location_min_fire_timer);
+                if fire_timer_factor == 0.0 {
+                    return 0.0;
+                }
                 let mine_center = Vec2::new(unit.position.x, unit.position.y.floor())
                     + Vec2::only_y(world.properties().mine_size.y / 2.0);
                 let explosion_radius = world.properties().mine_explosion_params.radius + 1.0;
                 let explosion_rect = Rect::new(mine_center, Vec2::both(explosion_radius));
-
-                explosion_rect.has_collision(&location_rect) as i32 * unit.mines
+                (explosion_rect.has_collision(&location_rect) as i32 * unit.mines) as f64 * fire_timer_factor
             })
-            .sum::<i32>() as f64 / number_of_opponents_mines as f64
+            .sum::<f64>() / number_of_opponents_mines as f64
     } else {
         0.0
     };
