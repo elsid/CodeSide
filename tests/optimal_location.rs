@@ -44,7 +44,7 @@ fn test_get_optimal_location() {
 
     assert_eq!(
         get_optimal_location(&unit, &Vec::new(), &world, &mut Debug::new(&mut debug)),
-        Some((2.9638381036025487, Location::new(29, 1)))
+        Some((6.29984397470312, Location::new(29, 1)))
     );
 }
 
@@ -88,7 +88,7 @@ fn test_get_location_score_for_tile_with_opponent() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -1.6728730735451247
+        -3.6728730735451256
     );
 }
 
@@ -104,7 +104,7 @@ fn test_get_location_score_for_tile_with_weapon() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        1.2128554234218871
+        2.3076518419924144
     );
 }
 
