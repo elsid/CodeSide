@@ -5,6 +5,7 @@ use model::{
     Item,
     LootBox,
     Mine,
+    MineState,
     Player,
     Properties,
     Tile,
@@ -291,9 +292,16 @@ impl World {
 
     pub fn has_mine(&self, location: Location) -> bool {
         let location_rect = make_location_rect(location);
-        let mine_half = Vec2::new(self.properties.mine_trigger_radius, self.properties.mine_trigger_radius);
+        let mine_trigger_half = Vec2::both(self.properties.mine_trigger_radius);
+        let mine_explosion_half = Vec2::both(self.properties.mine_explosion_params.radius);
         self.mines.iter()
-            .find(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
+            .find(|v| {
+                let half = match &v.state {
+                    MineState::Preparing | MineState::Idle => mine_trigger_half,
+                    MineState::Triggered | MineState::Exploded => mine_explosion_half,
+                };
+                Rect::new(v.position(), half).has_collision(&location_rect)
+            })
             .is_some()
     }
 
