@@ -222,7 +222,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         0.0
     };
     let mines_score = if world.mines().len() > 0 {
-        let mine_half = Vec2::new(world.properties().mine_trigger_radius, world.properties().mine_trigger_radius);
+        let mine_half = Vec2::both(world.properties().mine_explosion_params.radius + 1.0);
         world.mines().iter()
             .filter(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
             .count() as f64
