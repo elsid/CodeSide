@@ -166,7 +166,7 @@ fn test_get_location_score_for_tile_with_mine() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -5.541984881843375
+        -12.541984881843375
     );
 }
 
@@ -180,7 +180,7 @@ fn test_get_location_score_for_tile_with_mine_on_the_way() {
     assert!(path_info.is_some());
     assert_eq!(
         get_location_score(location, &unit, &world, &path_info.unwrap()),
-        -5.546685564362448
+        -12.546685564362448
     );
 }
 
