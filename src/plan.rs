@@ -101,21 +101,29 @@ impl<'c, 's> Planner<'c, 's> {
             1.0
         };
 
+        let max_time_to_bullet = self.simulator.unit().base().size.y * (1.0 + 1.0 / self.simulator.properties().unit_jump_speed);
         let distance_to_nearest_bullet_score = self.simulator.bullets().iter()
             .filter(|v| v.base().unit_id != self.simulator.unit().base().id)
-            .map(|v| v.center().distance(self.simulator.unit().lower_center())
-                .min(v.center().distance(self.simulator.unit().upper_center())))
-            .min_by_key(|v| as_score(*v))
-            .map(|v| v / self.max_distance)
+            .map(|v| (
+                v.velocity().norm(),
+                v.center().distance(self.simulator.unit().lower_center())
+                .min(v.center().distance(self.simulator.unit().upper_center()))
+            ))
+            .min_by_key(|(_, v)| as_score(*v))
+            .map(|(speed, distance)| distance / (speed * max_time_to_bullet))
             .unwrap_or(1.0);
 
+        let time_interval = self.time_interval();
+        let max_distance_to_opponent = self.simulator.properties().mine_explosion_params.radius
+            + self.simulator.unit().base().size.y
+            + self.simulator.properties().unit_jump_speed * time_interval;
         let distance_to_nearest_opponent_score = if self.simulator.unit().base().weapon.is_some() {
             self.simulator.bullets().iter()
                 .filter(|v| v.base().player_id != self.simulator.unit().base().player_id)
                 .map(|v| v.center().distance(self.simulator.unit().lower_center())
                     .min(v.center().distance(self.simulator.unit().upper_center())))
                 .min_by_key(|v| as_score(*v))
-                .map(|v| v / self.max_distance)
+                .map(|v| (v / max_distance_to_opponent).min(1.0))
                 .unwrap_or(1.0)
         } else {
             1.0
@@ -141,6 +149,10 @@ impl<'c, 's> Planner<'c, 's> {
 
     pub fn simulator(&self) -> &Simulator {
         &self.simulator
+    }
+
+    fn time_interval(&self) -> f64 {
+        self.config.plan_time_interval_factor / self.simulator.properties().ticks_per_second as f64
     }
 }
 
@@ -236,10 +248,9 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
         let mut result = Vec::with_capacity(TRANSITIONS.len());
 
         let unit = state.planner.simulator.unit();
-        let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
         let x = (unit.base().position.x * 1000.0).round() as i32;
         let y = (unit.base().position.y * 1000.0).round() as i32;
-        let jump_ticks_left = (unit.base().jump_state.max_time / time_interval).ceil() as i32;
+        let jump_ticks_left = (unit.base().jump_state.max_time / state.planner.time_interval()).ceil() as i32;
         let health = unit.base().health;
         let tick = state.planner.simulator.current_tick();
 
@@ -261,7 +272,7 @@ impl<'r, 'c, 'd1, 'd2, 's> Visitor<State<'c, 's>, Transition> for VisitorImpl<'r
 
     fn apply(&mut self, iteration: usize, state: &State<'c, 's>, transition: &Transition) -> State<'c, 's> {
         let mut next = state.clone();
-        let time_interval = state.planner.config.plan_time_interval_factor / state.properties().ticks_per_second as f64;
+        let time_interval = state.planner.time_interval();
         next.prev_id = next.id;
         next.id = self.state_id_generator.next();
         next.depth += 1;
