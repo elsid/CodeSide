@@ -129,32 +129,42 @@ pub fn get_location_score(location: Location, current_unit: &Unit, world: &World
     get_location_score_components(location, current_unit, world, path_info).iter().sum()
 }
 
-pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 17] {
+pub fn get_location_score_components(location: Location, current_unit: &Unit, world: &World, path_info: &TilePathInfo) -> [f64; 16] {
     let current_unit_position = Vec2::new(location.x() as f64 + 0.5, location.y() as f64);
     let current_unit_center = Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + current_unit.size.y * 0.5);
     let location_rect = Rect::new(
         Vec2::new(location.x() as f64 + 0.5, location.y() as f64 + 0.5),
         Vec2::new(0.5, 0.5)
     );
-    let distance_to_position_score = path_info.distance() / world.max_path_distance();
+
+    let distance_to_position_factor = 1.0 - (path_info.distance / world.max_path_distance()).powi(4);
+    let health_factor = current_unit.health as f64 / world.properties().unit_max_health as f64;
+    let min_distance_to_teammate_unit_factor = (path_info.min_distance_to_teammate_unit / (2.0 * world.properties().unit_size.y + 1.0)).min(1.0);
+
     let health_pack_score = match world.tile_item(location) {
-        Some(&Item::HealthPack { .. }) => 1.0 - current_unit.health as f64 / world.properties().unit_max_health as f64,
+        Some(&Item::HealthPack { .. }) => distance_to_position_factor * (1.0 - health_factor),
         _ => 0.0,
     };
     let first_weapon_score = if current_unit.weapon.is_none() {
         match world.tile_item(location) {
-            Some(&Item::Weapon { .. }) => 1.0 - distance_to_position_score,
+            Some(&Item::Weapon { .. }) => distance_to_position_factor * min_distance_to_teammate_unit_factor,
             _ => 0.0,
         }
     } else {
         0.0
     };
-    let swap_weapon_score = (current_unit.weapon.is_some() && match world.tile_item(location) {
-        Some(&Item::Weapon { ref weapon_type }) => {
-            get_weapon_score(&current_unit.weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)
-        },
-        _ => false,
-    }) as i32 as f64;
+    let swap_weapon_score = if current_unit.weapon.is_some() {
+        match world.tile_item(location) {
+            Some(&Item::Weapon { ref weapon_type }) => {
+                (get_weapon_score(&current_unit.weapon.as_ref().unwrap().typ) < get_weapon_score(weapon_type)) as i32 as f64
+                    * distance_to_position_factor
+                    * health_factor
+            },
+            _ => 0.0,
+        }
+    } else {
+        0.0
+    };
     let hit_by_opponent_score = world.units().iter()
         .filter(|unit| world.is_opponent_unit(unit))
         .map(|unit| {
@@ -166,8 +176,10 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                         current_unit.id, current_unit_position, get_mean_spread(weapon),
                         &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
                         world, world.config().optimal_location_number_of_directions, &mut None);
-                    (shoot_result.player_score - shoot_result.opponent_score) as f64
-                        / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64 * fire_timer_factor
+                        (shoot_result.player_score - shoot_result.opponent_score) as f64
+                            / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64
+                            * fire_timer_factor
+                            * distance_to_position_factor
                 } else {
                     0.0
                 }
@@ -176,14 +188,15 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
             }
         })
         .sum::<f64>();
-    let opponent_obstacle_score = path_info.has_opponent_unit() as i32 as f64;
-    let teammate_obstacle_score = path_info.has_teammate_unit() as i32 as f64;
-    let mine_obstacle_score = path_info.has_mine() as i32 as f64;
-    let bullet_obstacle_score = path_info.has_bullet() as i32 as f64;
-    let loot_box_mine_score = (match world.tile_item(location) {
-        Some(&Item::Mine { }) => true,
-        _ => false,
-    }) as i32 as f64;
+    let opponent_obstacle_score = 1.0 - (path_info.min_distance_to_opponent_unit / (2.0 * world.properties().unit_size.y + 1.0)).min(1.0);
+    let teammate_obstacle_score = 1.0 - min_distance_to_teammate_unit_factor;
+    let mine_obstacle_score = 1.0 - (path_info.min_distance_to_mine / (world.properties().unit_size.y + world.properties().mine_explosion_params.radius + 1.0)).min(1.0);
+    let rocket_launcher_explosion_radius = world.properties().weapon_params[&WeaponType::RocketLauncher].explosion.as_ref().unwrap().radius;
+    let bullet_obstacle_score = 1.0 - (path_info.min_distance_to_bullet / (world.properties().unit_size.y + rocket_launcher_explosion_radius + 1.0)).min(1.0);
+    let loot_box_mine_score = match world.tile_item(location) {
+        Some(&Item::Mine { }) => distance_to_position_factor,
+        _ => 0.0,
+    };
     let nearest_opponent = if let Some(weapon) = current_unit.weapon.as_ref() {
         world.units().iter()
             .filter(|unit| {
@@ -194,6 +207,26 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     } else {
         None
     };
+    let nearest_opponent_factor = nearest_opponent
+        .map(|nearest_opponent| {
+            world.units().iter()
+                .filter(|teammate| {
+                    teammate.id != current_unit.id
+                    && world.is_teammate_unit(teammate)
+                    && world.units().iter()
+                        .filter(|opponent| {
+                            world.is_opponent_unit(opponent)
+                            && teammate.weapon.as_ref()
+                                .map(|weapon| may_shoot(teammate.id, teammate.center(), &opponent, weapon, world))
+                                .unwrap_or(false)
+                        })
+                        .min_by_key(|opponent| as_score(teammate.position().distance(opponent.position())))
+                        .map(|opponent| opponent.id == nearest_opponent.id)
+                        .unwrap_or(false)
+                })
+                .count() + 1
+        })
+        .unwrap_or(1) as f64;
     let hit_nearest_opponent_score = if let (Some(weapon), Some(unit)) = (current_unit.weapon.as_ref(), nearest_opponent.as_ref()) {
         let fire_timer_factor = get_fire_timer_factor(weapon.fire_timer, world.config().optimal_location_min_fire_timer);
         if fire_timer_factor > 0.0 {
@@ -203,15 +236,19 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 &weapon.typ, &weapon.params.bullet, &weapon.params.explosion,
                 world, world.config().optimal_location_number_of_directions, &mut None);
             (shoot_result.player_score - shoot_result.opponent_score) as f64
-                / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64 * fire_timer_factor
+                / (world.max_score() * world.config().optimal_location_number_of_directions as i32) as f64
+                * fire_timer_factor
+                * distance_to_position_factor
+                * nearest_opponent_factor
         } else {
             0.0
         }
     } else {
         0.0
     };
-    let height_score = location.y() as f64 / world.size().y();
-    let over_ground_score = (world.get_tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64;
+    let height_score = location.y() as f64 / world.size().y() * distance_to_position_factor;
+    let over_ground_score = (world.get_tile(location + Vec2i::new(0, -1)) != Tile::Empty) as i32 as f64
+        * distance_to_position_factor;
     let number_of_bullets = world.bullets().iter()
         .filter(|v| v.unit_id != current_unit.id)
         .count();
@@ -219,6 +256,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         world.bullets().iter()
             .filter(|v| v.unit_id != current_unit.id && v.rect().has_collision(&location_rect))
             .count() as f64
+            * distance_to_position_factor
     } else {
         0.0
     };
@@ -227,6 +265,7 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
         world.mines().iter()
             .filter(|v| Rect::new(v.position(), mine_half).has_collision(&location_rect))
             .count() as f64
+            * distance_to_position_factor
     } else {
         0.0
     };
@@ -252,7 +291,9 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                     (shoot_result.teammates_damage + shoot_result.unit_damage) as f64
                         / (max_damage * world.config().optimal_location_number_of_directions as i32) as f64
                 })
-                .sum::<f64>() * fire_timer_factor
+                .sum::<f64>()
+                * fire_timer_factor
+                * distance_to_position_factor
         } else {
             0.0
         }
@@ -278,12 +319,12 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
                 (explosion_rect.has_collision(&location_rect) as i32 * unit.mines) as f64 * fire_timer_factor
             })
             .sum::<f64>() / number_of_opponents_mines as f64
+            * distance_to_position_factor
     } else {
         0.0
     };
 
     [
-        distance_to_position_score * world.config().optimal_location_distance_to_position_score_weight,
         health_pack_score * world.config().optimal_location_health_pack_score_weight,
         first_weapon_score * world.config().optimal_location_first_weapon_score_weight,
         swap_weapon_score * world.config().optimal_location_swap_weapon_score_weight,

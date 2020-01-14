@@ -42,10 +42,10 @@ pub struct World {
     items_by_tile: BTreeMap<Location, Item>,
     backtracks: Vec<(i32, Vec<usize>)>,
     distances: Vec<(i32, Vec<f64>)>,
-    has_opponent_unit: Vec<(i32, Vec<bool>)>,
-    has_teammate_unit: Vec<(i32, Vec<bool>)>,
-    has_mine: Vec<(i32, Vec<bool>)>,
-    has_bullet: Vec<(i32, Vec<bool>)>,
+    min_distance_to_opponent_unit: Vec<(i32, Vec<f64>)>,
+    min_distance_to_teammate_unit: Vec<(i32, Vec<f64>)>,
+    min_distance_to_mine: Vec<(i32, Vec<f64>)>,
+    min_distance_to_bullet: Vec<(i32, Vec<f64>)>,
     unit_index: Vec<i32>,
     max_distance: f64,
     number_of_teammates: usize,
@@ -74,10 +74,10 @@ impl World {
                 .collect(),
             backtracks: game.units.iter().map(|v| (v.id, std::iter::repeat(0).take(level.size()).collect::<Vec<_>>())).collect(),
             distances: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
-            has_opponent_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
-            has_teammate_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
-            has_mine: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
-            has_bullet: game.units.iter().map(|v| (v.id, std::iter::repeat(false).take(level.size()).collect::<Vec<_>>())).collect(),
+            min_distance_to_opponent_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
+            min_distance_to_teammate_unit: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
+            min_distance_to_mine: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
+            min_distance_to_bullet: game.units.iter().map(|v| (v.id, std::iter::repeat(std::f64::MAX).take(level.size()).collect::<Vec<_>>())).collect(),
             unit_index,
             number_of_teammates: game.units.iter().filter(|v| v.player_id == player_id).count().max(1) - 1,
             config,
@@ -128,10 +128,10 @@ impl World {
             self.unit_index.retain(|&id| game.units.iter().find(|v| v.id == id).is_some());
             self.backtracks.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
             self.distances.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
-            self.has_opponent_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
-            self.has_teammate_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
-            self.has_mine.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
-            self.has_bullet.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.min_distance_to_opponent_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.min_distance_to_teammate_unit.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.min_distance_to_mine.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
+            self.min_distance_to_bullet.retain(|&(id, _)| game.units.iter().find(|v| v.id == id).is_some());
         }
 
         if self.current_tick == 0
@@ -264,62 +264,52 @@ impl World {
         if distance != std::f64::MAX {
             Some(TilePathInfo {
                 distance,
-                has_opponent_unit: self.has_opponent_unit[unit_index].1[tile_index],
-                has_teammate_unit: self.has_teammate_unit[unit_index].1[tile_index],
-                has_mine: self.has_mine[unit_index].1[tile_index],
-                has_bullet: self.has_bullet[unit_index].1[tile_index],
+                min_distance_to_opponent_unit: self.min_distance_to_opponent_unit[unit_index].1[tile_index],
+                min_distance_to_teammate_unit: self.min_distance_to_teammate_unit[unit_index].1[tile_index],
+                min_distance_to_mine: self.min_distance_to_mine[unit_index].1[tile_index],
+                min_distance_to_bullet: self.min_distance_to_bullet[unit_index].1[tile_index],
             })
         } else {
             None
         }
     }
 
-    pub fn has_opponent_unit(&self, location: Location) -> bool {
+    pub fn get_min_distance_to_opponent_unit(&self, location: Location) -> f64 {
         let location_rect = make_location_rect(location);
         self.units.iter()
-            .filter(|v| self.is_opponent_unit(v))
-            .find(|v| v.rect().has_collision(&location_rect))
-            .is_some()
+            .filter(|unit| self.is_opponent_unit(unit))
+            .map(|unit| unit.center().distance(location.center()))
+            .min_by_key(|distance| as_score(*distance))
+            .unwrap_or(std::f64::MAX)
     }
 
-    pub fn has_teammate_unit(&self, unit_id: i32, location: Location) -> bool {
+    pub fn get_min_distance_to_teammate_unit(&self, unit_id: i32, location: Location) -> f64 {
         let location_rect = make_location_rect(location);
         self.units.iter()
             .filter(|v| v.id != unit_id && self.is_teammate_unit(v))
-            .find(|v| v.rect().has_collision(&location_rect))
-            .is_some()
+            .map(|unit| unit.center().distance(location.center()))
+            .min_by_key(|distance| as_score(*distance))
+            .unwrap_or(std::f64::MAX)
     }
 
-    pub fn has_mine(&self, location: Location) -> bool {
+    pub fn get_min_distance_to_mine(&self, location: Location) -> f64 {
         let location_rect = make_location_rect(location);
         let mine_trigger_half = Vec2::both(self.properties.mine_trigger_radius);
         let mine_explosion_half = Vec2::both(self.properties.mine_explosion_params.radius);
         self.mines.iter()
-            .find(|v| {
-                let half = match &v.state {
-                    MineState::Preparing | MineState::Idle => mine_trigger_half,
-                    MineState::Triggered | MineState::Exploded => mine_explosion_half,
-                };
-                Rect::new(v.position(), half).has_collision(&location_rect)
-            })
-            .is_some()
+            .map(|mine| mine.center().distance(location.center()))
+            .min_by_key(|distance| as_score(*distance))
+            .unwrap_or(std::f64::MAX)
     }
 
-    pub fn has_bullet(&self, unit_id: i32, location: Location) -> bool {
+    pub fn get_min_distance_to_bullet(&self, unit_id: i32, location: Location) -> f64 {
         let location_rect = make_location_rect(location);
         let above_location_rect = make_location_rect(location + Vec2i::only_y(1));
         self.bullets.iter()
-            .filter(|v| v.unit_id != unit_id)
-            .find(|v| {
-                let half = if let Some(explosion_params) = v.explosion_params.as_ref() {
-                    explosion_params.radius
-                } else {
-                    v.size / 2.0
-                };
-                let rect = Rect::new(v.position(), Vec2::new(half, half));
-                rect.has_collision(&location_rect) || rect.has_collision(&above_location_rect)
-            })
-            .is_some()
+            .filter(|bullet| bullet.unit_id != unit_id)
+            .map(|bullet| bullet.center().distance(location.center()))
+            .min_by_key(|distance| as_score(*distance))
+            .unwrap_or(std::f64::MAX)
     }
 
     pub fn get_backtrack(&self, unit_id: i32) -> &Vec<usize> {
@@ -416,10 +406,10 @@ impl World {
         for i in 0 .. self.level.size() {
             self.backtracks[unit_index].1[i] = i;
             self.distances[unit_index].1[i] = std::f64::MAX;
-            self.has_opponent_unit[unit_index].1[i] = false;
-            self.has_teammate_unit[unit_index].1[i] = false;
-            self.has_mine[unit_index].1[i] = false;
-            self.has_bullet[unit_index].1[i] = false;
+            self.min_distance_to_opponent_unit[unit_index].1[i] = std::f64::MAX;
+            self.min_distance_to_teammate_unit[unit_index].1[i] = std::f64::MAX;
+            self.min_distance_to_mine[unit_index].1[i] = std::f64::MAX;
+            self.min_distance_to_bullet[unit_index].1[i] = std::f64::MAX;
         }
 
         self.distances[unit_index].1[self.level.get_tile_index(source)] = 0.0;
@@ -427,7 +417,7 @@ impl World {
         let mut ordered: BinaryHeap<(i32, Location)> = BinaryHeap::new();
         ordered.push((0, source));
 
-        let mut destinations = self.has_mine[unit_index].1.clone();
+        let mut destinations = std::iter::repeat(false).take(self.level.size()).collect::<Vec<_>>();
         destinations[self.level.get_tile_index(source)] = true;
 
         const EDGES: &[(Vec2i, f64)] = &[
@@ -456,10 +446,14 @@ impl World {
                 let new_distance = self.distances[unit_index].1[node_index] + distance * get_distance_factor(self.level.get_tile(node_location), self.level.get_tile(neighbor_location));
                 if new_distance < self.distances[unit_index].1[neighbor_index] {
                     self.distances[unit_index].1[neighbor_index] = new_distance;
-                    self.has_opponent_unit[unit_index].1[neighbor_index] = self.has_opponent_unit[unit_index].1[node_index] || self.has_opponent_unit(neighbor_location);
-                    self.has_teammate_unit[unit_index].1[neighbor_index] = self.has_teammate_unit[unit_index].1[node_index] || self.has_teammate_unit(unit_id, neighbor_location);
-                    self.has_mine[unit_index].1[neighbor_index] = self.has_mine[unit_index].1[node_index] || self.has_mine(neighbor_location);
-                    self.has_bullet[unit_index].1[neighbor_index] = self.has_bullet[unit_index].1[node_index] || self.has_bullet(unit_id, neighbor_location);
+                    self.min_distance_to_opponent_unit[unit_index].1[neighbor_index] = self.min_distance_to_opponent_unit[unit_index].1[node_index]
+                        .min(self.get_min_distance_to_opponent_unit(neighbor_location));
+                    self.min_distance_to_teammate_unit[unit_index].1[neighbor_index] = self.min_distance_to_teammate_unit[unit_index].1[node_index]
+                        .min(self.get_min_distance_to_teammate_unit(unit_id, neighbor_location));
+                    self.min_distance_to_mine[unit_index].1[neighbor_index] = self.min_distance_to_mine[unit_index].1[node_index]
+                        .min(self.get_min_distance_to_mine(neighbor_location));
+                    self.min_distance_to_bullet[unit_index].1[neighbor_index] = self.min_distance_to_bullet[unit_index].1[node_index]
+                        .min(self.get_min_distance_to_bullet(unit_id, neighbor_location));
                     self.backtracks[unit_index].1[neighbor_index] = node_index;
                     if !destinations[neighbor_index] {
                         destinations[neighbor_index] = true;
@@ -521,38 +515,11 @@ impl World {
 
 #[derive(Clone, Debug)]
 pub struct TilePathInfo {
-    has_opponent_unit: bool,
-    has_teammate_unit: bool,
-    has_mine: bool,
-    has_bullet: bool,
-    distance: f64,
-}
-
-impl TilePathInfo {
-    #[inline(always)]
-    pub fn has_opponent_unit(&self) -> bool {
-        self.has_opponent_unit
-    }
-
-    #[inline(always)]
-    pub fn has_teammate_unit(&self) -> bool {
-        self.has_teammate_unit
-    }
-
-    #[inline(always)]
-    pub fn has_mine(&self) -> bool {
-        self.has_mine
-    }
-
-    #[inline(always)]
-    pub fn has_bullet(&self) -> bool {
-        self.has_bullet
-    }
-
-    #[inline(always)]
-    pub fn distance(&self) -> f64 {
-        self.distance
-    }
+    pub distance: f64,
+    pub min_distance_to_opponent_unit: f64,
+    pub min_distance_to_teammate_unit: f64,
+    pub min_distance_to_mine: f64,
+    pub min_distance_to_bullet: f64,
 }
 
 pub fn is_tile_reachable_from(source: Location, destination: Location, level: &Level, properties: &Properties) -> bool {
