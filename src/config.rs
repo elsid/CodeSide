@@ -53,7 +53,7 @@ impl Config {
             plan_distance_to_nearest_opponent_score_weight: 1.0,
             plan_time_interval_factor: 3.0,
             optimal_location_distance_to_position_score_weight: -0.25,
-            optimal_location_health_pack_score_weight: 8.0,
+            optimal_location_health_pack_score_weight: 16.0,
             optimal_location_first_weapon_score_weight: 7.0,
             optimal_location_swap_weapon_score_weight: 1.0,
             optimal_location_hit_by_opponent_score_weight: -300.0,
