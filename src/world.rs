@@ -334,7 +334,7 @@ impl World {
 
         while end > 0 {
             let mut tile = 0;
-            while tile < end && !is_valid_shortcut(current, tiles_path[tile], &self.level) {
+            while tile < end && !self.is_valid_shortcut(unit_id, current, tiles_path[tile]) {
                 tile += 1;
             }
             if tile == end {
@@ -468,6 +468,47 @@ impl World {
             }
         }
     }
+
+    fn is_valid_shortcut(&self, unit_id: i32, begin: Location, end: Location) -> bool {
+        let has_intersection_with_unit = self.units.iter()
+            .find(|unit| unit.id != unit_id && unit.rect().get_intersection_with_line(begin.center(), end.center()).is_some())
+            .is_some();
+        if has_intersection_with_unit {
+            return false;
+        }
+        if begin.x() == end.x() {
+            let mut y = begin.y() as isize;
+            let shift: isize = if y < end.y() as isize { 1 } else { -1 };
+            while y != end.y() as isize {
+                let tile = self.level.get_tile(Location::new(begin.x(), y as usize));
+                if tile == Tile::Wall || tile == Tile::JumpPad {
+                    return false;
+                }
+                y += shift;
+            }
+            true
+        } else if begin.y() == end.y() {
+            let mut x = begin.x() as isize;
+            let shift: isize = if x < end.x() as isize { 1 } else { -1 };
+            while x != end.x() as isize {
+                let tile = self.level.get_tile(Location::new(x as usize, begin.y()));
+                if tile == Tile::Wall || tile == Tile::JumpPad {
+                    return false;
+                }
+                x += shift;
+            }
+            true
+        } else {
+            for position in WalkGrid::new(begin.center(), end.center()) {
+                let tile = self.level.get_tile(position.as_location());
+                if tile == Tile::Wall || tile == Tile::JumpPad {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+
 }
 
 #[derive(Clone, Debug)]
@@ -615,38 +656,4 @@ fn is_complex_level(level: &Level) -> bool {
     }
 
     (0 .. level.size()).find(|v| !used[*v] && level.get_tile_by_index(*v) == Tile::Wall).is_some()
-}
-
-fn is_valid_shortcut(begin: Location, end: Location, level: &Level) -> bool {
-    if begin.x() == end.x() {
-        let mut y = begin.y() as isize;
-        let shift: isize = if y < end.y() as isize { 1 } else { -1 };
-        while y != end.y() as isize {
-            let tile = level.get_tile(Location::new(begin.x(), y as usize));
-            if tile == Tile::Wall || tile == Tile::JumpPad {
-                return false;
-            }
-            y += shift;
-        }
-        true
-    } else if begin.y() == end.y() {
-        let mut x = begin.x() as isize;
-        let shift: isize = if x < end.x() as isize { 1 } else { -1 };
-        while x != end.x() as isize {
-            let tile = level.get_tile(Location::new(x as usize, begin.y()));
-            if tile == Tile::Wall || tile == Tile::JumpPad {
-                return false;
-            }
-            x += shift;
-        }
-        true
-    } else {
-        for position in WalkGrid::new(begin.center(), end.center()) {
-            let tile = level.get_tile(position.as_location());
-            if tile == Tile::Wall || tile == Tile::JumpPad {
-                return false;
-            }
-        }
-        true
-    }
 }
