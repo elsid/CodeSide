@@ -86,8 +86,9 @@ pub fn get_optimal_location(unit: &Unit, optimal_locations: &Vec<(i32, Option<Lo
                 let path_info = world.get_path_info(unit_index, location).unwrap();
                 debug.log(format!("[{}] optimal_location: {:?} {:?} {:?}", unit.id, location, score, get_location_score_components(location, unit, world, &path_info)));
                 if let Some(v) = optimal_locations.iter().find(|(id, _)| *id == unit.id).unwrap().1 {
-                    let path_info = world.get_path_info(unit_index, v).unwrap();
-                    debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, world, &path_info)));
+                    if let Some(path_info) = world.get_path_info(unit_index, v) {
+                        debug.log(format!("[{}] previous_location: {:?} {:?} {:?}", unit.id, v, score, get_location_score_components(v, unit, world, &path_info)));
+                    }
                 }
             }
         }
