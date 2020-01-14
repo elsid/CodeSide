@@ -265,10 +265,6 @@ pub fn get_location_score_components(location: Location, current_unit: &Unit, wo
     let opponent_mine_explosion_score = if number_of_opponents_mines > 0 {
         world.units().iter()
             .filter(|unit| world.is_opponent_unit(unit) && unit.mines > 0 && unit.weapon.is_some())
-            .filter(|unit| {
-                let tile = world.get_tile(unit.location() + Vec2i::only_y(-1));
-                tile == Tile::Wall || tile == Tile::Platform
-            })
             .map(|unit| {
                 let fire_timer_factor = get_fire_timer_factor(unit.weapon.as_ref().unwrap().fire_timer, world.config().optimal_location_min_fire_timer);
                 if fire_timer_factor == 0.0 {
