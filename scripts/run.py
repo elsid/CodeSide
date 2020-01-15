@@ -82,7 +82,6 @@ def run_aicup(aicup_bin, config_path, result_path, replay_path, player_names):
         '--batch-mode',
         '--config', config_path,
         '--save-results', result_path,
-        '--save-replay', replay_path,
         '--player-names', *[str(v) for v in player_names],
     ])
 
