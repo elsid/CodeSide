@@ -116,8 +116,8 @@ impl MyStrategyImpl {
                 #[cfg(feature = "enable_debug_log")]
                 debug.log(
                     format!(
-                        "[{}] health={} mines={} x={} y={} weapon: {}",
-                        unit.id, unit.health, unit.mines, unit.position.x, unit.position.y,
+                        "[{}] health={} mines={} x={} y={} jump_time={} weapon: {}",
+                        unit.id, unit.health, unit.mines, unit.position.x, unit.position.y, unit.jump_state.max_time,
                         unit.weapon.as_ref()
                             .map(|v| format!(
                                 "type={:?} magazine={} last_angle={:?} fire_timer={:?} spread={}",
