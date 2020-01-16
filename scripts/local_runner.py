@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-import sys
-import json
-import time
-import pathlib
-import os.path
-import datetime
-import subprocess
 import click
 import copy
+import datetime
+import helpers
+import json
 import os
+import os.path
+import subprocess
+import sys
+import time
+import traceback
 
 
 @click.command()
@@ -24,84 +25,83 @@ import os
     '2x2+',
 )))
 @click.option('--player_port', default=31010, type=int)
-@click.option('--other_port', default=32010, type=int)
+@click.option('--opponent_port', default=32010, type=int)
 @click.option('--max_runs', default=2**64 - 1, type=int)
 @click.option('--prefix', default='default')
-@click.option('--aicup_bin', required=True, type=str)
+@click.option('--bin_path', required=True, type=str)
 @click.option('--config_template_path', required=True, type=str)
 @click.option('--output_path', default=os.path.join(os.getcwd(), 'results'), type=str)
-def main(opponent_type, game_type, player_port, other_port, max_runs, prefix, aicup_bin, config_template_path, output_path):
-    config_template = read_json(config_template_path)
+@click.option('--verbose', is_flag=True)
+def main(**kwargs):
+    run(**kwargs)
+
+
+def run(opponent_type, game_type, player_port, opponent_port, max_runs, prefix, bin_path,
+        aicup_config_template_path, output_path, verbose, should_stop=None):
+    config_template = helpers.read_json(aicup_config_template_path)
     session = '%s.%s.%s.%s' % (prefix, game_type, player_port, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     session_path = os.path.join(output_path, opponent_type, game_type, session)
     os.makedirs(session_path, exist_ok=False)
     for number in range(max_runs):
-        run_game(
-            number=number,
-            session_path=session_path,
+        if should_stop is not None and should_stop.is_set():
+            break
+        game = '%s.%s' % (number, int(time.time() * 1e6))
+        game_path = os.path.join(session_path, game)
+        process = run_game(
             opponent_type=opponent_type,
             game_type=game_type,
             player_port=player_port,
-            other_port=other_port,
-            aicup_bin=aicup_bin,
+            opponent_port=opponent_port,
+            swap=number % 2 == 1,
+            bin_path=bin_path,
             config_template=config_template,
+            verbose=verbose,
+            output_path=game_path,
         )
+        try:
+            process.wait(timeout=120)
+        except subprocess.TimeoutExpired:
+            traceback.print_exc()
 
 
-def run_game(number, session_path, opponent_type, game_type, player_port, other_port, aicup_bin, config_template):
-    game = '%s.%s' % (number, int(time.time() * 1e6))
-    game_path = os.path.join(session_path, game)
-    os.makedirs(game_path, exist_ok=False)
-    config_path = os.path.join(game_path, 'config.json')
-    result_path = os.path.join(game_path, 'result.json')
-    replay_path = os.path.join(game_path, 'replay.log')
-    swap = number % 2 == 1
+def run_game(opponent_type, game_type, player_port, opponent_port, swap, bin_path, config_template, verbose,
+             output_path, seed=None):
+    os.makedirs(output_path, exist_ok=False)
+    config_path = os.path.join(output_path, 'config.json')
+    result_path = os.path.join(output_path, 'result.json')
     config = generate_config(
         config_template=config_template,
         opponent_type=opponent_type,
         game_type=game_type,
         player_port=player_port,
-        other_port=other_port,
+        opponent_port=opponent_port,
         swap=swap,
+        seed=seed,
     )
-    write_json(data=config, path=config_path)
-    player_names = [other_port, player_port] if swap else [player_port, other_port]
-    print(number, game_path, player_names)
-    run_aicup(
-        aicup_bin=aicup_bin,
-        config_path=config_path,
-        result_path=result_path,
-        replay_path=replay_path,
-        player_names=player_names,
-    )
-
-
-def run_aicup(aicup_bin, config_path, result_path, replay_path, player_names):
-    subprocess.run([
-        aicup_bin,
+    helpers.write_json(data=config, path=config_path)
+    player_names = [opponent_port, player_port] if swap else [player_port, opponent_port]
+    args=[
+        bin_path,
         '--batch-mode',
         '--config', config_path,
         '--save-results', result_path,
         '--player-names', *[str(v) for v in player_names],
-    ])
+    ]
+    if verbose:
+        print('run', *args)
+    return subprocess.Popen(
+        args=args,
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
 
 
-def read_json(path):
-    with open(path) as stream:
-        return json.load(stream)
-
-
-def write_json(data, path):
-    with open(path, 'w') as stream:
-        json.dump(data, stream, indent=4)
-
-
-def generate_config(config_template, opponent_type, game_type, player_port, other_port, swap):
+def generate_config(config_template, opponent_type, game_type, player_port, opponent_port, swap, seed):
     player = make_player(player_port)
-    opponent = generate_opponent(opponent_type=opponent_type, port=other_port)
+    opponent = generate_opponent(opponent_type=opponent_type, port=opponent_port)
     level, properties = generate_game(game_type, template=config_template['options_preset']['Custom']['properties'])
     return {
-        'seed': None,
+        'seed': seed,
         'options_preset': {
             'Custom': {
                 'level': level,

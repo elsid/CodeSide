@@ -1,0 +1,26 @@
+{
+  "plan_distance_score_weight": {
+    "type": "float",
+    "index": 0
+  },
+  "plan_health_diff_score_weight": {
+    "type": "float",
+    "index": 1
+  },
+  "plan_game_score_diff_score_weight": {
+    "type": "float",
+    "index": 2
+  },
+  "plan_triggered_mines_by_me_score_weight": {
+    "type": "float",
+    "index": 3
+  },
+  "plan_distance_to_nearest_bullet_score_weight": {
+    "type": "float",
+    "index": 4
+  },
+  "plan_distance_to_nearest_opponent_score_weight": {
+    "type": "float",
+    "index": 5
+  }
+}

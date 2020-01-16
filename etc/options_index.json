@@ -1,0 +1,102 @@
+{
+  "optimal_location_distance_to_position_score_weight": {
+    "type": "float",
+    "index": 0
+  },
+  "optimal_location_health_pack_score_weight": {
+    "type": "float",
+    "index": 1
+  },
+  "optimal_location_first_weapon_score_weight": {
+    "type": "float",
+    "index": 2
+  },
+  "optimal_location_swap_weapon_score_weight": {
+    "type": "float",
+    "index": 3
+  },
+  "optimal_location_hit_by_opponent_score_weight": {
+    "type": "float",
+    "index": 4
+  },
+  "optimal_location_opponent_obstacle_score_weight": {
+    "type": "float",
+    "index": 5
+  },
+  "optimal_location_hit_nearest_opponent_score_weight": {
+    "type": "float",
+    "index": 6
+  },
+  "optimal_location_loot_box_mine_score_weight": {
+    "type": "float",
+    "index": 7
+  },
+  "optimal_location_height_score_weight": {
+    "type": "float",
+    "index": 8
+  },
+  "optimal_location_over_ground_score_weight": {
+    "type": "float",
+    "index": 9
+  },
+  "optimal_location_bullets_score_weight": {
+    "type": "float",
+    "index": 10
+  },
+  "optimal_location_mines_score_weight": {
+    "type": "float",
+    "index": 11
+  },
+  "optimal_location_mine_obstacle_score_weight": {
+    "type": "float",
+    "index": 12
+  },
+  "optimal_location_hit_teammates_score_weight": {
+    "type": "float",
+    "index": 13
+  },
+  "optimal_location_teammate_obstacle_score_weight": {
+    "type": "float",
+    "index": 14
+  },
+  "optimal_location_bullet_obstacle_score_weight": {
+    "type": "float",
+    "index": 15
+  },
+  "optimal_location_opponent_mine_explosion_score_weight": {
+    "type": "float",
+    "index": 16
+  },
+  "optimal_location_min_fire_timer": {
+    "type": "float",
+    "index": 17
+  },
+  "plan_distance_score_weight": {
+    "type": "float",
+    "index": 18
+  },
+  "plan_health_diff_score_weight": {
+    "type": "float",
+    "index": 19
+  },
+  "plan_game_score_diff_score_weight": {
+    "type": "float",
+    "index": 20
+  },
+  "plan_triggered_mines_by_me_score_weight": {
+    "type": "float",
+    "index": 21
+  },
+  "plan_distance_to_nearest_bullet_score_weight": {
+    "type": "float",
+    "index": 22
+  },
+  "plan_distance_to_nearest_opponent_score_weight": {
+    "type": "float",
+    "index": 23
+  },
+  "min_hit_probability_by_spread_to_shoot": {
+    "type": "float",
+    "index": 24
+  }
+}
