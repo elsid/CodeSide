@@ -19,10 +19,11 @@ pub enum Role {
     Miner {
         plant_mines: usize,
         planted_mines: usize,
-    }
+    },
+    Pusher,
 }
 
-pub fn get_role(unit: &Unit, prev: &Role, world: &World, debug: &mut Dbg) -> Role {
+pub fn get_role(unit: &Unit, prev: &Role, default: &Role, world: &World, debug: &mut Dbg) -> Role {
     if let Role::Miner { planted_mines, plant_mines } = prev {
         if *planted_mines == 0 && *planted_mines < *plant_mines
                 || (has_collision_with_teammate_mine(unit, world) && will_explode_opponent_units(unit, world)) {
@@ -38,7 +39,7 @@ pub fn get_role(unit: &Unit, prev: &Role, world: &World, debug: &mut Dbg) -> Rol
         }
     }
 
-    Role::Shooter
+    default.clone()
 }
 
 pub fn update_role(unit: &Unit, role: &Role, world: &World) -> Role {
