@@ -27,7 +27,7 @@ pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
         velocity: 0.0,
         jump: false,
         jump_down: false,
-        shoot: plant_mines == 0,
+        shoot: plant_mines <= 1,
         aim: (current_unit.position() - current_unit.center()).as_model(),
         reload: false,
         swap_weapon: false,
