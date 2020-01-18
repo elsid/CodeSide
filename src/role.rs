@@ -18,22 +18,39 @@ pub enum Role {
     Shooter,
     Miner {
         plant_mines: usize,
+        planted_mines: usize,
     }
 }
 
 pub fn get_role(unit: &Unit, prev: &Role, world: &World, debug: &mut Dbg) -> Role {
-    if let Role::Miner { plant_mines } = prev {
-        if (*plant_mines > 0 || has_collision_with_teammate_mine(unit, world)) && will_explode_opponent_units(unit, world) {
+    if let Role::Miner { planted_mines, plant_mines } = prev {
+        if *planted_mines == 0 && *planted_mines < *plant_mines
+                || (has_collision_with_teammate_mine(unit, world) && will_explode_opponent_units(unit, world)) {
             return prev.clone();
         }
+        #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
+        debug.log(format!("[{}] abort miner plant_mines={} planted_mines={} has_collision_with_teammate_mine={} will_explode_opponent_units={}",
+            unit.id, plant_mines, planted_mines, has_collision_with_teammate_mine(unit, world), will_explode_opponent_units(unit, world)));
     } else {
         let plant_mines = get_mines_to_plant(unit, world, debug);
         if plant_mines > 0 {
-            return Role::Miner { plant_mines };
+            return Role::Miner { plant_mines, planted_mines: 0 };
         }
     }
 
     Role::Shooter
+}
+
+pub fn update_role(unit: &Unit, role: &Role, world: &World) -> Role {
+    match role {
+        Role::Miner { plant_mines, .. } => Role::Miner {
+            plant_mines: (unit.mines as usize).min(*plant_mines),
+            planted_mines: world.mines().iter()
+                .filter(|mine| world.is_teammate_mine(mine) && mine.rect().has_collision(&unit.rect()))
+                .count()
+        },
+        v => v.clone(),
+    }
 }
 
 fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> usize {
@@ -134,9 +151,10 @@ fn get_mines_to_plant(current_unit: &Unit, world: &World, debug: &mut Dbg) -> us
         }
     }
 
-    if max_my_total_score < world.properties().kill_score * world.properties().team_size {
+    if max_my_total_score < world.properties().kill_score {
         #[cfg(all(feature = "enable_debug", feature = "enable_debug_log"))]
-        debug.log(format!("[{}] reject miner 6", current_unit.id));
+        debug.log(format!("[{}] reject miner 6 max_my_total_score={} limit={}",
+            current_unit.id, max_my_total_score, world.properties().kill_score));
         return 0;
     }
 

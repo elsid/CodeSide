@@ -22,16 +22,16 @@ use crate::my_strategy::{
     minimize1d,
 };
 
-pub fn get_miner_action(current_unit: &Unit, plant_mines: usize) -> UnitAction {
+pub fn get_miner_action(current_unit: &Unit, mines_left: usize) -> UnitAction {
     UnitAction {
         velocity: 0.0,
         jump: false,
         jump_down: false,
-        shoot: plant_mines <= 1,
+        shoot: mines_left <= 1,
         aim: (current_unit.position() - current_unit.center()).as_model(),
         reload: false,
         swap_weapon: false,
-        plant_mine: plant_mines > 0,
+        plant_mine: mines_left > 0,
     }
 }
 

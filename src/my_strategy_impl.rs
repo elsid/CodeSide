@@ -33,6 +33,7 @@ use crate::my_strategy::{
     get_optimal_target,
     get_role,
     get_shooter_action,
+    update_role,
 };
 
 #[cfg(feature = "enable_debug")]
@@ -180,10 +181,7 @@ impl MyStrategyImpl {
             let unit_id = self.roles[i].0;
             let unit = self.world.get_unit(unit_id);
             if self.world.is_teammate_unit(unit) {
-                self.roles[i].1 = match &self.roles[i].1 {
-                    Role::Miner { plant_mines } => Role::Miner { plant_mines: *plant_mines - self.optimal_actions[i].1.plant_mine as usize },
-                    v => v.clone(),
-                }
+                self.roles[i].1 = update_role(unit, &self.roles[i].1, &self.world);
             }
         }
     }
@@ -268,8 +266,13 @@ impl MyStrategyImpl {
                         let target = &self.optimal_targets[i].1;
                         self.optimal_actions[i].1 = get_shooter_action(unit, plan, target, &self.world, debug);
                     },
-                    Role::Miner { plant_mines } => {
-                        self.optimal_actions[i].1 = get_miner_action(unit, *plant_mines);
+                    Role::Miner { plant_mines, planted_mines } => {
+                        let mines_left = if *plant_mines > *planted_mines {
+                            *plant_mines - *planted_mines
+                        } else {
+                            0
+                        };
+                        self.optimal_actions[i].1 = get_miner_action(unit, mines_left);
                     }
                 }
             }
