@@ -33,8 +33,6 @@ pub struct Config {
     pub optimal_location_min_fire_timer: f64,
     pub optimal_location_number_of_directions: usize,
     pub min_hit_probability_by_spread_to_shoot: f64,
-    pub max_teammates_hits_to_shoot: usize,
-    pub min_target_hits_to_shoot: usize,
     pub optimal_action_number_of_directions: usize,
 }
 
@@ -72,8 +70,6 @@ impl Config {
             optimal_location_min_fire_timer: 0.5,
             optimal_location_number_of_directions: 3,
             min_hit_probability_by_spread_to_shoot: 0.3,
-            max_teammates_hits_to_shoot: 1,
-            min_target_hits_to_shoot: 1,
             optimal_action_number_of_directions: 9,
         }
     }
