@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "read_config", derive(RustcDecodable))]
 #[cfg_attr(feature = "dump_config", derive(RustcEncodable))]
 pub struct Config {
@@ -69,7 +69,7 @@ impl Config {
             optimal_location_opponent_mine_explosion_score_weight: -6.0,
             optimal_location_min_fire_timer: 0.5,
             optimal_location_number_of_directions: 3,
-            min_hit_probability_by_spread_to_shoot: 0.3,
+            min_hit_probability_by_spread_to_shoot: 0.30000000000000004,
             optimal_action_number_of_directions: 9,
         }
     }
